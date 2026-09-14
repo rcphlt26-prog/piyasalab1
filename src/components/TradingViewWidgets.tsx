@@ -78,3 +78,21 @@ export function TradingViewAdvancedChart() {
   useTradingViewScript("tv-chart", "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", advancedConfig);
   return <div id="tv-chart" className="h-[430px] w-full" />;
 }
+
+export function TradingViewSymbolChart({ symbol }: { symbol: string }) {
+  const containerId = `tv-chart-${symbol.replace(/[^a-zA-Z0-9]/g, "-")}`;
+  const config = JSON.stringify({
+    autosize: true,
+    symbol,
+    interval: "D",
+    timezone: "Europe/Istanbul",
+    theme: "dark",
+    style: "1",
+    locale: "tr",
+    hide_top_toolbar: false,
+    allow_symbol_change: true,
+    save_image: false,
+  });
+  useTradingViewScript(containerId, "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js", config);
+  return <div id={containerId} className="h-[430px] w-full" />;
+}

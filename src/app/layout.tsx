@@ -1,6 +1,22 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Piyasalab | Borsa Getiri Hesaplama ve Enflasyon Araçları",
@@ -93,8 +109,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 
   return (
-    <html lang="tr" className="h-full antialiased">
-      <body className="min-h-full bg-slate-950 text-slate-100">{children}</body>
+    <html lang="tr" className={`h-full antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
+      <body className="app-text min-h-full">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
       {/* AdSense'i aktif etmek için .env'e NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-XXXXXXXXX ekleyin. */}
       {adsenseClient ? (
         <Script

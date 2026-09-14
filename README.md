@@ -152,3 +152,17 @@ Kullanılan kaynak türleri:
 Bu uygulamadaki hiçbir içerik yatırım danışmanlığı kapsamında değildir. Buradaki araçlar; eğitim, simülasyon ve genel bilgilendirme amaçlıdır.
 
 **Yatırım tavsiyesi değildir.**
+
+
+
+## Supabase Veri Entegrasyonu (ipos, news, user_watchlists)
+
+`supabase/schema.sql` dosyası; mevcut realtime tabloların (comments, comment_reactions, polls, poll_votes, sentiment_votes) yanı sıra şu üç tabloyu da oluşturur:
+
+- **ipos** — Halka arz kayıtları. Halka Arz / IPO modülü mount olduğunda bu tablodan veri çeker. Tabloya Supabase panelinden kayıt eklerseniz "Canlı veri" rozetiyle listelenir; tablo boşsa veya erişilemezse uygulama yerel örnek veriye düşer ve "Demo veri" rozeti gösterir.
+- **news** — Haber akışı. Haberler modülü bu tablodan besleme yapar; aynı şekilde boş/erişilemez durumda demo haberlere düşer. Yeni haber eklemek için tabloya satır girin (kategori: `Ekonomi` | `BIST` | `Döviz` | `Emtia`).
+- **user_watchlists** — Kullanıcıların izleme listeleri. Oturum gerektirmez; her tarayıcı için `localStorage`'da tutulan anonim `client_id` ile eşlenir. Piyasa kartlarındaki ve varlık detay sayfasındaki yıldız butonu bu tabloya yazar. Supabase erişilemezse izleme listesi yalnızca yerel (localStorage) modda çalışır.
+
+`schema.sql` dosyasını Supabase SQL Editor'de bir kez çalıştırmanız yeterlidir; dosya tekrar çalıştırılmaya karşı güvenlidir (`if not exists` / `drop policy if exists` kullanır) ve test için birkaç örnek IPO ve haber kaydı ekler.
+
+> **Not:** ipos ve news tabloları anon rol için yalnızca **okuma** (SELECT) izniyle açılmıştır; içerik ekleme/düzenleme Supabase panelinden yapılır. user_watchlists tablosu anon rol için SELECT/INSERT/DELETE izinlerine sahiptir.
