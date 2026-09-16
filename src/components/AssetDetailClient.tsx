@@ -8,6 +8,7 @@ import { Sparkline, generateSparkData } from "@/components/ui/Sparkline";
 import { PriceChart } from "@/components/PriceChart";
 import { WatchStar } from "@/components/WatchStar";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { newsForTicker } from "@/data/newsData";
 import { scorecardData } from "@/data/scorecardData";
@@ -41,6 +42,7 @@ export function AssetDetailClient({
 }) {
   const { isWatched, toggle } = useWatchlist();
   const name = market?.label ?? entry?.name ?? ticker;
+  const liveQuote = useLiveQuote(ticker);
   const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
   const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
   const isStock = market ? market.category === "hisse" : Boolean(entry);
@@ -51,7 +53,8 @@ export function AssetDetailClient({
     value,
   }));
   const trend: "up" | "down" = spark[spark.length - 1] >= spark[0] ? "up" : "down";
-  const changePct = seededValue(seed, -4, 6);
+  const changePct = liveQuote?.changePct ?? seededValue(seed, -4, 6);
+  const currentPrice = liveQuote?.price ?? spark[spark.length - 1];
   const news = newsForTicker(ticker, name);
   const score = isStock ? scorecardData[ticker] : undefined;
 
@@ -107,11 +110,12 @@ export function AssetDetailClient({
           <div className="flex items-center gap-4">
             <Sparkline data={spark} width={120} height={44} trend={trend} />
             <div className="text-right">
-              <p className={`text-xl font-bold ${trend === "up" ? "text-bull" : "text-bear"}`}>
+              <p className="app-text text-xl font-bold">{formatNumber(currentPrice, currentPrice >= 100 ? 2 : 4)}</p>
+              <p className={`text-sm font-bold ${changePct >= 0 ? "text-bull" : "text-bear"}`}>
                 {changePct >= 0 ? "+" : ""}
                 {formatNumber(changePct)}%
               </p>
-              <p className="app-muted text-xs">Günlük (temsili)</p>
+              <p className="app-muted text-xs">{liveQuote ? "Canlı fiyat · 30 sn" : "Demo fiyat"}</p>
             </div>
           </div>
         </div>

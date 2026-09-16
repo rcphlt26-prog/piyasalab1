@@ -33,6 +33,8 @@ export function OverlayLineChart({ data, keys, logScale = false }: { data: Gener
         <Tooltip
           contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }}
           labelStyle={{ color: "#e2e8f0" }}
+          labelFormatter={(label) => `Yıl: ${label}`}
+          formatter={(value: unknown, name: unknown) => [formatTooltipValue(value), String(name)]}
         />
         {keys.map((key, index) => (
           <Line key={key} type="monotone" dataKey={key} stroke={colors[index % colors.length]} strokeWidth={2} dot={false} />
@@ -49,7 +51,7 @@ export function SimpleBarChart({ data, xKey, yKey }: { data: GenericPoint[]; xKe
         <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
         <XAxis dataKey={xKey} stroke="#94a3b8" />
         <YAxis stroke="#94a3b8" />
-        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
+        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} formatter={(value: unknown, name: unknown) => [formatTooltipValue(value), String(name)]} />
         <Bar dataKey={yKey} fill="#10b981" radius={[8, 8, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -63,7 +65,7 @@ export function InsiderFlowChart({ data }: { data: { tur: string; tutar: number 
         <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
         <XAxis dataKey="tur" stroke="#94a3b8" />
         <YAxis stroke="#94a3b8" />
-        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
+        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} formatter={(value: unknown, name: unknown) => [formatTooltipValue(value), String(name)]} />
         <Bar dataKey="tutar" radius={[8, 8, 0, 0]}>
           {data.map((d) => (
             <Cell key={d.tur} fill={d.tur === "Alım" ? "#10b981" : d.tur === "Satım" ? "#f43f5e" : "#38bdf8"} />
@@ -82,7 +84,7 @@ export function ScoreRadar({ data }: { data: { metric: string; score: number }[]
         <PolarAngleAxis dataKey="metric" stroke="#cbd5e1" />
         <PolarRadiusAxis stroke="#64748b" angle={30} domain={[0, 10]} />
         <Radar dataKey="score" stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
-        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
+        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} formatter={(value: unknown, name: unknown) => [formatTooltipValue(value), String(name)]} />
       </RadarChart>
     </ResponsiveContainer>
   );
@@ -98,8 +100,12 @@ export function AllocationChart({ data }: { data: { ad: string; oran: number }[]
             <Cell key={item.ad} fill={colors[idx % colors.length]} />
           ))}
         </Pie>
-        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
+        <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }} formatter={(value: unknown, name: unknown) => [formatTooltipValue(value), String(name)]} />
       </PieChart>
     </ResponsiveContainer>
   );
+}
+
+function formatTooltipValue(value: unknown) {
+  return typeof value === "number" ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(value) : String(value ?? "-");
 }
