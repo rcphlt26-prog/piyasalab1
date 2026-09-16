@@ -21,11 +21,24 @@ export function NewsSection() {
   const [category, setCategory] = useState<"Tümü" | NewsCategory>("Tümü");
   const [sortDesc, setSortDesc] = useState(true);
   const [news, setNews] = useState<NewsItem[]>(IS_PROD ? [] : newsData);
-  const [source, setSource] = useState<"loading" | "supabase" | "demo" | "empty">("loading");
+  const [source, setSource] = useState<"loading" | "yandex" | "supabase" | "demo" | "empty">("loading");
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      try {
+        const response = await fetch("/api/cron/fetch-news", { cache: "no-store" });
+        const payload = (await response.json()) as { items?: NewsItem[] };
+        if (response.ok && payload.items && payload.items.length > 0) {
+          if (cancelled) return;
+          setNews(payload.items);
+          setSource("yandex");
+          return;
+        }
+      } catch {
+        // Supabase fallback below keeps the page usable when the RSS request fails.
+      }
+
       const remote = await fetchNews();
       if (cancelled) return;
       if (remote && remote.length > 0) {
@@ -63,7 +76,9 @@ export function NewsSection() {
       />
 
       <div className="mb-3">
-        {source === "supabase" ? (
+        {source === "yandex" ? (
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Yandex Haberler) · 30 sn&apos;de bir güncellenir</span>
+        ) : source === "supabase" ? (
           <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Supabase) · 30 sn&apos;de bir güncellenir</span>
         ) : source === "demo" ? (
           <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Demo veri</span>
@@ -116,14 +131,13 @@ export function NewsSection() {
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {items.map((n: any) => {
-            // Eğer Supabase'den gelen veride 'url' varsa dış kaynak linki olarak kullan, yoksa standart akış
+          {items.map((n) => {
             const articleUrl = n.url || "#";
             const isExternal = Boolean(n.url);
 
             return (
               <a
-                key={n.slug || n.id || n.title}
+                key={n.slug || n.title}
                 href={articleUrl}
                 target={isExternal ? "_blank" : "_self"}
                 rel={isExternal ? "noopener noreferrer" : ""}
@@ -144,7 +158,7 @@ export function NewsSection() {
                   {isExternal && <ExternalLink className="h-4 w-4 opacity-50 group-hover:opacity-100 transition shrink-0 ml-2" />}
                 </h3>
                 
-                <p className="app-text-secondary text-sm leading-6">{n.summary || n.content}</p>
+                <p className="app-text-secondary text-sm leading-6">{n.summary}</p>
                 
                 {n.relatedTickers && n.relatedTickers.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1">
