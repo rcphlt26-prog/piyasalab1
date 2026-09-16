@@ -6,7 +6,7 @@ import { ArrowDownRight, ArrowUpRight, Search, Star } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchStar } from "@/components/WatchStar";
-import { TradingViewAdvancedChart, TradingViewMiniOverview, TradingViewTape } from "@/components/TradingViewWidgets";
+import { PriceChart } from "@/components/PriceChart";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Card } from "@/components/ui/Card";
 import { Sparkline, generateSparkData } from "@/components/ui/Sparkline";
@@ -32,9 +32,8 @@ export function MarketSection() {
 
   const watchedQuotes = quotes.filter((q) => tickers.includes(q.code));
 
-  const activeCategories = TABS.find((t) => t.key === activeTab)?.categories ?? [];
-
   const visibleQuotes = useMemo(() => {
+    const activeCategories = TABS.find((t) => t.key === activeTab)?.categories ?? [];
     let list = quotes.filter((q) => {
       const cat = categoryOf(q.code);
       return cat ? activeCategories.includes(cat) : false;
@@ -46,7 +45,16 @@ export function MarketSection() {
       );
     }
     return list;
-  }, [quotes, activeCategories, activeTab, cryptoSearch]);
+  }, [quotes, activeTab, cryptoSearch]);
+
+  const marketChartData = useMemo(() => {
+    const quote = visibleQuotes[0];
+    if (!quote) return [];
+    return generateSparkData(quote.code, 24).map((value, index) => ({
+      time: `2026-09-${String(index + 1).padStart(2, "0")}` as `${number}-${number}-${number}`,
+      value,
+    }));
+  }, [visibleQuotes]);
 
   return (
     <section className="section-card fade-in">
@@ -163,11 +171,13 @@ export function MarketSection() {
         )}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card padded={false} className="p-2"><TradingViewTape /></Card>
-        <Card padded={false} className="p-2"><TradingViewMiniOverview /></Card>
-      </div>
-      <Card padded={false} className="mt-4 p-2"><TradingViewAdvancedChart /></Card>
+      <Card padded={false} className="mt-4 p-2">
+        <div className="px-2 pt-2">
+          <h3 className="app-text text-sm font-semibold">{visibleQuotes[0]?.label ?? "Piyasa"} Fiyat Grafiği</h3>
+          <p className="app-muted text-xs">Seçili kategorideki ilk varlığın son hareketi</p>
+        </div>
+        {marketChartData.length > 0 ? <PriceChart data={marketChartData} height={380} /> : null}
+      </Card>
 
       <p className="app-muted mt-3 text-xs">
         Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. Son güncelleme: {updatedAt ? new Date(updatedAt).toLocaleString("tr-TR") : "-"} · {demoMode ? "Demo veri modu" : "Canlı kaynak"}

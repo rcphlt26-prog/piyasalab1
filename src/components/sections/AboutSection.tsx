@@ -29,7 +29,7 @@ export function AboutSection() {
           <ul className="space-y-2 text-sm">
             <li className="app-text-secondary flex items-center gap-2"><Code2 className="text-primary h-4 w-4" /> Next.js (App Router) & TypeScript</li>
             <li className="app-text-secondary flex items-center gap-2"><Database className="text-bull h-4 w-4" /> Supabase (gerçek zamanlı forum & anketler)</li>
-            <li className="app-text-secondary flex items-center gap-2"><LineChart className="text-gold h-4 w-4" /> TradingView & Recharts görselleştirme</li>
+            <li className="app-text-secondary flex items-center gap-2"><LineChart className="text-gold h-4 w-4" /> Lightweight Charts & Recharts görselleştirme</li>
           </ul>
         </div>
       </div>
