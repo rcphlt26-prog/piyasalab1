@@ -7,6 +7,7 @@ export type NewsItem = {
   category: NewsCategory;
   source: string;
   date: string; // YYYY-MM-DD
+  url?: string;
   breaking?: boolean;
   relatedTickers?: string[];
 };
