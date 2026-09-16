@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, ExternalLink } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { newsData, type NewsCategory, type NewsItem } from "@/data/newsData";
 import { fetchNews } from "@/lib/supabase/data";
@@ -32,7 +32,6 @@ export function NewsSection() {
         setNews(remote);
         setSource("supabase");
       } else if (IS_PROD) {
-        // Production'da demo haberleri gösterme; boş durum mesajı ver
         setNews([]);
         setSource("empty");
       } else {
@@ -41,7 +40,6 @@ export function NewsSection() {
       }
     };
     void load();
-    // 30 saniyede bir yeniden çek (canlı Supabase güncellemeleri için)
     const timer = setInterval(() => void load(), 30000);
     return () => {
       cancelled = true;
@@ -61,7 +59,7 @@ export function NewsSection() {
       <SectionTitle
         eyebrow="Gündem"
         title="Piyasa Haberleri ve Ekonomi Gündemi"
-        description="Ekonomi, BIST, döviz ve emtia başlıklarında derlenen güncel gelişmeler. Tüm içerikler temsili/eğitim amaçlıdır."
+        description="Ekonomi, BIST, döviz ve emtia başlıklarında güncel gelişmeler. Haberin detayları için kaynak sitelere yönlendirilirsiniz."
       />
 
       <div className="mb-3">
@@ -118,27 +116,51 @@ export function NewsSection() {
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          {items.map((n) => (
-            <article key={n.slug} className="app-surface-2 app-border card-hover rounded-2xl border p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${catColor[n.category]}`}>{n.category}</span>
-                {n.breaking ? <span className="rounded-full bg-[var(--color-bear)] px-2 py-0.5 text-[11px] font-bold text-white">Son Dakika</span> : null}
-                <span className="app-muted ml-auto flex items-center gap-1 text-[11px]">
-                  <Clock className="h-3 w-3" /> {new Date(n.date).toLocaleDateString("tr-TR")}
-                </span>
-              </div>
-              <h3 className="app-text mb-1 text-base font-semibold leading-snug">{n.title}</h3>
-              <p className="app-text-secondary text-sm leading-6">{n.summary}</p>
-              {n.relatedTickers && n.relatedTickers.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {n.relatedTickers.map((t) => (
-                    <span key={t} className="app-surface-3 app-text-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold">{t}</span>
-                  ))}
+          {items.map((n: any) => {
+            // Eğer Supabase'den gelen veride 'url' varsa dış kaynak linki olarak kullan, yoksa standart akış
+            const articleUrl = n.url || "#";
+            const isExternal = Boolean(n.url);
+
+            return (
+              <a
+                key={n.slug || n.id || n.title}
+                href={articleUrl}
+                target={isExternal ? "_blank" : "_self"}
+                rel={isExternal ? "noopener noreferrer" : ""}
+                className="app-surface-2 app-border card-hover rounded-2xl border p-4 block transition hover:border-[var(--color-primary-light)] group"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${catColor[n.category as NewsCategory] || "bg-gray-500/15 text-gray-400"}`}>
+                    {n.category || "Genel"}
+                  </span>
+                  {n.breaking ? <span className="rounded-full bg-[var(--color-bear)] px-2 py-0.5 text-[11px] font-bold text-white">Son Dakika</span> : null}
+                  <span className="app-muted ml-auto flex items-center gap-1 text-[11px]">
+                    <Clock className="h-3 w-3" /> {n.date ? new Date(n.date).toLocaleDateString("tr-TR") : ""}
+                  </span>
                 </div>
-              ) : null}
-              <p className="app-muted mt-2 text-xs">Kaynak: {n.source}</p>
-            </article>
-          ))}
+                
+                <h3 className="app-text mb-1 text-base font-semibold leading-snug flex items-center justify-between">
+                  <span>{n.title}</span>
+                  {isExternal && <ExternalLink className="h-4 w-4 opacity-50 group-hover:opacity-100 transition shrink-0 ml-2" />}
+                </h3>
+                
+                <p className="app-text-secondary text-sm leading-6">{n.summary || n.content}</p>
+                
+                {n.relatedTickers && n.relatedTickers.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {n.relatedTickers.map((t: string) => (
+                      <span key={t} className="app-surface-3 app-text-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold">{t}</span>
+                    ))}
+                  </div>
+                ) : null}
+                
+                <div className="mt-2 flex items-center justify-between text-xs">
+                  <span className="app-muted">Kaynak: {n.source || "Yahoo Finance"}</span>
+                  {isExternal && <span className="text-[var(--color-primary)] font-medium">Habere Git →</span>}
+                </div>
+              </a>
+            );
+          })}
         </div>
       )}
       <p className="app-muted mt-4 text-xs">Haberler bilgilendirme amaçlıdır ve yatırım tavsiyesi niteliği taşımaz.</p>
