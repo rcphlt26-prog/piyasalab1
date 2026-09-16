@@ -26,6 +26,7 @@ type NewsRow = {
   category: string;
   source: string | null;
   news_date: string | null;
+  url: string | null;
   breaking: boolean | null;
   related_tickers: string[] | null;
 };
@@ -68,7 +69,7 @@ export async function fetchNews(): Promise<NewsItem[] | null> {
   try {
     const { data, error } = await supabase
       .from("news")
-      .select("slug, title, summary, category, source, news_date, breaking, related_tickers")
+      .select("slug, title, summary, category, source, news_date, url, breaking, related_tickers")
       .order("news_date", { ascending: false });
     if (error || !data || data.length === 0) return null;
     return (data as NewsRow[]).map((r) => ({
@@ -80,6 +81,7 @@ export async function fetchNews(): Promise<NewsItem[] | null> {
         : "Ekonomi"),
       source: r.source ?? "VeriAkış",
       date: r.news_date ?? "",
+      url: r.url ?? undefined,
       breaking: Boolean(r.breaking),
       relatedTickers: r.related_tickers ?? [],
     }));
