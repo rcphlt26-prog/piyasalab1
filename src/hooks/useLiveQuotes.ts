@@ -98,3 +98,31 @@ export function useLiveQuotes() {
     updatedAt: quotes[0]?.timestamp,
   };
 }
+
+export function useLiveQuote(code: string) {
+  const [quote, setQuote] = useState<LiveQuote | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = async () => {
+      try {
+        const response = await fetch(`/api/quotes?symbols=${encodeURIComponent(code)}`, { cache: "no-store" });
+        const payload = (await response.json()) as { data?: LiveQuote[] };
+        if (mounted && payload.data?.[0]) setQuote(payload.data[0]);
+      } catch {
+        // Keep the last quote visible during a temporary network failure.
+      }
+      if (mounted) timer = setTimeout(load, 30000);
+    };
+
+    void load();
+    return () => {
+      mounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [code]);
+
+  return quote;
+}
