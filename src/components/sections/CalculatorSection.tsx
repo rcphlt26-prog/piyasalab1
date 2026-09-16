@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Coins } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
@@ -24,6 +24,7 @@ export function CalculatorSection() {
   const [drip, setDrip] = useState(true);
   const [usCpiAdjusted, setUsCpiAdjusted] = useState(false);
   const [chartScale, setChartScale] = useState<"linear" | "log">("linear");
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const [powerYear, setPowerYear] = useState(2005);
   const [powerAmount, setPowerAmount] = useState(10000);
@@ -70,6 +71,10 @@ export function CalculatorSection() {
     };
   }, [powerAmount, powerYear, nowPower]);
 
+  function focusResults() {
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <section className="section-card fade-in">
       <SectionTitle
@@ -101,8 +106,12 @@ export function CalculatorSection() {
 
       <AdSlot label="Hesaplayıcı Altı Inline" width={300} height={250} className="my-4" />
 
+      <button type="button" onClick={focusResults} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110">
+        Hesapla ve sonucu göster
+      </button>
+
       {currentReturn.message ? <p className="mb-3 rounded-lg border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-3 text-sm text-gold">{currentReturn.message}</p> : null}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div ref={resultsRef} className="scroll-mt-24 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Nihai nominal değer</p><p className="app-text text-lg font-bold">{formatCurrency(currentReturn.finalNominal)}</p></div>
         <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Toplam getiri</p><p className={`text-lg font-bold ${currentReturn.gainPct >= 0 ? "text-bull" : "text-bear"}`}>%{formatNumber(currentReturn.gainPct)}</p></div>
         <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">CAGR</p><p className="app-text text-lg font-bold">%{formatNumber(currentReturn.cagr)}</p></div>

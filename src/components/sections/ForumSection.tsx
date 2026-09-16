@@ -195,7 +195,7 @@ export function ForumSection() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr_260px]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
         {/* Sol: Kategoriler */}
         <aside className="app-surface-2 app-border rounded-xl border p-3">
           <h3 className="app-muted mb-2 text-xs font-semibold uppercase tracking-wide">Kategoriler</h3>
@@ -224,7 +224,7 @@ export function ForumSection() {
         </aside>
 
         {/* Orta: Akış */}
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <div className="app-surface-2 app-border rounded-xl border p-3">
             <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
               {categoryTickers.map((t) => (
@@ -293,9 +293,9 @@ export function ForumSection() {
                 tickerComments.map((c) => {
                   const counts = reactionCount.get(c.id) ?? { rocket: 0, fire: 0, cry: 0 };
                   return (
-                    <article key={c.id} className="app-surface app-border card-hover rounded-xl border p-3">
-                      <div className="mb-1 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                    <article key={c.id} className="app-surface app-border card-hover min-w-0 overflow-hidden rounded-xl border p-3">
+                      <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <strong className="app-text text-sm">{c.nickname}</strong>
                           <span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
                             Getiri {c.portfolio_band}
@@ -304,7 +304,7 @@ export function ForumSection() {
                         </div>
                         <span className="app-muted text-[10px]">{relativeTime(c.created_at)}</span>
                       </div>
-                      <p className="app-text-secondary text-sm">{c.body}</p>
+                      <p className="app-text-secondary break-words text-sm">{c.body}</p>
                       <div className="mt-2 flex gap-2">
                         {reactionEmojis.map(({ emoji, key }) => (
                           <button
