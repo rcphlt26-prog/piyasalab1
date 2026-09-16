@@ -6,6 +6,16 @@ export const revalidate = 30;
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
+const GOLD_FACTORS: Record<string, number> = {
+  GRAMALTIN: 1,
+  CEYREKALTIN: 1.754,
+  YARIMALTIN: 3.508,
+  TAMALTIN: 7.016,
+  ATAALTIN: 7.216,
+  RESATALTIN: 7.216,
+  BILEZIK22: 1,
+};
+
 type Quote = {
   code: string;
   label: string;
@@ -51,14 +61,23 @@ export async function GET(request: Request) {
   }
 
   try {
-    const yahooSymbols = selected.map((s) => s.yahooSymbol);
+    const needsGoldConversion = selected.some((s) => GOLD_FACTORS[s.code]);
+    const yahooSymbols = [...new Set([
+      ...selected.map((s) => s.yahooSymbol),
+      ...(needsGoldConversion ? ["GC=F", "TRY=X"] : []),
+    ])];
     const results = await yahooFinance.quote(yahooSymbols);
     const list = Array.isArray(results) ? results : [results];
     const bySymbol = new Map(list.map((r) => [r.symbol, r]));
+    const ounceGold = Number(bySymbol.get("GC=F")?.regularMarketPrice ?? 0);
+    const usdTry = Number(bySymbol.get("TRY=X")?.regularMarketPrice ?? 0);
 
     const data: Quote[] = selected.map((item) => {
       const r = bySymbol.get(item.yahooSymbol);
-      const price = Number(r?.regularMarketPrice ?? 0);
+      const convertedGold = GOLD_FACTORS[item.code]
+        ? (ounceGold * usdTry * GOLD_FACTORS[item.code]) / 31.1035 * (item.code === "BILEZIK22" ? 0.9167 : 1)
+        : 0;
+      const price = convertedGold || Number(r?.regularMarketPrice ?? 0);
       const changePct = Number(r?.regularMarketChangePercent ?? 0);
       return {
         code: item.code,
