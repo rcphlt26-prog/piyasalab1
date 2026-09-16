@@ -19,7 +19,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Piyasalab | Borsa Getiri Hesaplama ve Enflasyon Araçları",
+  title: "VeriAkış | Borsa Getiri Hesaplama ve Enflasyon Araçları",
   description:
     "Borsa getiri hesaplama, enflasyon hesaplama, dolar bazlı reel getiri analizi, alım gücü simülatörü ve canlı piyasa forumu.",
   keywords: [
@@ -31,19 +31,19 @@ export const metadata: Metadata = {
     "temettü yeniden yatırım",
     "piyasa sentiment",
   ],
-  alternates: { canonical: "https://piyasalab.com.tr" },
+  alternates: { canonical: "https://veriakis.com" },
   openGraph: {
-    title: "Piyasalab - Borsa, Enflasyon ve Reel Getiri Platformu",
+    title: "VeriAkış - Borsa, Enflasyon ve Reel Getiri Platformu",
     description:
       "Canlı BIST akışı, reel getiri araçları, nostalji simülatörü, viral mini oyunlar ve topluluk forumu.",
     type: "website",
     locale: "tr_TR",
-    url: "https://piyasalab.com.tr",
-    siteName: "Piyasalab",
+    url: "https://veriakis.com",
+    siteName: "VeriAkış",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Piyasalab",
+    title: "VeriAkış",
     description: "Borsa ve enflasyon odaklı interaktif finans platformu.",
   },
   robots: {
@@ -73,10 +73,10 @@ const faqData = [
 const webAppJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Piyasalab",
+  name: "VeriAkış",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
-  url: "https://piyasalab.com.tr",
+  url: "https://veriakis.com",
   description:
     "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
   inLanguage: "tr-TR",
@@ -99,10 +99,10 @@ const articleJsonLd = {
   "@context": "https://schema.org",
   "@type": "Article",
   headline: "Borsa İstanbul Getiri Hesaplama, Enflasyon ve Dolar Bazlı Reel Kazançlar",
-  author: { "@type": "Organization", name: "Piyasalab" },
-  publisher: { "@type": "Organization", name: "Piyasalab" },
+  author: { "@type": "Organization", name: "VeriAkış" },
+  publisher: { "@type": "Organization", name: "VeriAkış" },
   inLanguage: "tr-TR",
-  mainEntityOfPage: "https://piyasalab.com.tr",
+  mainEntityOfPage: "https://veriakis.com",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

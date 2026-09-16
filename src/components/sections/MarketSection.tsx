@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Star } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Search, Star } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchStar } from "@/components/WatchStar";
@@ -10,13 +11,42 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Card } from "@/components/ui/Card";
 import { Sparkline, generateSparkData } from "@/components/ui/Sparkline";
 import { formatNumber } from "@/lib/utils";
-import { stockByTicker } from "@/data/marketSymbols";
+import { marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
+
+type TabKey = "borsa" | "doviz" | "emtia" | "kripto";
+
+const TABS: Array<{ key: TabKey; label: string; categories: MarketCategory[] }> = [
+  { key: "borsa", label: "Endeks & Hisseler", categories: ["endeks", "hisse"] },
+  { key: "doviz", label: "Döviz", categories: ["doviz"] },
+  { key: "emtia", label: "Emtia", categories: ["emtia"] },
+  { key: "kripto", label: "Kripto", categories: ["kripto"] },
+];
+
+const categoryOf = (code: string): MarketCategory | undefined => marketSymbolByCode.get(code)?.category;
 
 export function MarketSection() {
   const { quotes, tickerTape, demoMode, updatedAt } = useLiveQuotes();
   const { isWatched, toggle, tickers, localOnly } = useWatchlist();
+  const [activeTab, setActiveTab] = useState<TabKey>("borsa");
+  const [cryptoSearch, setCryptoSearch] = useState("");
 
   const watchedQuotes = quotes.filter((q) => tickers.includes(q.code));
+
+  const activeCategories = TABS.find((t) => t.key === activeTab)?.categories ?? [];
+
+  const visibleQuotes = useMemo(() => {
+    let list = quotes.filter((q) => {
+      const cat = categoryOf(q.code);
+      return cat ? activeCategories.includes(cat) : false;
+    });
+    if (activeTab === "kripto" && cryptoSearch.trim()) {
+      const term = cryptoSearch.trim().toLowerCase();
+      list = list.filter(
+        (q) => q.code.toLowerCase().includes(term) || q.label.toLowerCase().includes(term),
+      );
+    }
+    return list;
+  }, [quotes, activeCategories, activeTab, cryptoSearch]);
 
   return (
     <section className="section-card fade-in">
@@ -31,37 +61,32 @@ export function MarketSection() {
           <p className="app-muted text-xs">Henüz favori eklemediniz — kartlardaki yıldıza dokunun.</p>
         ) : (
           <div className="no-scrollbar flex gap-2 overflow-x-auto">
-            {watchedQuotes.map((q) => {
-              const isStock = stockByTicker.has(q.code);
-              const inner = (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="app-text text-xs font-semibold">{q.label}</span>
-                    <WatchStar watched onToggle={() => toggle(q.code)} size={13} />
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="app-text text-sm font-bold">{formatNumber(q.price)}</span>
-                    <span className={`text-[11px] ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>
-                      {q.changePct >= 0 ? "+" : ""}{formatNumber(q.changePct, 2)}%
-                    </span>
-                  </div>
-                </>
-              );
-              const cls = "app-surface app-border min-w-[150px] rounded-lg border px-2.5 py-1.5";
-              return isStock ? (
-                <Link key={q.code} href={`/varlik/${q.code}`} className={`${cls} card-hover`}>{inner}</Link>
-              ) : (
-                <div key={q.code} className={cls}>{inner}</div>
-              );
-            })}
+            {watchedQuotes.map((q) => (
+              <Link
+                key={q.code}
+                href={`/varlik/${q.code}`}
+                className="app-surface app-border card-hover min-w-[150px] rounded-lg border px-2.5 py-1.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="app-text text-xs font-semibold">{q.label}</span>
+                  <WatchStar watched onToggle={() => toggle(q.code)} size={13} />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="app-text text-sm font-bold">{formatNumber(q.price)}</span>
+                  <span className={`text-[11px] ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>
+                    {q.changePct >= 0 ? "+" : ""}{formatNumber(q.changePct, 2)}%
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
 
       <SectionTitle
         eyebrow="Canlı Veri"
-        title="Saniyelik Canlı Borsa ve Döviz Akışı"
-        description="Veriler yaklaşık 3 saniyede bir güncellenir. Kaynak erişilemezse ekran demo veriyle boş kalmadan çalışmaya devam eder."
+        title="Canlı Borsa, Döviz, Emtia ve Kripto Akışı"
+        description="Veriler Yahoo Finance üzerinden yaklaşık 30 saniyede bir güncellenir. Kaynak erişilemezse ekran demo veriyle boş kalmadan çalışmaya devam eder."
       />
 
       <div className="app-surface-2 app-border mb-3 rounded-xl border p-2">
@@ -75,12 +100,47 @@ export function MarketSection() {
         </div>
       </div>
 
+      {/* Kategori sekmeleri */}
+      <div className="mb-3 flex flex-wrap gap-2">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+              activeTab === tab.key
+                ? "border-transparent bg-[var(--color-primary)] text-white"
+                : "app-surface app-border app-text card-hover"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "kripto" && (
+        <div className="app-surface-2 app-border mb-3 flex items-center gap-2 rounded-xl border px-3 py-2">
+          <Search className="app-muted h-4 w-4" />
+          <input
+            value={cryptoSearch}
+            onChange={(e) => setCryptoSearch(e.target.value)}
+            placeholder="Kripto ara (BTC, Ethereum, SOL...)"
+            className="app-text w-full bg-transparent text-sm outline-none placeholder:opacity-60"
+          />
+        </div>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {quotes.map((q) => {
-          const isStock = stockByTicker.has(q.code);
+        {visibleQuotes.map((q) => {
           const spark = generateSparkData(q.code);
-          const inner = (
-            <>
+          return (
+            <Link
+              key={q.code}
+              href={`/varlik/${q.code}`}
+              className={`app-surface-2 app-border card-hover cursor-pointer rounded-xl border p-3 ${
+                q.direction === "up" ? "flash-up" : q.direction === "down" ? "flash-down" : ""
+              }`}
+            >
               <div className="mb-1 flex items-center justify-between gap-1">
                 <h3 className="app-text text-sm font-semibold">{q.label}</h3>
                 <div className="flex items-center gap-1">
@@ -94,16 +154,13 @@ export function MarketSection() {
                 <p className="app-text text-lg font-bold">{formatNumber(q.price)}</p>
                 <Sparkline data={spark} trend={q.changePct >= 0 ? "up" : "down"} />
               </div>
-              <p className="app-muted text-[11px]">{q.source}{isStock ? " · Detay için tıkla" : ""}</p>
-            </>
-          );
-          const cls = `app-surface-2 app-border rounded-xl border p-3 ${q.direction === "up" ? "flash-up" : q.direction === "down" ? "flash-down" : ""} ${isStock ? "card-hover cursor-pointer" : ""}`;
-          return isStock ? (
-            <Link key={q.code} href={`/varlik/${q.code}`} className={cls}>{inner}</Link>
-          ) : (
-            <article key={q.code} className={cls}>{inner}</article>
+              <p className="app-muted text-[11px]">{q.source} · Detay için tıkla</p>
+            </Link>
           );
         })}
+        {visibleQuotes.length === 0 && (
+          <p className="app-muted col-span-full py-6 text-center text-sm">Sonuç bulunamadı.</p>
+        )}
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

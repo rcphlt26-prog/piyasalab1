@@ -1,4 +1,4 @@
-const STORAGE_KEY = "piyasalab_client_id";
+const STORAGE_KEY = "VeriAkış_client_id";
 
 /**
  * Tarayıcı bazlı anonim istemci kimliği döndürür.

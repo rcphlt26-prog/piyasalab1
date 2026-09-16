@@ -1,4 +1,4 @@
--- Piyasalab Supabase şeması
+-- VeriAkış Supabase şeması
 -- Bu SQL dosyasını Supabase SQL Editor içinde bir kez çalıştırın.
 
 create extension if not exists pgcrypto;
@@ -189,7 +189,7 @@ where not exists (select 1 from public.ipos);
 -- Örnek haber kayıtları (test için) — yalnızca yoksa eklenir
 insert into public.news (slug, title, summary, category, source, news_date, breaking, related_tickers)
 select * from (values
-  ('tcmb-faiz-karari-piyasa', 'TCMB faiz kararı öncesi piyasalarda temkinli seyir', 'Merkez Bankası toplantısı öncesinde yatırımcılar pozisyonlarını sadeleştirdi.', 'Ekonomi', 'Piyasalab Ekonomi', date '2026-09-12', true, array[]::text[]),
+  ('tcmb-faiz-karari-piyasa', 'TCMB faiz kararı öncesi piyasalarda temkinli seyir', 'Merkez Bankası toplantısı öncesinde yatırımcılar pozisyonlarını sadeleştirdi.', 'Ekonomi', 'VeriAkış Ekonomi', date '2026-09-12', true, array[]::text[]),
   ('bist100-rekor-kapanis', 'BIST 100 haftayı rekor kapanışla tamamladı', 'Bankacılık ve holding hisselerindeki alımlarla endeks gün içi zirvesini yeniledi.', 'BIST', 'Borsa Gündem', date '2026-09-12', false, array['GARAN','AKBNK','KCHOL']),
   ('gram-altin-yeni-zirve', 'Gram altın ons ve kur etkisiyle yeni zirvede', 'Güvenli liman talebi ve kur etkisiyle gram altın tarihi yüksek seviyelere ulaştı.', 'Emtia', 'Emtia Bülteni', date '2026-09-11', true, array[]::text[])
 ) as t(slug, title, summary, category, source, news_date, breaking, related_tickers)

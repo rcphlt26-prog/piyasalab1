@@ -40,7 +40,7 @@ export function useLiveQuotes() {
 
     const fetchCycle = async () => {
       const codes = marketSymbols.map((s) => s.code);
-      const groups = chunk(codes, 6);
+      const groups = chunk(codes, 40);
       const fetched: LiveQuote[] = [];
       let anyLive = false;
 
@@ -79,7 +79,7 @@ export function useLiveQuotes() {
         setDemoMode(true);
       }
 
-      timer = setTimeout(fetchCycle, 3000);
+      timer = setTimeout(fetchCycle, 30000);
     };
 
     fetchCycle();
@@ -89,7 +89,7 @@ export function useLiveQuotes() {
     };
   }, [applyUpdate]);
 
-  const tickerTape = useMemo(() => quotes.slice(0, 12), [quotes]);
+  const tickerTape = useMemo(() => quotes.slice(0, 15), [quotes]);
 
   return {
     quotes,

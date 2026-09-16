@@ -13,11 +13,11 @@ export function Footer() {
                 <TrendingUp className="h-5 w-5" />
               </span>
               <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                Piyasalab
+                VeriAkış
               </span>
             </div>
             <p className="app-text-secondary max-w-xl text-sm leading-relaxed">
-              Piyasalab; borsa, döviz, altın ve enflasyon verileriyle çalışan interaktif hesaplayıcılar, hisse karnesi,
+              VeriAkış; borsa, döviz, altın ve enflasyon verileriyle çalışan interaktif hesaplayıcılar, hisse karnesi,
               yatırımcı forumu ve finansal oyunlar sunan bir bilgilendirme ve eğitim platformudur. Tüm hesaplamalar
               tarayıcınızda çalışır.
             </p>
@@ -53,7 +53,7 @@ export function Footer() {
         </div>
 
         <div className="app-border mt-6 flex flex-col items-center justify-between gap-2 border-t pt-4 text-xs sm:flex-row">
-          <p className="app-muted">© 2024-2025 Piyasalab. Tüm hakları saklıdır.</p>
+          <p className="app-muted">© 2024-2025 VeriAkış. Tüm hakları saklıdır.</p>
           <p className="app-muted">Bilgilendirme amaçlıdır · Yatırım tavsiyesi değildir</p>
         </div>
       </div>

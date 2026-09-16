@@ -29,8 +29,8 @@ export function ShareCard({ title, subtitle, metrics, shareText, template = "get
   const [selected, setSelected] = useState<ShareTemplate>(template);
 
   const xIntent = useMemo(() => {
-    const text = encodeURIComponent(`${shareText} \n#Piyasalab`);
-    const url = encodeURIComponent("https://piyasalab.com.tr");
+    const text = encodeURIComponent(`${shareText} \n#VeriAkış`);
+    const url = encodeURIComponent("https://veriakis.com");
     return `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
   }, [shareText]);
 
@@ -50,7 +50,7 @@ export function ShareCard({ title, subtitle, metrics, shareText, template = "get
     if (!imageUrl) return;
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = "piyasalab-sonuc-karti.png";
+    a.download = "VeriAkış-sonuc-karti.png";
     a.click();
   };
 
@@ -58,7 +58,7 @@ export function ShareCard({ title, subtitle, metrics, shareText, template = "get
     if (!imageUrl || !("share" in navigator)) return;
     try {
       const blob = await (await fetch(imageUrl)).blob();
-      const file = new File([blob], "piyasalab.png", { type: "image/png" });
+      const file = new File([blob], "VeriAkış.png", { type: "image/png" });
       await navigator.share({ title, text: shareText, files: [file] });
     } catch {
       // kullanıcı iptal etmiş olabilir
@@ -90,9 +90,9 @@ export function ShareCard({ title, subtitle, metrics, shareText, template = "get
       >
         <div className="mb-4 flex items-center justify-between">
           <strong className="flex items-center gap-1 text-lg">
-            <TrendingUp className="h-5 w-5" /> Piyasalab
+            <TrendingUp className="h-5 w-5" /> VeriAkış
           </strong>
-          <span className="text-xs opacity-80">piyasalab.com.tr</span>
+          <span className="text-xs opacity-80">veriakis.com</span>
         </div>
         <h4 className="text-2xl font-bold">{title}</h4>
         <p className="mb-4 mt-1 text-sm opacity-90">{subtitle}</p>

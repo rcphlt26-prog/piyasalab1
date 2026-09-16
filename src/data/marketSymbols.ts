@@ -1,12 +1,80 @@
+export type MarketCategory = "endeks" | "hisse" | "doviz" | "emtia" | "kripto";
+
 export type MarketSymbol = {
   code: string;
   label: string;
   yahooSymbol: string;
-  category: "endeks" | "hisse" | "doviz" | "emtia";
+  category: MarketCategory;
 };
+
+/* ---- Kripto listesi (code -> [yahooSuffix hariç], label) ---- */
+const cryptoRaw: Array<[string, string]> = [
+  ["BTC", "Bitcoin"],
+  ["ETH", "Ethereum"],
+  ["BNB", "BNB"],
+  ["SOL", "Solana"],
+  ["XRP", "XRP"],
+  ["ADA", "Cardano"],
+  ["DOGE", "Dogecoin"],
+  ["TRX", "TRON"],
+  ["TON", "Toncoin"],
+  ["AVAX", "Avalanche"],
+  ["DOT", "Polkadot"],
+  ["MATIC", "Polygon"],
+  ["LINK", "Chainlink"],
+  ["LTC", "Litecoin"],
+  ["BCH", "Bitcoin Cash"],
+  ["SHIB", "Shiba Inu"],
+  ["UNI", "Uniswap"],
+  ["ATOM", "Cosmos"],
+  ["XLM", "Stellar"],
+  ["ETC", "Ethereum Classic"],
+  ["FIL", "Filecoin"],
+  ["APT", "Aptos"],
+  ["NEAR", "NEAR Protocol"],
+  ["ICP", "Internet Computer"],
+  ["ARB", "Arbitrum"],
+  ["OP", "Optimism"],
+  ["VET", "VeChain"],
+  ["HBAR", "Hedera"],
+  ["ALGO", "Algorand"],
+  ["AAVE", "Aave"],
+  ["GRT", "The Graph"],
+  ["SAND", "The Sandbox"],
+  ["MANA", "Decentraland"],
+  ["AXS", "Axie Infinity"],
+  ["EGLD", "MultiversX"],
+  ["FTM", "Fantom"],
+  ["THETA", "Theta Network"],
+  ["XTZ", "Tezos"],
+  ["FLOW", "Flow"],
+  ["CHZ", "Chiliz"],
+  ["INJ", "Injective"],
+  ["RUNE", "THORChain"],
+  ["IMX", "Immutable"],
+  ["SUI", "Sui"],
+  ["SEI", "Sei"],
+  ["PEPE", "Pepe"],
+  ["WLD", "Worldcoin"],
+  ["RNDR", "Render"],
+  ["MKR", "Maker"],
+  ["QNT", "Quant"],
+  ["CRV", "Curve DAO"],
+  ["LDO", "Lido DAO"],
+  ["STX", "Stacks"],
+  ["KAS", "Kaspa"],
+];
+
+const cryptoSymbols: MarketSymbol[] = cryptoRaw.map(([sym, name]) => ({
+  code: `${sym}USD`,
+  label: name,
+  yahooSymbol: `${sym}-USD`,
+  category: "kripto",
+}));
 
 export const marketSymbols: MarketSymbol[] = [
   { code: "XU100", label: "BIST 100", yahooSymbol: "^XU100", category: "endeks" },
+  { code: "XU030", label: "BIST 30", yahooSymbol: "^XU030", category: "endeks" },
   { code: "THYAO", label: "THYAO", yahooSymbol: "THYAO.IS", category: "hisse" },
   { code: "ASELS", label: "ASELS", yahooSymbol: "ASELS.IS", category: "hisse" },
   { code: "GARAN", label: "GARAN", yahooSymbol: "GARAN.IS", category: "hisse" },
@@ -22,10 +90,24 @@ export const marketSymbols: MarketSymbol[] = [
   { code: "SISE", label: "SISE", yahooSymbol: "SISE.IS", category: "hisse" },
   { code: "ISCTR", label: "ISCTR", yahooSymbol: "ISCTR.IS", category: "hisse" },
   { code: "YKBNK", label: "YKBNK", yahooSymbol: "YKBNK.IS", category: "hisse" },
+  { code: "VAKBN", label: "VAKBN", yahooSymbol: "VAKBN.IS", category: "hisse" },
   { code: "USDTRY", label: "USD/TRY", yahooSymbol: "TRY=X", category: "doviz" },
   { code: "EURTRY", label: "EUR/TRY", yahooSymbol: "EURTRY=X", category: "doviz" },
-  { code: "XAUTRY", label: "Gram Altın", yahooSymbol: "GC=F", category: "emtia" },
+  { code: "GBPTRY", label: "GBP/TRY", yahooSymbol: "GBPTRY=X", category: "doviz" },
+  { code: "JPYTRY", label: "JPY/TRY", yahooSymbol: "JPYTRY=X", category: "doviz" },
+  { code: "CHFTRY", label: "CHF/TRY", yahooSymbol: "CHFTRY=X", category: "doviz" },
+  { code: "SARATRY", label: "SAR/TRY", yahooSymbol: "SARTRY=X", category: "doviz" },
+  { code: "RUBTRY", label: "RUB/TRY", yahooSymbol: "RUBTRY=X", category: "doviz" },
+  { code: "ALTIN", label: "Altın (Ons)", yahooSymbol: "GC=F", category: "emtia" },
+  { code: "GUMUS", label: "Gümüş (Ons)", yahooSymbol: "SI=F", category: "emtia" },
+  { code: "PETROL", label: "Ham Petrol (Brent)", yahooSymbol: "BZ=F", category: "emtia" },
+  { code: "DOGALGAZ", label: "Doğal Gaz", yahooSymbol: "NG=F", category: "emtia" },
+  { code: "BAKIR", label: "Bakır", yahooSymbol: "HG=F", category: "emtia" },
+  { code: "PLATIN", label: "Platin", yahooSymbol: "PL=F", category: "emtia" },
+  ...cryptoSymbols,
 ];
+
+export const marketSymbolByCode = new Map(marketSymbols.map((s) => [s.code, s]));
 
 /* ---- Genişletilmiş hisse dizini (arama & varlık sayfaları için) ---- */
 export type StockCategory = "BIST 100" | "BIST Orta Ölçek" | "Global Hisseler";
@@ -37,7 +119,7 @@ export type StockEntry = {
   category: StockCategory;
 };
 
-const rawBist100: Array<[string, string, string]> = [
+export const rawBist100: Array<[string, string, string]> = [
   ["THYAO", "Türk Hava Yolları", "Ulaştırma"],
   ["ASELS", "Aselsan", "Savunma"],
   ["GARAN", "Garanti BBVA", "Bankacılık"],
@@ -137,7 +219,7 @@ const rawBist100: Array<[string, string, string]> = [
   ["PEKGY", "Peker GYO", "GYO"],
 ];
 
-const rawMidCap: Array<[string, string, string]> = [
+export const rawMidCap: Array<[string, string, string]> = [
   ["KAYSE", "Kayseri Şeker", "Gıda & İçecek"],
   ["SILVR", "SDT Uzay & Savunma", "Savunma"],
   ["SUNTK", "Söktaş Tekstil", "Tekstil & Giyim"],

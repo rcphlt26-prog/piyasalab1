@@ -10,7 +10,7 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { newsForTicker } from "@/data/newsData";
 import { scorecardData } from "@/data/scorecardData";
 import { formatNumber } from "@/lib/utils";
-import type { StockEntry } from "@/data/marketSymbols";
+import type { StockEntry, MarketSymbol } from "@/data/marketSymbols";
 
 const TradingViewSymbolChart = dynamic(
   () => import("@/components/TradingViewWidgets").then((m) => m.TradingViewSymbolChart),
@@ -25,28 +25,91 @@ function seededValue(seed: number, min: number, max: number): number {
   return min + frac * (max - min);
 }
 
-export function AssetDetailClient({ ticker, entry }: { ticker: string; entry: StockEntry | null }) {
+const DOVIZ_TV: Record<string, string> = {
+  USDTRY: "FX_IDC:USDTRY",
+  EURTRY: "FX_IDC:EURTRY",
+  GBPTRY: "FX_IDC:GBPTRY",
+  JPYTRY: "FX_IDC:JPYTRY",
+  CHFTRY: "FX_IDC:CHFTRY",
+  SARATRY: "FX_IDC:SARTRY",
+  RUBTRY: "FX_IDC:RUBTRY",
+};
+
+const EMTIA_TV: Record<string, string> = {
+  ALTIN: "TVC:GOLD",
+  GUMUS: "TVC:SILVER",
+  PETROL: "TVC:UKOIL",
+  DOGALGAZ: "NYMEX:NG1!",
+  BAKIR: "COMEX:HG1!",
+  PLATIN: "TVC:PLATINUM",
+};
+
+const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
+  endeks: "Endeks",
+  hisse: "Hisse Senedi",
+  doviz: "Döviz",
+  emtia: "Emtia",
+  kripto: "Kripto Para",
+};
+
+function resolveTvSymbol(ticker: string, market: MarketSymbol | null, entry: StockEntry | null): string {
+  if (market) {
+    switch (market.category) {
+      case "endeks":
+        return `BIST:${ticker}`;
+      case "hisse":
+        return `BIST:${ticker}`;
+      case "doviz":
+        return DOVIZ_TV[ticker] ?? `FX_IDC:${ticker}`;
+      case "emtia":
+        return EMTIA_TV[ticker] ?? `TVC:${ticker}`;
+      case "kripto":
+        return `CRYPTO:${ticker}`;
+    }
+  }
+  if (entry?.category === "Global Hisseler") return `NASDAQ:${ticker}`;
+  return `BIST:${ticker}`;
+}
+
+export function AssetDetailClient({
+  ticker,
+  entry,
+  market,
+}: {
+  ticker: string;
+  entry: StockEntry | null;
+  market: MarketSymbol | null;
+}) {
   const { isWatched, toggle } = useWatchlist();
-  const name = entry?.name ?? ticker;
-  const sector = entry?.sector ?? "Bilinmiyor";
-  const isGlobal = entry?.category === "Global Hisseler";
-  const tvSymbol = isGlobal ? `NASDAQ:${ticker}` : `BIST:${ticker}`;
+  const name = market?.label ?? entry?.name ?? ticker;
+  const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
+  const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
+  const isStock = market ? market.category === "hisse" : Boolean(entry);
+  const tvSymbol = resolveTvSymbol(ticker, market, entry);
 
   const seed = ticker.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   const spark = generateSparkData(ticker, 24);
   const trend: "up" | "down" = spark[spark.length - 1] >= spark[0] ? "up" : "down";
   const changePct = seededValue(seed, -4, 6);
   const news = newsForTicker(ticker, name);
-  const score = scorecardData[ticker];
+  const score = isStock ? scorecardData[ticker] : undefined;
 
-  const fundamentals: Array<[string, string]> = [
-    ["Sektör", sector],
-    ["Kategori", entry?.category ?? "-"],
-    ["F/K (temsili)", score ? String(score.fk) : formatNumber(seededValue(seed + 1, 4, 25))],
-    ["PD/DD (temsili)", score ? String(score.pddd) : formatNumber(seededValue(seed + 2, 0.8, 5))],
-    ["Piyasa Değeri (temsili)", `₺${formatNumber(seededValue(seed + 3, 5, 400), 1)} milyar`],
-    ["Temettü Verimi (temsili)", `%${formatNumber(seededValue(seed + 4, 0, 8), 1)}`],
-  ];
+  const fundamentals: Array<[string, string]> = isStock
+    ? [
+        ["Sektör", sector],
+        ["Kategori", categoryLabel],
+        ["F/K (temsili)", score ? String(score.fk) : formatNumber(seededValue(seed + 1, 4, 25))],
+        ["PD/DD (temsili)", score ? String(score.pddd) : formatNumber(seededValue(seed + 2, 0.8, 5))],
+        ["Piyasa Değeri (temsili)", `₺${formatNumber(seededValue(seed + 3, 5, 400), 1)} milyar`],
+        ["Temettü Verimi (temsili)", `%${formatNumber(seededValue(seed + 4, 0, 8), 1)}`],
+      ]
+    : [
+        ["Tür", categoryLabel],
+        ["Kaynak Sembol", market?.yahooSymbol ?? "-"],
+        ["52H En Yüksek (temsili)", formatNumber(seededValue(seed + 3, 100, 1000), 2)],
+        ["52H En Düşük (temsili)", formatNumber(seededValue(seed + 4, 10, 90), 2)],
+        ["Günlük Değişim (temsili)", `%${formatNumber(changePct, 2)}`],
+      ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">

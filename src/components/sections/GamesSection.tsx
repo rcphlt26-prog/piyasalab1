@@ -3,11 +3,12 @@
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { Sparkles, Trophy, ShieldCheck, PieChart, Swords } from "lucide-react";
+import Link from "next/link";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { calculateReturn } from "@/lib/finance";
-import { duelPeriods, regretScenarios, tarotDeck } from "@/data/gamesData";
+import { duelPeriods, regretScenarios, dailyTips } from "@/data/gamesData";
 import { popularStocks } from "@/data/scorecardData";
 import { bist100Series, gramGoldSeries, usdTrySeries } from "@/data/historicalData";
 
@@ -66,52 +67,60 @@ const gdbPeriods = [
 ];
 
 export function GamesSection() {
-  // Tarot
-  const [tarotMode, setTarotMode] = useState<"gunluk" | "serbest">("gunluk");
-  const [tarotCards, setTarotCards] = useState<number[]>([0, 2, 4]);
-
-  const runTarot = () => {
+  // Bugünün Piyasa Özeti (deterministik, tarih tohumlu)
+  const dailySummary = useMemo(() => {
     const dateSeed = new Date().toISOString().slice(0, 10);
-    const visitor = localStorage.getItem("piyasalab-visitor") || crypto.randomUUID();
-    localStorage.setItem("piyasalab-visitor", visitor);
-    const seed = tarotMode === "gunluk" ? hashSeed(visitor + dateSeed) : Date.now();
+    const seed = hashSeed(dateSeed);
+    const picks: { ticker: string; change: number }[] = [];
     const used = new Set<number>();
     let i = 0;
-    while (used.size < 3) {
-      used.add((seed + i * 7) % tarotDeck.length);
+    while (picks.length < 3 && i < 200) {
+      const idx = (seed + i * 13) % popularStocks.length;
+      if (!used.has(idx)) {
+        used.add(idx);
+        const ticker = popularStocks[idx];
+        const change = Number((((hashSeed(ticker + dateSeed) % 1200) / 100) - 6).toFixed(2));
+        picks.push({ ticker, change });
+      }
       i += 1;
-      if (i > 50) break;
     }
-    setTarotCards([...used]);
-  };
+    const tip = dailyTips[seed % dailyTips.length];
+    return { picks, tip };
+  }, []);
 
   // Regret
   const [scenarioId, setScenarioId] = useState(regretScenarios[0].id);
+  const [customAmount, setCustomAmount] = useState<string>("");
   const regretResult = useMemo(() => {
     const scenario = regretScenarios.find((s) => s.id === scenarioId) || regretScenarios[0];
-    const base = scenario.amount;
+    const parsedCustom = Number(customAmount.replace(/[^\d]/g, ""));
+    const base = parsedCustom > 0 ? parsedCustom : scenario.amount;
+    const cur: "TL" | "USD" = scenario.currency === "USD" ? "USD" : "TL";
     const yearsCount = Math.max(1, currentYear - scenario.year);
-    const calc = (a: "BIST100" | "GRAM_ALTIN" | "USD") => calculateReturn({ initial: base, currency: "TL", startYear: scenario.year, endYear: currentYear, asset: a, drip: true, usCpiAdjusted: false }).finalNominal;
+    const calc = (a: "BIST100" | "GRAM_ALTIN" | "USD") => calculateReturn({ initial: base, currency: cur, startYear: scenario.year, endYear: currentYear, asset: a, drip: true, usCpiAdjusted: false }).finalNominal;
     const bistVal = calc("BIST100");
     const altinVal = calc("GRAM_ALTIN");
     const usdVal = calc("USD");
     const thyaoVal = bistVal * (1.1 + yearsCount * 0.02);
+    // TL karşılığı baz (USD senaryoda pişmanlık skoru için TL'ye çevrilmiş baz gerekir)
+    const baseTL = cur === "USD" ? calculateReturn({ initial: base, currency: cur, startYear: scenario.year, endYear: scenario.year, asset: "USD", drip: false, usCpiAdjusted: false }).finalNominal : base;
     const best = Math.max(bistVal, altinVal, usdVal, thyaoVal);
-    const regretScore = Math.min(100, Math.round(((best - base) / base) * 16));
+    const regretScore = Math.min(100, Math.max(0, Math.round(((best - baseTL) / baseTL) * 16)));
+    const mkRow = (varlik: string, deger: number) => ({ varlik, deger, pct: ((deger / baseTL - 1) * 100) });
     return {
-      scenario, base, bestValue: best,
+      scenario, base, baseTL, bestValue: best,
       rows: [
-        { varlik: "THYAO", deger: thyaoVal },
-        { varlik: "BIST 100", deger: bistVal },
-        { varlik: "Gram Altın", deger: altinVal },
-        { varlik: "USD", deger: usdVal },
+        mkRow("THYAO", thyaoVal),
+        mkRow("BIST 100", bistVal),
+        mkRow("Gram Altın", altinVal),
+        mkRow("USD", usdVal),
       ],
       regretScore,
       line: regretScore > 75 ? "Pişmanlık seviyesi kritik: O dönemki harcama bugün büyük bir portföy fırsatını kaçırmış olabilir."
         : regretScore > 45 ? "Orta düzey pişmanlık: Fırsat maliyeti can yaksa da yeni planla toparlanabilir."
         : "Düşük pişmanlık: Harcama kararın hayat kalitesine değmiş olabilir.",
     };
-  }, [scenarioId]);
+  }, [scenarioId, customAmount]);
   const regretColor = regretResult.regretScore > 75 ? "#f43f5e" : regretResult.regretScore > 45 ? "#f59e0b" : "#10b981";
 
   // Duel
@@ -189,61 +198,68 @@ export function GamesSection() {
     <section className="section-card fade-in">
       <SectionTitle
         eyebrow="Viral Bölüm"
-        title="Mini Oyunlar: Tarot, Pişmanlık, Düello, Simülatör ve Yarış"
+        title="Mini Oyunlar: Günlük Özet, Pişmanlık, Düello, Simülatör ve Yarış"
         description="Tamamı tarayıcı içinde çalışan, paylaşılabilir eğlenceli finans deneyimleri. Sonuçlar temsilidir, yatırım tavsiyesi değildir."
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Tarot */}
+        {/* Bugünün Piyasa Özeti */}
         <div className="app-surface-2 app-border rounded-xl border p-3">
-          <h3 className="app-text mb-2 text-lg font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-[var(--color-primary-light)]" />Borsa Tarot & Günlük Fal</h3>
-          <div className="mb-2 flex gap-2 text-xs">
-            <button onClick={() => setTarotMode("gunluk")} className={`app-border rounded-lg border px-3 py-1 ${tarotMode === "gunluk" ? "border-[var(--color-bull)]" : ""}`}>Günlük Fal</button>
-            <button onClick={() => setTarotMode("serbest")} className={`app-border rounded-lg border px-3 py-1 ${tarotMode === "serbest" ? "border-[var(--color-bull)]" : ""}`}>Serbest Çekim</button>
-            <button onClick={runTarot} className="rounded-lg bg-[var(--color-bull)] px-3 py-1 text-white">Karıştır & Aç</button>
-          </div>
+          <h3 className="app-text mb-2 text-lg font-semibold"><Sparkles className="mr-1 inline h-4 w-4 text-[var(--color-primary-light)]" />Bugünün Piyasa Özeti</h3>
+          <p className="app-muted mb-3 text-xs">Her gün otomatik seçilen 3 hisse ve günün yatırım ipucu. Sonuçlar temsilidir.</p>
           <div className="grid gap-2 sm:grid-cols-3">
-            {tarotCards.map((idx, cardPos) => {
-              const card = tarotDeck[idx];
-              return (
-                <article key={`${idx}-${cardPos}`} className="app-surface app-border rounded-xl border p-2 text-xs">
-                  <p className={`mb-1 font-semibold ${card.effect === "pozitif" ? "text-bull" : "text-bear"}`}>{card.title}</p>
-                  <p className="app-text-secondary">{card.text}</p>
-                </article>
-              );
-            })}
+            {dailySummary.picks.map((p) => (
+              <Link key={p.ticker} href={`/varlik/${p.ticker}`} className="app-surface app-border rounded-xl border p-3 text-center transition hover:border-[var(--color-primary)]">
+                <p className="app-text text-sm font-bold">{p.ticker}</p>
+                <p className={`mt-1 text-sm font-semibold ${p.change >= 0 ? "text-bull" : "text-bear"}`}>{p.change >= 0 ? "+" : ""}%{formatNumber(p.change, 2)}</p>
+                <p className="app-muted mt-1 text-[10px]">Detay için tıkla</p>
+              </Link>
+            ))}
           </div>
-          <div className="mt-3">
-            <ShareCard template="tarot" title="Günlük Borsa Falım" subtitle={tarotMode === "gunluk" ? "Günlük deterministik mod" : "Serbest mod"} metrics={tarotCards.map((idx) => ({ label: tarotDeck[idx].title, value: tarotDeck[idx].effect === "pozitif" ? "Pozitif" : "Negatif" }))} shareText="Piyasalab tarot bölümünde bugün kartlarımı açtım." />
+          <div className="app-surface app-border mt-3 rounded-xl border p-3">
+            <p className="text-gold mb-1 text-xs font-semibold">💡 Günün İpucu</p>
+            <p className="app-text-secondary text-xs">{dailySummary.tip}</p>
           </div>
         </div>
 
         {/* Regret */}
         <div className="app-surface-2 app-border rounded-xl border p-3">
           <h3 className="app-text mb-2 text-lg font-semibold">😭 Piyasa Pişmanlık Ölçeri</h3>
-          <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)} className="app-surface app-border app-text mb-3 w-full rounded-lg border px-3 py-2 text-sm">
+          <select value={scenarioId} onChange={(e) => { setScenarioId(e.target.value); setCustomAmount(""); }} className="app-surface app-border app-text mb-2 w-full rounded-lg border px-3 py-2 text-sm">
             {regretScenarios.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
+          <label className="app-muted mb-3 block text-xs">Kendi tutarını gir ({regretResult.scenario.currency === "USD" ? "USD" : "₺"}) — boş bırakırsan senaryo tutarı kullanılır
+            <input
+              type="text"
+              inputMode="numeric"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              placeholder={formatNumber(regretResult.scenario.amount, 0)}
+              className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
           <div className="mb-2 flex items-center justify-center">
-            <ArcProgress value={regretResult.regretScore} color={regretColor} />
+            <div className="regret-pulse" style={{ ["--pulse-color" as string]: regretColor }}>
+              <ArcProgress value={regretResult.regretScore} color={regretColor} />
+            </div>
           </div>
           <p className="app-text-secondary mb-2 text-center text-xs">{regretResult.line}</p>
-          <div className="app-surface app-border overflow-hidden rounded-xl border">
-            <table className="w-full text-left text-xs">
-              <thead className="app-surface-3"><tr><th className="p-2">Varlık</th><th className="p-2">Bugünkü Değer</th><th className="p-2">Fark</th></tr></thead>
+          <div className="app-surface app-border overflow-x-auto rounded-xl border">
+            <table className="w-full min-w-[360px] text-left text-xs">
+              <thead className="app-surface-3"><tr><th className="p-2">Varlık</th><th className="p-2">Bugünkü Değer</th><th className="p-2">Getiri</th></tr></thead>
               <tbody>
                 {regretResult.rows.map((r) => (
                   <tr key={r.varlik} className="app-border border-t">
                     <td className="p-2 font-semibold">{r.varlik}</td>
                     <td className="p-2">{formatCurrency(r.deger)}</td>
-                    <td className="p-2 text-bull">+{formatNumber(r.deger - regretResult.base, 0)} ₺</td>
+                    <td className={`p-2 font-semibold ${r.pct >= 0 ? "text-bull" : "text-bear"}`}>{r.pct >= 0 ? "+" : ""}%{formatNumber(r.pct, 0)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div className="mt-3">
-            <ShareCard template="regret" title="Pişmanlık Ölçeri" subtitle={regretResult.scenario.label} highlight={{ label: "Pişmanlık Skoru", value: `${regretResult.regretScore}/100` }} metrics={regretResult.rows.map((r) => ({ label: r.varlik, value: formatCurrency(r.deger) }))} shareText="Piyasalab'da pişmanlık skorumu ölçtüm, sonuç şaşırtıcı çıktı." />
+            <ShareCard template="regret" title="Pişmanlık Ölçeri" subtitle={regretResult.scenario.label} highlight={{ label: "Pişmanlık Skoru", value: `${regretResult.regretScore}/100` }} metrics={[{ label: "Ayrılan tutar", value: formatCurrency(regretResult.baseTL) }, ...regretResult.rows.map((r) => ({ label: r.varlik, value: formatCurrency(r.deger) }))]} shareText="VeriAkış'da pişmanlık skorumu ölçtüm, sonuç şaşırtıcı çıktı." />
           </div>
         </div>
 

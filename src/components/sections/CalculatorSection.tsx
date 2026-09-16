@@ -147,7 +147,7 @@ export function CalculatorSection() {
             { label: "Reel TL", value: formatCurrency(currentReturn.realTl) },
             { label: "USD", value: formatCurrency(currentReturn.usdValue, "USD") },
           ]}
-          shareText={`Piyasalab'da ${toAssetLabel(asset)} için getiri analizimi tamamladım.`}
+          shareText={`VeriAkış'da ${toAssetLabel(asset)} için getiri analizimi tamamladım.`}
         />
       </div>
 

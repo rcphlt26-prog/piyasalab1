@@ -137,6 +137,13 @@ a {
 }
 .grow-bar { animation: growBar 1s ease forwards; }
 
+@keyframes regretPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 var(--pulse-color)); }
+  50% { transform: scale(1.03); filter: drop-shadow(0 0 10px var(--pulse-color)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 var(--pulse-color)); }
+}
+.regret-pulse { animation: regretPulse 2.2s ease-in-out infinite; }
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar {
   -ms-overflow-style: none;

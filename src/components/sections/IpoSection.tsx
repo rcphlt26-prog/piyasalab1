@@ -176,7 +176,7 @@ export function IpoSection() {
             { label: "Toplam Getiri", value: `%${result.gainPct}` },
             { label: "Gün", value: String(days) },
           ]}
-          shareText="Piyasalab IPO tavan serisi hesaplayıcısı ile senaryomu test ettim."
+          shareText="VeriAkış IPO tavan serisi hesaplayıcısı ile senaryomu test ettim."
         />
       </div>
     </section>

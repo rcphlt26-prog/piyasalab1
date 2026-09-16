@@ -78,7 +78,7 @@ export async function fetchNews(): Promise<NewsItem[] | null> {
       category: (VALID_CATEGORIES.includes(r.category as NewsCategory)
         ? (r.category as NewsCategory)
         : "Ekonomi"),
-      source: r.source ?? "Piyasalab",
+      source: r.source ?? "VeriAkış",
       date: r.news_date ?? "",
       breaking: Boolean(r.breaking),
       relatedTickers: r.related_tickers ?? [],

@@ -14,7 +14,7 @@ export const tickerTabs = [
   "YKBNK",
 ] as const;
 
-export type TickerTab = (typeof tickerTabs)[number];
+export type TickerTab = string;
 
 export const portfolioBands = ["%0-10", "%10-20", "%20-30", "%30-40", "%40-50", "%50-75", "%75-100"] as const;
 

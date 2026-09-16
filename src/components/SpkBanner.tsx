@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, AlertTriangle } from "lucide-react";
 
-const STORAGE_KEY = "piyasalab-spk-banner";
+const STORAGE_KEY = "VeriAkış-spk-banner";
 
 export function SpkBanner() {
   const [visible, setVisible] = useState(false);
@@ -36,7 +36,7 @@ export function SpkBanner() {
       <div className="mx-auto flex max-w-7xl items-start gap-3 px-4 py-2.5">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-gold)]" />
         <p className="flex-1 text-xs leading-relaxed text-[var(--color-gold)]">
-          <strong>Yasal Uyarı:</strong> Piyasalab&apos;da yer alan tüm içerik, hesaplama ve veriler yalnızca bilgilendirme
+          <strong>Yasal Uyarı:</strong> VeriAkış&apos;da yer alan tüm içerik, hesaplama ve veriler yalnızca bilgilendirme
           ve eğitim amaçlıdır; yatırım danışmanlığı kapsamında değildir ve yatırım tavsiyesi niteliği taşımaz. Geçmiş
           performans gelecekteki getiriyi garanti etmez.
         </p>

@@ -1,17 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRealtimeCommunity } from "@/hooks/useRealtimeCommunity";
-import { portfolioBands, tickerTabs, type TickerTab } from "@/data/demoRealtime";
+import { portfolioBands } from "@/data/demoRealtime";
+import { rawBist100, stockDirectory } from "@/data/marketSymbols";
 import { formatNumber } from "@/lib/utils";
 
 type ForumCategory = {
   id: string;
   label: string;
   description: string;
-  tickers: readonly TickerTab[];
+  tickers: string[];
 };
 
 const forumCategories: ForumCategory[] = [
@@ -19,37 +21,28 @@ const forumCategories: ForumCategory[] = [
     id: "genel",
     label: "Genel Borsa",
     description: "BİST geneli, endeks ve piyasa gündemi sohbeti.",
-    tickers: tickerTabs,
+    tickers: [
+      "THYAO", "ASELS", "GARAN", "AKBNK", "EREGL", "BIMAS", "TUPRS",
+      "FROTO", "TCELL", "SISE", "KCHOL", "YKBNK", "ISCTR", "VAKBN",
+    ],
   },
   {
     id: "bist100",
     label: "BIST 100 Hisseleri",
     description: "Popüler BİST 100 hisseleri hakkında tartışmalar.",
-    tickers: ["THYAO", "EREGL", "ASELS", "GARAN", "AKBNK", "BIMAS", "TUPRS", "FROTO"],
+    tickers: rawBist100.slice(0, 30).map((r) => r[0]),
   },
   {
     id: "doviz-altin",
     label: "Döviz & Altın",
-    description: "Dolar, euro ve altın tarafındaki beklentiler.",
-    tickers: ["SASA", "SISE", "TCELL"],
-  },
-  {
-    id: "ekonomi",
-    label: "Ekonomi & Makro",
-    description: "Enflasyon, faiz ve makroekonomik veri yorumları.",
-    tickers: ["ISCTR", "YKBNK", "GARAN", "AKBNK"],
+    description: "Dolar, euro, sterlin ve altın/gümüş tarafındaki beklentiler.",
+    tickers: ["USDTRY", "EURTRY", "GBPTRY", "ALTIN", "GUMUS"],
   },
   {
     id: "kripto",
     label: "Kripto",
     description: "Kripto para gündemi ve risk sohbeti.",
-    tickers: ["SASA", "ASELS"],
-  },
-  {
-    id: "yeni-baslayanlar",
-    label: "Yeni Başlayanlar",
-    description: "Borsaya yeni başlayanlar için soru-cevap.",
-    tickers: ["THYAO", "TCELL", "BIMAS"],
+    tickers: ["BTCUSD", "ETHUSD", "BNBUSD", "SOLUSD"],
   },
 ];
 
@@ -93,9 +86,35 @@ export function ForumSection() {
   const [nickname, setNickname] = useState("");
   const [band, setBand] = useState<string>(portfolioBands[0]);
   const [body, setBody] = useState("");
-  const [pollChoice, setPollChoice] = useState<string | null>(null);
+
+  // Tek oy takibi (localStorage)
+  const [votedSide, setVotedSide] = useState<string | null>(null);
+  const [pollVoted, setPollVoted] = useState<string | null>(null);
+
+  // Hisse arama
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVotedSide(localStorage.getItem(`VeriAkış-sentiment-${activeTicker}`));
+  }, [activeTicker]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPollVoted(localStorage.getItem(`VeriAkış-poll-${poll.id}`));
+  }, [poll.id]);
 
   const categoryTickers = activeCategory.tickers;
+
+  const searchResults = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return [];
+    return stockDirectory
+      .filter((s) => s.ticker.toLowerCase().includes(term) || s.name.toLowerCase().includes(term))
+      .slice(0, 6);
+  }, [search]);
 
   function handlePost() {
     const text = body.trim();
@@ -107,6 +126,29 @@ export function ForumSection() {
       body: text,
     });
     setBody("");
+  }
+
+  function handleSentiment(side: "boga" | "ayi") {
+    if (votedSide) return;
+    castSentimentVote(side, band);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`VeriAkış-sentiment-${activeTicker}`, side);
+    }
+    setVotedSide(side);
+  }
+
+  function handlePoll(option: string) {
+    if (pollVoted) return;
+    castPollVote(option);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`VeriAkış-poll-${poll.id}`, option);
+    }
+    setPollVoted(option);
+  }
+
+  function pickSearchTicker(ticker: string) {
+    setActiveTicker(ticker);
+    setSearch("");
   }
 
   return (
@@ -124,6 +166,33 @@ export function ForumSection() {
         <span className={`rounded-full px-3 py-1 ${demoMode ? "bg-[var(--color-gold)]/15 text-gold" : "bg-[var(--color-bull)]/15 text-bull"}`}>
           {demoMode ? "Demo modu (canlı bağlantı yok)" : "Canlı"}
         </span>
+      </div>
+
+      {/* Hisse arama */}
+      <div className="relative mb-4">
+        <div className="app-surface-2 app-border flex items-center gap-2 rounded-xl border px-3 py-2">
+          <Search className="app-muted h-4 w-4" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Hisse ara ve foruma ekle (ör. THYAO, Aselsan)..."
+            className="app-text w-full bg-transparent text-sm outline-none placeholder:opacity-60"
+          />
+        </div>
+        {searchResults.length > 0 && (
+          <div className="app-surface app-border absolute z-10 mt-1 w-full overflow-hidden rounded-xl border shadow-lg">
+            {searchResults.map((s) => (
+              <button
+                key={s.ticker}
+                onClick={() => pickSearchTicker(s.ticker)}
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-[var(--color-primary)]/10"
+              >
+                <span className="app-text font-semibold">{s.ticker}</span>
+                <span className="app-muted text-xs">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[220px_1fr_260px]">
@@ -169,6 +238,11 @@ export function ForumSection() {
                   {t}
                 </button>
               ))}
+              {!categoryTickers.includes(activeTicker) && (
+                <span className="shrink-0 rounded-full bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+                  {activeTicker}
+                </span>
+              )}
             </div>
 
             {/* Yorum formu */}
@@ -267,19 +341,33 @@ export function ForumSection() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => castSentimentVote("boga", band)}
-                className="flex-1 rounded-lg bg-[var(--color-bull)]/15 px-2 py-2 text-xs font-semibold text-bull transition hover:bg-[var(--color-bull)]/25"
+                onClick={() => handleSentiment("boga")}
+                disabled={Boolean(votedSide)}
+                className={`flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                  votedSide === "boga"
+                    ? "bg-[var(--color-bull)] text-white"
+                    : "bg-[var(--color-bull)]/15 text-bull hover:bg-[var(--color-bull)]/25"
+                } ${votedSide ? "cursor-not-allowed opacity-70" : ""}`}
               >
                 🐂 Boğa oyu
               </button>
               <button
-                onClick={() => castSentimentVote("ayi", band)}
-                className="flex-1 rounded-lg bg-[var(--color-bear)]/15 px-2 py-2 text-xs font-semibold text-bear transition hover:bg-[var(--color-bear)]/25"
+                onClick={() => handleSentiment("ayi")}
+                disabled={Boolean(votedSide)}
+                className={`flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                  votedSide === "ayi"
+                    ? "bg-[var(--color-bear)] text-white"
+                    : "bg-[var(--color-bear)]/15 text-bear hover:bg-[var(--color-bear)]/25"
+                } ${votedSide ? "cursor-not-allowed opacity-70" : ""}`}
               >
                 🐻 Ayı oyu
               </button>
             </div>
-            <p className="app-muted mt-2 text-[10px]">Oy ağırlığı seçtiğin getiri bandına göre belirlenir.</p>
+            <p className="app-muted mt-2 text-[10px]">
+              {votedSide
+                ? "Bu varlık için oyunuzu kullandınız."
+                : "Oy ağırlığı seçtiğin getiri bandına göre belirlenir."}
+            </p>
           </div>
 
           <div className="app-surface-2 app-border rounded-xl border p-3">
@@ -288,7 +376,7 @@ export function ForumSection() {
               {hypeIndex.map((h, i) => (
                 <button
                   key={h.ticker}
-                  onClick={() => setActiveTicker(h.ticker as TickerTab)}
+                  onClick={() => setActiveTicker(h.ticker)}
                   className="app-surface app-border flex w-full items-center justify-between rounded-lg border px-2 py-1.5 text-xs transition hover:app-surface-3"
                 >
                   <span className="app-text font-semibold">
@@ -307,11 +395,11 @@ export function ForumSection() {
               {pollStats.byChoice.map((opt) => (
                 <button
                   key={opt.option}
-                  onClick={() => {
-                    setPollChoice(opt.option);
-                    castPollVote(opt.option);
-                  }}
-                  className="app-surface app-border w-full overflow-hidden rounded-lg border text-left"
+                  onClick={() => handlePoll(opt.option)}
+                  disabled={Boolean(pollVoted)}
+                  className={`app-surface app-border w-full overflow-hidden rounded-lg border text-left ${
+                    pollVoted ? "cursor-not-allowed" : ""
+                  }`}
                 >
                   <div className="relative px-2 py-1.5">
                     <div
@@ -319,14 +407,16 @@ export function ForumSection() {
                       style={{ width: `${opt.pct}%` }}
                     />
                     <div className="relative flex justify-between text-xs">
-                      <span className={`app-text ${pollChoice === opt.option ? "font-semibold text-primary" : ""}`}>{opt.option}</span>
+                      <span className={`app-text ${pollVoted === opt.option ? "font-semibold text-primary" : ""}`}>{opt.option}</span>
                       <span className="app-muted">%{formatNumber(opt.pct, 0)}</span>
                     </div>
                   </div>
                 </button>
               ))}
             </div>
-            <p className="app-muted mt-2 text-[10px]">Toplam {pollStats.total} oy</p>
+            <p className="app-muted mt-2 text-[10px]">
+              {pollVoted ? `Oyunuz: ${pollVoted} · Toplam ${pollStats.total} oy` : `Toplam ${pollStats.total} oy`}
+            </p>
           </div>
         </aside>
       </div>

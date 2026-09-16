@@ -1,6 +1,6 @@
-# Piyasalab
+# VeriAkış
 
-Piyasalab, **Borsa İstanbul odaklı canlı piyasa akışı**, **enflasyon ve reel getiri hesaplayıcıları**, **topluluk forumu/sentiment**, **hisse karnesi**, **nostalji simülatörü** ve **viral mini-oyunlar** içeren tek sayfa (SPA hissi veren) bir Next.js finans platformudur.
+VeriAkış, **Borsa İstanbul odaklı canlı piyasa akışı**, **enflasyon ve reel getiri hesaplayıcıları**, **topluluk forumu/sentiment**, **hisse karnesi**, **nostalji simülatörü** ve **viral mini-oyunlar** içeren tek sayfa (SPA hissi veren) bir Next.js finans platformudur.
 
 > ⚠️ Bu uygulamadaki tüm veriler ve çıktılar bilgilendirme amaçlıdır. **Yatırım tavsiyesi değildir.**
 

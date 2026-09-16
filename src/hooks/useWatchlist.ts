@@ -5,7 +5,7 @@ import { getClientId } from "@/lib/clientId";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addToWatchlist, getWatchlist, removeFromWatchlist } from "@/lib/supabase/data";
 
-const LOCAL_KEY = "piyasalab_watchlist";
+const LOCAL_KEY = "VeriAkış_watchlist";
 
 function readLocal(): string[] {
   if (typeof window === "undefined") return [];

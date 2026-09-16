@@ -51,13 +51,13 @@ export default function HomePage() {
             <button
               onClick={() => handleNavigate("piyasa")}
               className="flex shrink-0 items-center gap-2"
-              aria-label="Piyasalab ana sayfa"
+              aria-label="VeriAkış ana sayfa"
             >
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white">
                 <TrendingUp className="h-5 w-5" />
               </span>
               <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                Piyasalab
+                VeriAkış
               </span>
             </button>
 
