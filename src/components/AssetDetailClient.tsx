@@ -3,7 +3,9 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ArrowLeft, TrendingUp } from "lucide-react";
+import type { Time } from "lightweight-charts";
 import { Sparkline, generateSparkData } from "@/components/ui/Sparkline";
+import { PriceChart } from "@/components/PriceChart";
 import { WatchStar } from "@/components/WatchStar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -11,11 +13,6 @@ import { newsForTicker } from "@/data/newsData";
 import { scorecardData } from "@/data/scorecardData";
 import { formatNumber } from "@/lib/utils";
 import type { StockEntry, MarketSymbol } from "@/data/marketSymbols";
-
-const TradingViewSymbolChart = dynamic(
-  () => import("@/components/TradingViewWidgets").then((m) => m.TradingViewSymbolChart),
-  { ssr: false },
-);
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
 
@@ -25,25 +22,6 @@ function seededValue(seed: number, min: number, max: number): number {
   return min + frac * (max - min);
 }
 
-const DOVIZ_TV: Record<string, string> = {
-  USDTRY: "FX_IDC:USDTRY",
-  EURTRY: "FX_IDC:EURTRY",
-  GBPTRY: "FX_IDC:GBPTRY",
-  JPYTRY: "FX_IDC:JPYTRY",
-  CHFTRY: "FX_IDC:CHFTRY",
-  SARATRY: "FX_IDC:SARTRY",
-  RUBTRY: "FX_IDC:RUBTRY",
-};
-
-const EMTIA_TV: Record<string, string> = {
-  ALTIN: "TVC:GOLD",
-  GUMUS: "TVC:SILVER",
-  PETROL: "TVC:UKOIL",
-  DOGALGAZ: "NYMEX:NG1!",
-  BAKIR: "COMEX:HG1!",
-  PLATIN: "TVC:PLATINUM",
-};
-
 const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   endeks: "Endeks",
   hisse: "Hisse Senedi",
@@ -51,25 +29,6 @@ const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   emtia: "Emtia",
   kripto: "Kripto Para",
 };
-
-function resolveTvSymbol(ticker: string, market: MarketSymbol | null, entry: StockEntry | null): string {
-  if (market) {
-    switch (market.category) {
-      case "endeks":
-        return `BIST:${ticker}`;
-      case "hisse":
-        return `BIST:${ticker}`;
-      case "doviz":
-        return DOVIZ_TV[ticker] ?? `FX_IDC:${ticker}`;
-      case "emtia":
-        return EMTIA_TV[ticker] ?? `TVC:${ticker}`;
-      case "kripto":
-        return `CRYPTO:${ticker}`;
-    }
-  }
-  if (entry?.category === "Global Hisseler") return `NASDAQ:${ticker}`;
-  return `BIST:${ticker}`;
-}
 
 export function AssetDetailClient({
   ticker,
@@ -85,10 +44,12 @@ export function AssetDetailClient({
   const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
   const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
   const isStock = market ? market.category === "hisse" : Boolean(entry);
-  const tvSymbol = resolveTvSymbol(ticker, market, entry);
-
   const seed = ticker.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   const spark = generateSparkData(ticker, 24);
+  const chartData = spark.map((value, index) => ({
+    time: `2026-09-${String(index + 1).padStart(2, "0")}` as Time,
+    value,
+  }));
   const trend: "up" | "down" = spark[spark.length - 1] >= spark[0] ? "up" : "down";
   const changePct = seededValue(seed, -4, 6);
   const news = newsForTicker(ticker, name);
@@ -163,7 +124,7 @@ export function AssetDetailClient({
         {/* Grafik */}
         <div className="section-card">
           <SectionTitle eyebrow="Grafik" title={`${ticker} Fiyat Grafiği`} />
-          <TradingViewSymbolChart symbol={tvSymbol} />
+          <PriceChart data={chartData} height={430} />
         </div>
 
         {/* Temel bilgiler + karne */}
