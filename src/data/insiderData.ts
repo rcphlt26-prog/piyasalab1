@@ -11,7 +11,7 @@ export type InsiderTxn = {
 };
 
 export const insiderTransactions: InsiderTxn[] = [
-  { id: "i1", ticker: "THYAO", company: "Türk Hava Yolları", actor: "Yönetim Kurulu Üyesi", type: "Alım", shares: 420000, approxValue: 138600000, date: "2026-08-29", source: "KAP bildirimi (temsili)" },
+  { id: "i1", ticker: "THYAO", company: "Türk Hava Yolları", actor: "Yönetim Kurulu Üyesi", type: "Alım", shares: 420000, approxValue: 138600000, date: "2026-08-29", source: "Eğitim simülasyonu - gerçek KAP kaydı değildir" },
   { id: "i2", ticker: "EREGL", company: "Ereğli Demir Çelik", actor: "Bağlı Ortaklık", type: "Geri Alım", shares: 1500000, approxValue: 91500000, date: "2026-08-24", source: "Şirket duyurusu (temsili)" },
   { id: "i3", ticker: "SASA", company: "SASA Polyester", actor: "Ana Hissedar", type: "Satım", shares: 680000, approxValue: 89760000, date: "2026-08-18", source: "KAP bildirimi (temsili)" },
   { id: "i4", ticker: "GARAN", company: "Garanti BBVA", actor: "İcra Kurulu", type: "Alım", shares: 240000, approxValue: 33120000, date: "2026-08-10", source: "KAP bildirimi (temsili)" },

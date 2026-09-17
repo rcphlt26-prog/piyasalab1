@@ -61,9 +61,9 @@ export async function GET() {
       const newsItem = {
         slug,
         title: item.title,
-        summary: item.contentSnippet || item.title,
+        summary: 'Başlık ve güncel içerik için yayıncının sayfasını ziyaret edin.',
         category: categoryFor(item.title),
-        source: 'Google News Türkiye',
+        source: item.source?.trim() || 'Yayıncı bağlantısı',
         date: publishedAt,
         url: item.link,
         relatedTickers: [],

@@ -36,7 +36,7 @@ const forumCategories: ForumCategory[] = [
     id: "doviz-altin",
     label: "Döviz & Altın",
     description: "Dolar, euro, sterlin ve altın/gümüş tarafındaki beklentiler.",
-    tickers: ["USDTRY", "EURTRY", "GBPTRY", "ALTIN", "GUMUS"],
+    tickers: ["USDTRY", "EURTRY", "GBPTRY", "CHFTRY", "JPYTRY", "CADTRY", "AUDTRY", "RUBTRY", "CNYTRY", "SARATRY", "PLNTRY", "AEDTRY", "KWDTRY", "ALTIN", "GUMUS"],
   },
   {
     id: "kripto",

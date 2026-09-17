@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TrendingUp, Mail } from "lucide-react";
 
 export function Footer() {
@@ -53,8 +54,13 @@ export function Footer() {
         </div>
 
         <div className="app-border mt-6 flex flex-col items-center justify-between gap-2 border-t pt-4 text-xs sm:flex-row">
-          <p className="app-muted">© 2024-2025 VeriAkış. Tüm hakları saklıdır.</p>
-          <p className="app-muted">Bilgilendirme amaçlıdır · Yatırım tavsiyesi değildir</p>
+          <p className="app-muted">© 2024-{new Date().getFullYear()} VeriAkış. Tüm hakları saklıdır.</p>
+          <nav className="flex flex-wrap justify-center gap-3">
+            <Link href="/gizlilik" className="app-muted hover:text-primary">Gizlilik</Link>
+            <Link href="/cerezler" className="app-muted hover:text-primary">Çerezler</Link>
+            <Link href="/kullanim-sartlari" className="app-muted hover:text-primary">Kullanım şartları</Link>
+            <Link href="/yasal-uyari" className="app-muted hover:text-primary">Yasal uyarı</Link>
+          </nav>
         </div>
       </div>
     </footer>

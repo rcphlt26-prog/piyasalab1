@@ -72,7 +72,7 @@ export function NewsSection() {
       <SectionTitle
         eyebrow="Gündem"
         title="Piyasa Haberleri ve Ekonomi Gündemi"
-        description="Ekonomi, BIST, döviz ve emtia başlıklarında güncel gelişmeler. Haberin detayları için kaynak sitelere yönlendirilirsiniz."
+        description="Ekonomi, BIST, döviz ve emtia başlıkları. Güncel bilgi için her zaman resmi ve yetkili kaynakları doğrulayın."
       />
 
       <div className="mb-3">
@@ -169,7 +169,7 @@ export function NewsSection() {
                 ) : null}
                 
                 <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className="app-muted">Kaynak: {n.source || "Yahoo Finance"}</span>
+                  <span className="app-muted">Kaynak: {n.url ? (n.source || "Yayıncı bağlantısı") : "Eğitim simülasyonu"}</span>
                   {isExternal && <span className="text-[var(--color-primary)] font-medium">Habere Git →</span>}
                 </div>
               </a>
@@ -177,7 +177,7 @@ export function NewsSection() {
           })}
         </div>
       )}
-      <p className="app-muted mt-4 text-xs">Haberler bilgilendirme amaçlıdır ve yatırım tavsiyesi niteliği taşımaz.</p>
+      <p className="app-muted mt-4 text-xs">Başlıklar yalnızca bilgilendirme amaçlıdır; içerik doğruluğu, yatırım tavsiyesi veya resmi kaynak niteliği garanti edilmez.</p>
     </section>
   );
 }

@@ -23,13 +23,14 @@ export function useLiveQuotes() {
   const applyUpdate = useCallback((incoming: LiveQuote[]) => {
     setQuotes((prev) => {
       const prevMap = new Map(prev.map((q) => [q.code, q]));
-      const merged: LiveQuote[] = incoming.map((q) => {
+      const nextMap = new Map(prevMap);
+      incoming.forEach((q) => {
         const prevItem = prevMap.get(q.code);
         const direction: LiveQuote["direction"] = !prevItem || q.price === prevItem.price ? undefined : q.price > prevItem.price ? "up" : "down";
-        return { ...q, direction };
+        nextMap.set(q.code, { ...q, direction });
       });
-      merged.forEach((item) => cacheRef.current.set(item.code, item));
-      return merged;
+      nextMap.forEach((item) => cacheRef.current.set(item.code, item));
+      return marketSymbols.map((symbol) => nextMap.get(symbol.code)).filter(Boolean) as LiveQuote[];
     });
   }, []);
 
@@ -40,30 +41,18 @@ export function useLiveQuotes() {
     const fetchCycle = async () => {
       const codes = marketSymbols.map((s) => s.code);
       const groups = chunk(codes, 40);
-      const fetched: LiveQuote[] = [];
-
-      for (const group of groups) {
+      const fetchGroup = async (group: string[]) => {
         try {
           const response = await fetch(`/api/quotes?symbols=${group.join(",")}`);
           const json = await response.json();
-          if (json?.data) {
-            fetched.push(...json.data);
-          }
+          if (isMounted && json?.data?.length) applyUpdate(json.data as LiveQuote[]);
         } catch {
           // noop
         }
-        await new Promise((resolve) => setTimeout(resolve, 450));
-      }
+      };
 
+      await Promise.all(groups.map(fetchGroup));
       if (!isMounted) return;
-
-      if (fetched.length > 0) {
-        const byCode = new Map(fetched.map((x) => [x.code, x]));
-        const ordered = codes
-          .map((code) => byCode.get(code) ?? cacheRef.current.get(code))
-          .filter(Boolean) as LiveQuote[];
-        applyUpdate(ordered);
-      }
 
       timer = setTimeout(fetchCycle, 30000);
     };

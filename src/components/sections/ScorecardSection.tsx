@@ -48,7 +48,7 @@ export function ScorecardSection() {
       <SectionTitle
         eyebrow="Analiz"
         title="Hisse Karnesi & Patron/Insider Takibi"
-        description="Karnedeki veriler temsili eğitim verisidir. Yatırım kararı için tek başına kullanılmamalıdır."
+        description="Karnedeki tüm skorlar eğitim simülasyonudur; gerçek finansal tablo, KAP bildirimi veya yatırım tavsiyesi değildir."
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="app-surface-2 app-border rounded-xl border p-3">
@@ -176,7 +176,7 @@ export function ScorecardSection() {
                       <td className="app-text-secondary px-2 py-1.5">{tx.actor}</td>
                       <td className="app-text px-2 py-1.5 text-right font-semibold">{formatCurrency(tx.approxValue)}</td>
                       <td className="app-muted px-2 py-1.5 whitespace-nowrap">{tx.date}</td>
-                      <td className="app-muted px-2 py-1.5">{tx.source}</td>
+                      <td className="app-muted px-2 py-1.5">Eğitim simülasyonu</td>
                     </tr>
                   ))}
                   {filteredInsider.length === 0 && (
@@ -186,7 +186,7 @@ export function ScorecardSection() {
               </table>
             </div>
           </div>
-          <p className="app-muted mt-2 text-xs">Not: Bu bölümdeki kayıtlar örnek/temsili veri olarak hazırlanmıştır.</p>
+          <p className="app-muted mt-2 text-xs">Not: Bu bölümdeki kayıtlar eğitim simülasyonudur; gerçek KAP/insider verisi değildir. Gerçek işlemler için KAP kayıtlarını kontrol edin.</p>
         </div>
       </div>
     </section>

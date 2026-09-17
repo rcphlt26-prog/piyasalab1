@@ -45,7 +45,7 @@ export function AssetDetailClient({
   const trend: "up" | "down" = spark.length < 2 || spark[spark.length - 1] >= spark[0] ? "up" : "down";
   const changePct = liveQuote?.changePct;
   const currentPrice = liveQuote?.price;
-  const news = newsForTicker(ticker, name);
+  const news = newsForTicker(ticker);
   const score = isStock ? scorecardData[ticker] : undefined;
 
   const fundamentals: Array<[string, string]> = isStock
@@ -157,6 +157,7 @@ export function AssetDetailClient({
       <div className="section-card mt-4">
         <SectionTitle eyebrow="Haberler" title={`${ticker} Güncel Haberleri`} />
         <div className="grid gap-3 md:grid-cols-2">
+          {news.length === 0 ? <p className="app-muted py-6 text-center text-sm">Bu sembol için doğrulanmış haber bağlantısı bulunmuyor.</p> : null}
           {news.map((n) => (
             <article key={n.slug} className="app-surface-2 app-border card-hover rounded-xl border p-3">
               <div className="mb-1 flex items-center gap-2">
@@ -172,7 +173,7 @@ export function AssetDetailClient({
               <h3 className="app-text text-sm font-semibold">{n.title}</h3>
               <p className="app-text-secondary mt-1 text-xs">{n.summary}</p>
               <p className="app-muted mt-2 text-[10px]">
-                {n.source} · {n.date}
+                {n.url ? n.source : "Eğitim simülasyonu"} · {n.date}
               </p>
             </article>
           ))}

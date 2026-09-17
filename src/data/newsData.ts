@@ -12,7 +12,7 @@ export type NewsItem = {
   relatedTickers?: string[];
 };
 
-/** Tüm haberler temsili/eğitim amaçlıdır; gerçek yatırım tavsiyesi içermez. */
+/** Eğitim amaçlı yerel içerik; güncel haber yerine kullanılmamalıdır. */
 export const newsData: NewsItem[] = [
   { slug: "tcmb-faiz-karari-piyasa", title: "TCMB faiz kararı öncesi piyasalarda temkinli seyir", summary: "Merkez Bankası'nın toplantısı öncesinde yatırımcılar pozisyonlarını sadeleştirdi; tahvil faizleri yatay seyretti.", category: "Ekonomi", source: "VeriAkış Ekonomi", date: "2026-09-12", breaking: true },
   { slug: "bist100-rekor-kapanis", title: "BIST 100 haftayı rekor kapanışla tamamladı", summary: "Bankacılık ve holding hisselerindeki alımlarla endeks gün içi zirvesini yeniledi.", category: "BIST", source: "Borsa Gündem", date: "2026-09-12", relatedTickers: ["GARAN", "AKBNK", "KCHOL"] },
@@ -38,41 +38,7 @@ export const newsData: NewsItem[] = [
   { slug: "yabanci-takas-orani", title: "Yabancı yatırımcı takas oranında hareket", summary: "BIST'te yabancı payındaki değişim yatırımcı ilgisini yansıttı.", category: "BIST", source: "Borsa Gündem", date: "2026-08-29" },
 ];
 
-const categorySummaries: Record<NewsCategory, string> = {
-  Ekonomi: "makroekonomik görünüm",
-  BIST: "borsa performansı",
-  Döviz: "kur hareketleri",
-  Emtia: "emtia fiyatları",
-};
-
-/** Bir hisse için deterministik 3-5 güncel haber üretir. */
-export function newsForTicker(ticker: string, name: string): NewsItem[] {
-  const direct = newsData.filter((n) => n.relatedTickers?.includes(ticker));
-  const seed = ticker.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  const count = 3 + (seed % 3); // 3-5
-  const templates: Array<{ title: string; summary: string; category: NewsCategory }> = [
-    { title: `${name} hisselerinde işlem hacmi arttı`, summary: `${ticker} tarafında artan işlem hacmi yatırımcı ilgisini gösterdi.`, category: "BIST" },
-    { title: `${name} için analist görünümü güncellendi`, summary: `Aracı kurumlar ${ticker} için hedef fiyat ve tavsiyelerini gözden geçirdi.`, category: "BIST" },
-    { title: `${name} temettü takviminde öne çıktı`, summary: `${ticker} temettü politikası yatırımcıların gündeminde.`, category: "Ekonomi" },
-    { title: `${name} sektöründeki gelişmeler fiyatı etkiliyor`, summary: `${categorySummaries.BIST} kapsamında ${ticker} için yeni gelişmeler izleniyor.`, category: "BIST" },
-    { title: `${name} kur ve emtia hareketlerinden etkilendi`, summary: `Küresel piyasalardaki dalgalanma ${ticker} fiyatlamasına yansıdı.`, category: "Döviz" },
-  ];
-
-  const generated: NewsItem[] = Array.from({ length: count }, (_, i) => {
-    const t = templates[(seed + i) % templates.length];
-    const day = 12 - ((seed + i * 3) % 12);
-    return {
-      slug: `${ticker.toLowerCase()}-haber-${i + 1}`,
-      title: t.title,
-      summary: t.summary,
-      category: t.category,
-      source: "VeriAkış Derleme",
-      date: `2026-09-${String(day).padStart(2, "0")}`,
-      relatedTickers: [ticker],
-    };
-  });
-
-  const merged = [...direct, ...generated];
-  const unique = merged.filter((n, i) => merged.findIndex((m) => m.title === n.title) === i);
-  return unique.slice(0, Math.max(3, Math.min(5, unique.length)));
+/** Yalnızca ticker ile açıkça ilişkilendirilmiş içerikleri döndürür; sentetik haber üretmez. */
+export function newsForTicker(ticker: string): NewsItem[] {
+  return newsData.filter((n) => n.relatedTickers?.includes(ticker)).slice(0, 5);
 }

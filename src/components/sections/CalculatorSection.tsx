@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { Coins } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
+import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
 import { AdSlot } from "@/components/AdSlot";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { assetList, calculateReturn, toAssetLabel, type CurrencyCode } from "@/lib/finance";
@@ -135,6 +136,8 @@ export function CalculatorSection() {
       </button>
 
       <AdSlot label="Hesaplayıcı Altı Inline" width={300} height={250} className="my-4" />
+
+      <LiveCurrencyConverter />
 
       {currentReturn.message ? <p className="mb-3 rounded-lg border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-3 text-sm text-gold">{currentReturn.message}</p> : null}
       <div ref={resultsRef} className="scroll-mt-24 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

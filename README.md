@@ -50,9 +50,15 @@ Proje kökünde `.env.local` dosyası oluşturun:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://wjpptnqotjpxccpoiifo.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...sizin_anahtariniz...
+NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-XXXXXXXXXXXXXXXX
+NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD=XXXXXXXXXX
+NEXT_PUBLIC_ADSENSE_SLOT_INLINE=XXXXXXXXXX
+NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR=XXXXXXXXXX
 ```
 
 > Güvenlik için gerçek anahtarları repoya commit etmeyin.
+
+AdSense için kendi Google yayıncı ve reklam alanı kimliklerinizi kullanın. Kimlikler girildiğinde `/ads.txt` endpoint'i otomatik olarak `google.com` kaydını üretir. Yer tutucu değerlerle reklam açılmaz; gerçek kimlikleri yalnızca Vercel Environment Variables bölümüne ekleyin.
 
 ### 3) Geliştirme sunucusunu başlatın
 
@@ -101,6 +107,8 @@ Bu dosya şunları yapar:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Deploy edin.
+
+Yayın öncesi `/gizlilik`, `/cerezler`, `/kullanim-sartlari` ve `/yasal-uyari` sayfalarının erişilebilir olduğundan emin olun. AdSense başvurusu için gerçek iletişim bilgisi, özgün içerik, gizlilik/çerez açıklaması, `ads.txt` ve Google’ın istediği onay/CMP ayarları ayrıca tamamlanmalıdır. Onay kararı Google’a aittir.
 
 Uygulama Vercel’de olduğu gibi çalışır; server tarafında sadece ince quote proxy route’u bulunur (`/api/quotes`).
 
