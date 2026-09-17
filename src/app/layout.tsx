@@ -32,6 +32,11 @@ export const metadata: Metadata = {
     "piyasa sentiment",
   ],
   alternates: { canonical: "https://veriakis.com" },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   openGraph: {
     title: "VeriAkış - Borsa, Enflasyon ve Reel Getiri Platformu",
     description:
