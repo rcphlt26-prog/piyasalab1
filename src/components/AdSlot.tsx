@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { hasAdsConsent } from "@/components/AdSenseConsent";
 
 type Props = {
   label: string;
@@ -14,6 +15,7 @@ declare global {
 }
 
 export function AdSlot({ label, width, height, className = "" }: Props) {
+  const [consent, setConsent] = useState(false);
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
   const slot = label.includes("Leaderboard")
     ? process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD
@@ -22,13 +24,20 @@ export function AdSlot({ label, width, height, className = "" }: Props) {
       : process.env.NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR;
 
   useEffect(() => {
-    if (!client || !slot) return;
+    const sync = () => setConsent(hasAdsConsent());
+    sync();
+    window.addEventListener("veriakis-ads-consent-changed", sync);
+    return () => window.removeEventListener("veriakis-ads-consent-changed", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!client || !slot || !consent) return;
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {
       // AdSense may not be available when an ad blocker is active.
     }
-  }, [client, slot]);
+  }, [client, consent, slot]);
 
   return (
     <div
@@ -39,7 +48,7 @@ export function AdSlot({ label, width, height, className = "" }: Props) {
       data-ad-height={height}
       aria-label={`${label} reklam alanı`}
     >
-      {client && slot ? (
+      {client && slot && consent ? (
         <ins
           className="adsbygoogle block"
           style={{ display: "block", minHeight: height, width: "100%" }}

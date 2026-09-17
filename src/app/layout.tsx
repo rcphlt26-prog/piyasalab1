@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AdSenseConsent } from "@/components/AdSenseConsent";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -118,16 +119,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="app-text min-h-full">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
-      {/* AdSense'i aktif etmek için .env'e NEXT_PUBLIC_ADSENSE_CLIENT=ca-pub-XXXXXXXXX ekleyin. */}
-      {adsenseClient ? (
-        <Script
-          async
-          id="adsense-loader"
-          strategy="afterInteractive"
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
-          crossOrigin="anonymous"
-        />
-      ) : null}
+      <AdSenseConsent client={adsenseClient} />
       <Script id="jsonld-webapp" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
       <Script id="jsonld-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <Script id="jsonld-article" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />

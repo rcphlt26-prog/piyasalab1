@@ -60,6 +60,7 @@ export function Footer() {
             <Link href="/cerezler" className="app-muted hover:text-primary">Çerezler</Link>
             <Link href="/kullanim-sartlari" className="app-muted hover:text-primary">Kullanım şartları</Link>
             <Link href="/yasal-uyari" className="app-muted hover:text-primary">Yasal uyarı</Link>
+            <Link href="/iletisim" className="app-muted hover:text-primary">İletişim</Link>
           </nav>
         </div>
       </div>

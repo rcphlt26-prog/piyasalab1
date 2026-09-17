@@ -8,7 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 1,
     },
-    ...["gizlilik", "cerezler", "kullanim-sartlari", "yasal-uyari"].map((path) => ({
+    ...["gizlilik", "cerezler", "kullanim-sartlari", "yasal-uyari", "iletisim"].map((path) => ({
       url: `https://veriakis.com/${path}`,
       lastModified: new Date(),
       changeFrequency: "yearly" as const,
