@@ -14,6 +14,8 @@ import { ForumSection } from "@/components/sections/ForumSection";
 import { GamesSection } from "@/components/sections/GamesSection";
 import { NewsSection } from "@/components/sections/NewsSection";
 import { AboutSection } from "@/components/sections/AboutSection";
+import { OnlineUsers } from "@/components/OnlineUsers";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type TabId = "piyasa" | "hesaplayici" | "karne" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
@@ -30,6 +32,7 @@ const tabs: Array<{ id: TabId; label: string; icon: typeof LineChart }> = [
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabId>("piyasa");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const supabase = getSupabaseBrowserClient();
 
   function handleNavigate(tab: string) {
     const match = tabs.find((t) => t.id === tab);
@@ -66,6 +69,7 @@ export default function HomePage() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <OnlineUsers supabase={supabase} />
               <ThemeToggle />
               <button
                 onClick={() => setMobileOpen((v) => !v)}
