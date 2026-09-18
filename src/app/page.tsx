@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, TrendingUp, Menu, X } from "lucide-react";
+import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, TrendingUp, Menu, X, BriefcaseBusiness, Star } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SpkBanner } from "@/components/SpkBanner";
@@ -14,17 +14,24 @@ import { ForumSection } from "@/components/sections/ForumSection";
 import { GamesSection } from "@/components/sections/GamesSection";
 import { NewsSection } from "@/components/sections/NewsSection";
 import { AboutSection } from "@/components/sections/AboutSection";
+import { PortfolioSection } from "@/components/sections/PortfolioSection";
+import { WatchlistSection } from "@/components/sections/WatchlistSection";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import MostCurious from "@/components/MostCurious"; // <--- Yeni eklenen bileşen import edildi
-import { HomeTickerRail } from "@/components/HomeTickerRail";
+import { AuthPanel } from "@/components/AuthPanel";
+import { HomeHero } from "@/components/HomeHero";
+import { HomePersonalPanel } from "@/components/HomePersonalPanel";
+import { HomeDailyFlow } from "@/components/HomeDailyFlow";
+import { HomeTools } from "@/components/HomeTools";
 
-type TabId = "piyasa" | "hesaplayici" | "karne" | "forum" | "oyunlar" | "haberler" | "hakkinda";
+type TabId = "piyasa" | "hesaplayici" | "karne" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof LineChart }> = [
   { id: "piyasa", label: "Piyasa", icon: LineChart },
   { id: "hesaplayici", label: "Hesaplayıcı", icon: Calculator },
   { id: "karne", label: "Hisse Karnesi", icon: ClipboardList },
+  { id: "portfoy", label: "Portföyüm", icon: BriefcaseBusiness },
+  { id: "izleme", label: "İzleme Listem", icon: Star },
   { id: "forum", label: "Forum", icon: MessagesSquare },
   { id: "oyunlar", label: "Oyunlar", icon: Gamepad2 },
   { id: "haberler", label: "Haberler", icon: Newspaper },
@@ -72,6 +79,7 @@ export default function HomePage() {
 
             <div className="ml-auto flex items-center gap-2">
               <OnlineUsers supabase={supabase} />
+              <AuthPanel />
               <ThemeToggle />
               <button
                 onClick={() => setMobileOpen((v) => !v)}
@@ -135,15 +143,19 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl px-4 py-6">
         <AdSlot label="Üst Leaderboard" width={728} height={90} className="mb-4" />
 
-        {/* En Çok Merak Edilenler Bölümü (Piyasa sekmesindeyken veya her an yukarılarda görünmesi için eklendi) */}
-        {activeTab === "piyasa" && <MostCurious />}
-
-        {activeTab === "piyasa" && <HomeTickerRail />}
+        {activeTab === "piyasa" ? <div className="space-y-6">
+          <HomeHero />
+          <HomePersonalPanel />
+          <HomeDailyFlow />
+          <HomeTools onNavigate={handleNavigate} />
+        </div> : null}
 
         <div className="space-y-6">
           {activeTab === "piyasa" ? <MarketSection /> : null}
           {activeTab === "hesaplayici" ? <CalculatorSection /> : null}
           {activeTab === "karne" ? <ScorecardSection /> : null}
+          {activeTab === "portfoy" ? <PortfolioSection /> : null}
+          {activeTab === "izleme" ? <WatchlistSection /> : null}
           {activeTab === "forum" ? <ForumSection /> : null}
           {activeTab === "oyunlar" ? <GamesSection /> : null}
           {activeTab === "haberler" ? <NewsSection /> : null}

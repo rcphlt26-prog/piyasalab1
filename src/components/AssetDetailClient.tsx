@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ArrowLeft, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, MessageCircle, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { PriceChart } from "@/components/PriceChart";
 import { WatchStar } from "@/components/WatchStar";
@@ -10,12 +12,43 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { newsForTicker } from "@/data/newsData";
 import { scorecardData } from "@/data/scorecardData";
 import { formatNumber } from "@/lib/utils";
+import { StockInsightCard } from "@/components/StockInsightCard";
+import { StockCommunityWidget } from "@/components/StockCommunityWidget";
 import type { StockEntry, MarketSymbol } from "@/data/marketSymbols";
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
+const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
+
+const detailTabs: Array<["financials" | "news" | "sector" | "community", string, LucideIcon]> = [
+  ["financials", "Bilanço ve metrikler", BarChart3],
+  ["news", "KAP / şirket haberleri", FileText],
+  ["sector", "Sektör karşılaştırması", TrendingUp],
+  ["community", "Forum tartışmaları", MessageCircle],
+];
+
+type FinancialStatement = {
+  id: string;
+  symbol: string;
+  year: number;
+  quarter: number;
+  net_profit: number;
+  revenue: number;
+  ebitda: number | null;
+  total_debt: number | null;
+  pe_ratio: number | null;
+  pb_ratio: number | null;
+};
+
+type KapNotification = {
+  id: string;
+  title: string;
+  summary: string | null;
+  kap_url: string;
+  category: string | null;
+  publish_date: string;
+};
 
 const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   endeks: "Endeks",
@@ -34,6 +67,9 @@ export function AssetDetailClient({
   entry: StockEntry | null;
   market: MarketSymbol | null;
 }) {
+  const [detailTab, setDetailTab] = useState<"financials" | "news" | "sector" | "community">("financials");
+  const [statements, setStatements] = useState<FinancialStatement[]>([]);
+  const [kapNotifications, setKapNotifications] = useState<KapNotification[]>([]);
   const { isWatched, toggle } = useWatchlist();
   const name = market?.label ?? entry?.name ?? ticker;
   const liveQuote = useLiveQuote(ticker);
@@ -45,8 +81,44 @@ export function AssetDetailClient({
   const trend: "up" | "down" = spark.length < 2 || spark[spark.length - 1] >= spark[0] ? "up" : "down";
   const changePct = liveQuote?.changePct;
   const currentPrice = liveQuote?.price;
-  const news = newsForTicker(ticker);
   const score = isStock ? scorecardData[ticker] : undefined;
+
+  useEffect(() => {
+    if (!isStock) return;
+    let cancelled = false;
+    void Promise.all([
+      fetch(`/api/financial-statements?symbol=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.json()),
+      fetch(`/api/kap?symbol=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.json()),
+    ]).then(([financialPayload, kapPayload]) => {
+      if (cancelled) return;
+      setStatements(financialPayload.data ?? []);
+      setKapNotifications(kapPayload.data ?? []);
+    }).catch(() => {
+      if (!cancelled) {
+        setStatements([]);
+        setKapNotifications([]);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isStock, ticker]);
+
+  const financialChartData = statements.map((statement) => ({
+    year: `${statement.year}Q${statement.quarter / 3}`,
+    "Ciro": statement.revenue,
+    "Net Kâr": statement.net_profit,
+    "Borç": statement.total_debt ?? 0,
+  }));
+  const latestStatement = statements.at(-1);
+  const sectorPeers = useMemo(() => {
+    if (!entry?.sector) return [];
+    return Object.entries(scorecardData)
+      .filter(([peerTicker]) => peerTicker !== ticker)
+      .map(([peerTicker, peerScore]) => ({ ticker: peerTicker, score: peerScore }))
+      .filter(({ ticker: peerTicker }) => peerTicker.slice(0, 1) === ticker.slice(0, 1))
+      .slice(0, 5);
+  }, [entry?.sector, ticker]);
 
   const fundamentals: Array<[string, string]> = isStock
     ? [
@@ -113,6 +185,8 @@ export function AssetDetailClient({
         </p>
       </div>
 
+      {statements.length > 0 ? <StockInsightCard ticker={ticker} statements={statements} changePct={changePct} /> : null}
+
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         {/* Grafik */}
         <div className="section-card">
@@ -153,32 +227,36 @@ export function AssetDetailClient({
         </div>
       </div>
 
-      {/* Haberler */}
-      <div className="section-card mt-4">
-        <SectionTitle eyebrow="Haberler" title={`${ticker} Güncel Haberleri`} />
-        <div className="grid gap-3 md:grid-cols-2">
-          {news.length === 0 ? <p className="app-muted py-6 text-center text-sm">Bu sembol için doğrulanmış haber bağlantısı bulunmuyor.</p> : null}
-          {news.map((n) => (
-            <article key={n.slug} className="app-surface-2 app-border card-hover rounded-xl border p-3">
-              <div className="mb-1 flex items-center gap-2">
-                <span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                  {n.category}
-                </span>
-                {n.breaking ? (
-                  <span className="rounded-full bg-[var(--color-bear)]/15 px-2 py-0.5 text-[10px] font-semibold text-bear">
-                    Son Dakika
-                  </span>
-                ) : null}
-              </div>
-              <h3 className="app-text text-sm font-semibold">{n.title}</h3>
-              <p className="app-text-secondary mt-1 text-xs">{n.summary}</p>
-              <p className="app-muted mt-2 text-[10px]">
-                {n.url ? n.source : "Eğitim simülasyonu"} · {n.date}
-              </p>
-            </article>
-          ))}
+      {score ? (
+        <div className="section-card mt-4">
+          <div className="mb-4 flex flex-wrap gap-2 border-b border-[var(--border)] pb-3">
+            {detailTabs.map(([key, label, Icon]) => (
+              <button key={String(key)} type="button" onClick={() => setDetailTab(key as typeof detailTab)} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold ${detailTab === key ? "bg-[var(--color-primary)] text-white" : "app-text-secondary hover:app-surface-2"}`}>
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            ))}
+          </div>
+
+          {detailTab === "financials" ? (
+            <div>
+              {statements.length === 0 ? <p className="app-muted rounded-xl border border-dashed p-8 text-center text-sm">Bu hisse için henüz gerçek finansal tablo kaydı bulunmuyor.</p> : <><div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">F/K</p><p className="app-text text-lg font-bold">{latestStatement?.pe_ratio == null ? "Veri yok" : formatNumber(latestStatement.pe_ratio)}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">PD/DD</p><p className="app-text text-lg font-bold">{latestStatement?.pb_ratio == null ? "Veri yok" : formatNumber(latestStatement.pb_ratio)}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">Net Kâr</p><p className="app-text text-lg font-bold">{latestStatement ? formatNumber(latestStatement.net_profit) : "Veri yok"}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">Ciro</p><p className="app-text text-lg font-bold">{latestStatement ? formatNumber(latestStatement.revenue) : "Veri yok"}</p></div></div><h3 className="app-text mb-2 text-sm font-semibold">Gerçek finansal tablo geçmişi</h3><OverlayLineChart data={financialChartData} keys={["Ciro", "Net Kâr", "Borç"]} /></>}
+            </div>
+          ) : null}
+
+          {detailTab === "news" ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {kapNotifications.length === 0 ? <p className="app-muted py-6 text-center text-sm">Bu sembol için gerçek KAP bildirimi bulunmuyor.</p> : kapNotifications.map((item) => <a key={item.id} href={item.kap_url} target="_blank" rel="noreferrer" className="app-surface-2 app-border card-hover rounded-xl border p-3"><div className="mb-1 flex items-center gap-2"><span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[10px] font-semibold text-primary">{item.category ?? "KAP"}</span><span className="app-muted text-[10px]">{new Date(item.publish_date).toLocaleDateString("tr-TR")}</span></div><h3 className="app-text text-sm font-semibold">{item.title}</h3><p className="app-text-secondary mt-1 text-xs">{item.summary ?? "KAP bildirimi"}</p></a>)}
+            </div>
+          ) : null}
+
+          {detailTab === "sector" ? (
+            <div><p className="app-muted mb-3 text-xs">Aynı sektör dizinindeki temsili metriklerle karşılaştırma.</p><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Hisse</th><th className="px-3 py-2">F/K</th><th className="px-3 py-2">PD/DD</th><th className="px-3 py-2">Temettü</th><th className="px-3 py-2">Sağlık</th></tr></thead><tbody><tr className="app-border border-b bg-[var(--color-primary)]/10"><td className="app-text px-3 py-2 font-bold">{ticker}</td><td className="app-text px-3 py-2">{formatNumber(score.fk)}</td><td className="app-text px-3 py-2">{formatNumber(score.pddd)}</td><td className="app-text px-3 py-2">%{formatNumber(score.dividendYield)}</td><td className="app-text px-3 py-2">{score.health}/10</td></tr>{sectorPeers.map(({ ticker: peerTicker, score: peer }) => <tr key={peerTicker} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{peerTicker}</td><td className="app-text px-3 py-2">{formatNumber(peer.fk)}</td><td className="app-text px-3 py-2">{formatNumber(peer.pddd)}</td><td className="app-text px-3 py-2">%{formatNumber(peer.dividendYield)}</td><td className="app-text px-3 py-2">{peer.health}/10</td></tr>)}</tbody></table></div></div>
+          ) : null}
+
+          {detailTab === "community" ? <StockCommunityWidget ticker={ticker} /> : null}
         </div>
-      </div>
+      ) : null}
+
     </div>
   );
 }

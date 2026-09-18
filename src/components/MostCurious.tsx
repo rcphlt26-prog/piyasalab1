@@ -12,7 +12,7 @@ interface ItemData {
 
 export default function MostCurious() {
   const { quotes, liveAvailable, updatedAt } = useLiveQuotes();
-  const codes = ["XU100", "GRAMALTIN", "GUMUS", "USDTRY", "EURTRY"];
+  const codes = ["XU100", "GRAMALTIN", "GRAMGUMUS", "USDTRY", "EURTRY"];
   const data: ItemData[] = codes.map((code) => {
     const quote = quotes.find((item) => item.code === code);
     const isPositive = (quote?.changePct ?? 0) >= 0;

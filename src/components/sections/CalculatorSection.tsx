@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useRef, useState } from "react";
-import { Coins } from "lucide-react";
+import { Coins, Sparkles } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
@@ -26,6 +26,13 @@ const currencies: Array<{ code: CurrencyCode; label: string }> = [
   { code: "PLN", label: "Polonya Zlotisi (PLN)" }, { code: "AED", label: "BAE Dirhemi (AED)" },
   { code: "KWD", label: "Kuveyt Dinarı (KWD)" }, { code: "QAR", label: "Katar Riyali (QAR)" },
   { code: "KRW", label: "Güney Kore Wonu (KRW)" }, { code: "INR", label: "Hindistan Rupisi (INR)" },
+];
+
+const quickAssets: Array<{ asset: (typeof assetList)[number]; label: string; amount: number }> = [
+  { asset: "BIST100", label: "BIST 100", amount: 100000 },
+  { asset: "GRAM_ALTIN", label: "Gram Altın", amount: 50000 },
+  { asset: "USD", label: "Dolar", amount: 50000 },
+  { asset: "MEVDUAT", label: "Mevduat", amount: 100000 },
 ];
 
 type CalculationInput = {
@@ -108,12 +115,40 @@ export function CalculatorSection() {
     <section className="section-card fade-in">
       <SectionTitle
         eyebrow="Amiral Araç"
-        title="Gelişmiş Getiri ve ABD-TÜFE Reel Kazanç Hesaplayıcı"
-        description="Tüm hesaplamalar yalnızca tarayıcı içinde yapılır. Sunucuda ağır işleme yoktur."
+        title="Paran bugün ne kadar olurdu?"
+        description="Bir tutar seç, geçmişteki karşılığını saniyeler içinde gör. Detaylı seçenekler aşağıda."
       />
       
-      {/* Sade ve net form alanı */}
-      <div className="app-surface-2 app-border rounded-xl border p-4 mb-4">
+      <div className="mb-4 rounded-2xl border border-[var(--color-primary)]/30 bg-gradient-to-br from-[var(--color-primary)]/15 via-[var(--surface-2)] to-[var(--color-bull)]/10 p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white"><Sparkles className="h-4 w-4" /></span>
+          <div>
+            <p className="app-text text-sm font-bold">Hızlı başlangıç</p>
+            <p className="app-muted text-xs">Merak ettiğin yatırımı seç, rakamları birlikte dolduralım.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {quickAssets.map((item) => (
+            <button
+              key={item.asset}
+              type="button"
+              onClick={() => {
+                setAsset(item.asset);
+                setInitialAmount(item.amount);
+              }}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${asset === item.asset ? "border-transparent bg-[var(--color-primary)] text-white" : "app-border app-surface app-text-secondary hover:border-[var(--color-primary-light)]"}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="app-surface-2 app-border mb-4 rounded-xl border p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="app-text text-sm font-semibold">Hesabını oluştur</h3>
+          <span className="app-muted text-[11px]">Tahmini simülasyon</span>
+        </div>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           <label className="app-text-secondary text-xs">Başlangıç tutarı
             <input type="number" value={initialAmount} onChange={(e) => setInitialAmount(Number(e.target.value))} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none" />
@@ -148,7 +183,7 @@ export function CalculatorSection() {
             onClick={focusResults} 
             className="rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
           >
-            Hesapla
+            Sonucu gör
           </button>
         </div>
       </div>

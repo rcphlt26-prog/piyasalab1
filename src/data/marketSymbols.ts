@@ -119,6 +119,7 @@ export const marketSymbols: MarketSymbol[] = [
   { code: "RESATALTIN", label: "Reşat Altın", yahooSymbol: "GC=F", category: "emtia" },
   { code: "BILEZIK22", label: "22 Ayar Bilezik", yahooSymbol: "GC=F", category: "emtia" },
   { code: "GUMUS", label: "Gümüş (Ons)", yahooSymbol: "SI=F", category: "emtia" },
+  { code: "GRAMGUMUS", label: "Gram Gümüş", yahooSymbol: "SI=F", category: "emtia" },
   { code: "PETROL", label: "Ham Petrol (Brent)", yahooSymbol: "BZ=F", category: "emtia" },
   { code: "DOGALGAZ", label: "Doğal Gaz", yahooSymbol: "NG=F", category: "emtia" },
   { code: "BAKIR", label: "Bakır", yahooSymbol: "HG=F", category: "emtia" },

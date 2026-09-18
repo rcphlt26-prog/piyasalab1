@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String         @id @default(uuid())
+  supabaseUserId String         @unique
+  email          String         @unique
+  name           String?
+  avatarUrl      String?
+  role           Role           @default(USER)
+  portfolios     Portfolio[]
+  watchlists     Watchlist[]
+  alerts         PriceAlert[]
+  posts          ForumPost[]
+  comments       ForumComment[]
+  createdAt      DateTime       @default(now())
+
+  @@map("app_users")
+}
+
+enum Role {
+  USER
+  PREMIUM
+  ADMIN
+}
+
+model Portfolio {
+  id           String                 @id @default(uuid())
+  userId       String
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String                 @default("Ana Portföy")
+  transactions PortfolioTransaction[]
+  createdAt    DateTime               @default(now())
+
+  @@index([userId])
+  @@map("portfolios")
+}
+
+model PortfolioTransaction {
+  id              String    @id @default(uuid())
+  portfolioId     String
+  portfolio       Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  symbol          String
+  assetType       String
+  buyPrice        Float
+  quantity        Float
+  transactionDate DateTime  @default(now())
+  type            String
+
+  @@index([portfolioId, transactionDate])
+  @@map("portfolio_transactions")
+}
+
+model Watchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbols   String[]
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("watchlists")
+}
+
+model PriceAlert {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  symbol      String
+  targetValue Float
+  condition   String
+  metricType  String
+  isTriggered Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isTriggered])
+  @@index([symbol, isTriggered])
+  @@map("price_alerts")
+}
+
+model ForumPost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("forum_posts")
+}
+
+model ForumComment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("forum_comments")
+}
+
+model KapNotification {
+  id          String   @id @default(uuid())
+  title       String
+  summary     String?  @db.Text
+  kapUrl      String   @unique
+  relatedSymbols String[] @map("related_symbols")
+  category    String?
+  publishDate DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([publishDate])
+  @@map("kap_notifications")
+}
+
+model FinancialStatement {
+  id          String   @id @default(uuid())
+  symbol      String
+  year        Int
+  quarter     Int
+  netProfit   Float
+  revenue     Float
+  ebitda      Float?
+  totalDebt   Float?
+  peRatio     Float?
+  pbRatio     Float?
+  updatedAt   DateTime @updatedAt
+
+  @@unique([symbol, year, quarter])
+  @@index([symbol])
+  @@map("financial_statements")
+}

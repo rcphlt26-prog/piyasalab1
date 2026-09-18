@@ -1,6 +1,13 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const calculatorPaths = [
+    "hesaplayicilar/bilesik-getiri",
+    "hesaplayicilar/temettu-getirisi",
+    "hesaplayicilar/maliyet-ortalamasi",
+    "hesaplayicilar/hisse-vs-altin",
+  ];
+
   return [
     {
       url: "https://veriakis.com",
@@ -13,6 +20,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: "yearly" as const,
       priority: 0.3,
+    })),
+    ...calculatorPaths.map((path) => ({
+      url: `https://veriakis.com/${path}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     })),
   ];
 }

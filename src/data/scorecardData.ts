@@ -22,6 +22,10 @@ export type ScoreMetric = {
   beta: number;
   /** Borç/Özsermaye oranı (temsili) */
   debtEquity: number;
+  revenueGrowth: number;
+  netProfit: number;
+  ebitdaMargin: number;
+  balanceSheet: Array<{ year: number; revenue: number; netProfit: number; debt: number }>;
   note: string;
 };
 
@@ -101,6 +105,15 @@ function generate(ticker: string, name: string, sector: string): ScoreMetric {
     annualReturn: round(between(rnd(), -35, 120), 1),
     beta: round(between(rnd(), 0.4, 1.8), 2),
     debtEquity: round(between(rnd(), 0.1, 2.4), 2),
+    revenueGrowth: round(between(rnd(), -12, 85), 1),
+    netProfit: round(between(rnd(), 0.4, 85), 1),
+    ebitdaMargin: round(between(rnd(), 8, 48), 1),
+    balanceSheet: [2021, 2022, 2023, 2024, 2025].map((year, index) => ({
+      year,
+      revenue: round(between(rnd(), 8, 100) * (1 + index * 0.18), 1),
+      netProfit: round(between(rnd(), 1, 25) * (1 + index * 0.12), 1),
+      debt: round(between(rnd(), 5, 70) * (1 + (index % 2) * 0.08), 1),
+    })),
     note: noteTemplates[intBetween(rnd(), 0, noteTemplates.length - 1)](name, sector),
   };
   return { ...base, ...curated[ticker] };

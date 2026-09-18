@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 let supabaseSingleton: SupabaseClient | null | undefined;
 
@@ -19,7 +20,7 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
     return null;
   }
 
-  supabaseSingleton = createClient(url, anonKey, {
+  supabaseSingleton = createBrowserClient(url, anonKey, {
     realtime: {
       params: { eventsPerSecond: 8 },
     },

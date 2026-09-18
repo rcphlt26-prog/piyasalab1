@@ -11,6 +11,7 @@ import { calculateReturn } from "@/lib/finance";
 import { duelPeriods, regretScenarios, dailyTips } from "@/data/gamesData";
 import { popularStocks } from "@/data/scorecardData";
 import { bist100Series, gramGoldSeries, usdTrySeries } from "@/data/historicalData";
+import { VirtualPortfolioGame } from "@/components/VirtualPortfolioGame";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
 const AllocationChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.AllocationChart), { ssr: false });
@@ -201,6 +202,8 @@ export function GamesSection() {
         title="Mini Oyunlar: Günlük Özet, Pişmanlık, Düello, Simülatör ve Yarış"
         description="Tamamı tarayıcı içinde çalışan, paylaşılabilir eğlenceli finans deneyimleri. Sonuçlar temsilidir, yatırım tavsiyesi değildir."
       />
+
+      <VirtualPortfolioGame />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Bugünün Piyasa Özeti */}

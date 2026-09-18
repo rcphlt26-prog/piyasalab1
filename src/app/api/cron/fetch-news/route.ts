@@ -66,7 +66,7 @@ export async function GET() {
         source: item.source?.trim() || 'Yayıncı bağlantısı',
         date: publishedAt,
         url: item.link,
-        relatedTickers: [],
+        relatedSymbols: [],
       };
       items.push(newsItem);
 
@@ -88,7 +88,7 @@ export async function GET() {
             source: newsItem.source,
             news_date: new Date(newsItem.date).toISOString().slice(0, 10),
             url: newsItem.url,
-            related_tickers: [],
+            related_symbols: [],
           },
         ]);
 

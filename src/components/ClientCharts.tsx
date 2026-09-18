@@ -106,6 +106,26 @@ export function AllocationChart({ data }: { data: { ad: string; oran: number }[]
   );
 }
 
+export function PortfolioComparisonChart({ data }: { data: GenericPoint[] }) {
+  const colors = ["#10b981", "#38bdf8", "#f59e0b", "#f43f5e"];
+  const keys = ["Portföyüm", "BIST 100", "Gram Altın", "Dolar"];
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={data} margin={{ left: 4, right: 12, top: 12, bottom: 4 }}>
+        <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
+        <XAxis dataKey="date" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+        <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} domain={["auto", "auto"]} />
+        <Tooltip
+          contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12 }}
+          labelStyle={{ color: "#e2e8f0" }}
+          formatter={(value: unknown, name: unknown) => [`${formatTooltipValue(value)}%`, String(name)]}
+        />
+        {keys.map((key, index) => <Line key={key} type="monotone" dataKey={key} stroke={colors[index]} strokeWidth={key === "Portföyüm" ? 3 : 1.8} dot={false} />)}
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
 function formatTooltipValue(value: unknown) {
   return typeof value === "number" ? new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(value) : String(value ?? "-");
 }

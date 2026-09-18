@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Clock, ExternalLink } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { newsData, type NewsCategory, type NewsItem } from "@/data/newsData";
@@ -114,11 +115,8 @@ export function NewsSection() {
             const isExternal = Boolean(n.url);
 
             return (
-              <a
+              <article
                 key={n.slug || n.title}
-                href={articleUrl}
-                target={isExternal ? "_blank" : "_self"}
-                rel={isExternal ? "noopener noreferrer" : ""}
                 className="app-surface-2 app-border card-hover rounded-2xl border p-4 block transition hover:border-[var(--color-primary-light)] group"
               >
                 <div className="mb-2 flex items-center gap-2">
@@ -132,25 +130,25 @@ export function NewsSection() {
                 </div>
                 
                 <h3 className="app-text mb-1 text-base font-semibold leading-snug flex items-center justify-between">
-                  <span>{n.title}</span>
+                  <Link href={`/haber/${n.slug}`} className="hover:text-primary">{n.title}</Link>
                   {isExternal && <ExternalLink className="h-4 w-4 opacity-50 group-hover:opacity-100 transition shrink-0 ml-2" />}
                 </h3>
                 
                 <p className="app-text-secondary text-sm leading-6">{n.summary}</p>
                 
-                {n.relatedTickers && n.relatedTickers.length > 0 ? (
+                {n.relatedSymbols && n.relatedSymbols.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {n.relatedTickers.map((t: string) => (
-                      <span key={t} className="app-surface-3 app-text-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold">{t}</span>
+                    {n.relatedSymbols.map((symbol: string) => (
+                      <Link key={symbol} href={`/varlik/${symbol}`} className="app-surface-3 app-text-secondary rounded-full px-2 py-0.5 text-[10px] font-semibold hover:text-primary">{symbol}</Link>
                     ))}
                   </div>
                 ) : null}
                 
                 <div className="mt-2 flex items-center justify-between text-xs">
                   <span className="app-muted">Kaynak: {n.url ? (n.source || "Yayıncı bağlantısı") : "Eğitim simülasyonu"}</span>
-                  {isExternal && <span className="text-[var(--color-primary)] font-medium">Habere Git →</span>}
+                  {isExternal && <a href={articleUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] font-medium">Kaynağa git →</a>}
                 </div>
-              </a>
+              </article>
             );
           })}
         </div>
