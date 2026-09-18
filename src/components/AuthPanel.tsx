@@ -1,19 +1,26 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
+import Link from "next/link";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
-import { LogIn, LogOut, UserPlus } from "lucide-react";
+import { LoaderCircle, LogIn, LogOut, UserPlus } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { isValidUsername } from "@/lib/contentModeration";
 
-export function AuthPanel() {
+export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
   const supabase = getSupabaseBrowserClient();
   const client = supabase;
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode] = useState<"login" | "signup">(initialMode);
   const [message, setMessage] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Supabase Dashboard > Authentication > Providers > Google:
+  // Google Cloud OAuth Client ID ve Client Secret değerlerini Google sağlayıcısına ekleyin.
 
   useEffect(() => {
     if (!client) return;
@@ -32,17 +39,47 @@ export function AuthPanel() {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
+    setLoading(true);
+    if (mode === "signup" && !isValidUsername(username)) {
+      setMessage("Takma ad 3-30 karakter olmalı; yalnızca harf, rakam ve alt çizgi kullanın.");
+      setLoading(false);
+      return;
+    }
     const result = mode === "login"
       ? await authClient.auth.signInWithPassword({ email, password })
-      : await authClient.auth.signUp({ email, password });
+      : await authClient.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: { username },
+          },
+        });
 
     if (result.error) {
       setMessage(result.error.message);
+      setLoading(false);
       return;
     }
     setMessage(mode === "signup" ? "Kayıt başarılı. E-posta onayını kontrol edin." : "Giriş yapıldı.");
     setPassword("");
     setOpen(false);
+    setLoading(false);
+  }
+
+  async function handleGoogleLogin() {
+    setMessage(null);
+    setLoading(true);
+    const { error } = await authClient.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+    }
   }
 
   async function signOut() {
@@ -76,14 +113,18 @@ export function AuthPanel() {
           </div>
           <form onSubmit={submit} className="space-y-2">
             <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="E-posta" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
+            {mode === "signup" ? <input required minLength={3} maxLength={30} value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, ""))} placeholder="Takma ad: borsa_kaplani34" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" /> : null}
             <input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifre (en az 6 karakter)" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
-            <button type="submit" className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white">
-              {mode === "login" ? "Giriş yap" : "Ücretsiz üye ol"}
+            <button type="submit" disabled={loading} className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+              {loading ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : mode === "login" ? "Giriş yap" : "Ücretsiz üye ol"}
             </button>
           </form>
-          <button type="button" onClick={() => setMode((value) => value === "login" ? "signup" : "login")} className="app-text-secondary mt-3 text-xs underline">
-            {mode === "login" ? "Hesabın yok mu? Üye ol" : "Zaten hesabın var mı? Giriş yap"}
+          <div className="my-3 flex items-center gap-2"><span className="app-border h-px flex-1 border-t" /><span className="app-muted text-[10px]">veya</span><span className="app-border h-px flex-1 border-t" /></div>
+          <button type="button" disabled={loading} onClick={() => void handleGoogleLogin()} className="app-border app-text inline-flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold disabled:cursor-wait disabled:opacity-60">
+            {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold text-[#4285f4]">G</span>}
+            Google ile Devam Et
           </button>
+          {mode === "login" ? <Link href="/register" target="_blank" rel="noopener noreferrer" className="app-text-secondary mt-3 inline-block text-xs underline">Hesabın yok mu? Üye ol</Link> : <Link href="/login" target="_blank" rel="noopener noreferrer" className="app-text-secondary mt-3 inline-block text-xs underline">Zaten hesabın var mı? Giriş yap</Link>}
           {message ? <p className="app-muted mt-2 text-xs">{message}</p> : null}
         </div>
       ) : null}

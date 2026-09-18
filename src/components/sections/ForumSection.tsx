@@ -8,6 +8,7 @@ import { useRealtimeCommunity } from "@/hooks/useRealtimeCommunity";
 import { portfolioBands } from "@/data/demoRealtime";
 import { rawBist100, stockDirectory } from "@/data/marketSymbols";
 import { formatNumber } from "@/lib/utils";
+import { findBlockedWord } from "@/lib/contentModeration";
 
 type ForumCategory = {
   id: string;
@@ -51,17 +52,6 @@ const reactionEmojis: Array<{ emoji: "🚀" | "🔥" | "😭"; key: "rocket" | "
   { emoji: "🔥", key: "fire" },
   { emoji: "😭", key: "cry" },
 ];
-
-const profanityList = ["aq", "amina", "orospu", "amk", "sik", "piç", "mal", "gerizekalı"];
-
-function filterProfanity(text: string): string {
-  let filtered = text;
-  profanityList.forEach((word) => {
-    const regex = new RegExp(`\\b${word}\\b`, "gi");
-    filtered = filtered.replace(regex, "*".repeat(word.length));
-  });
-  return filtered;
-}
 
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -147,13 +137,17 @@ export function ForumSection() {
     const text = body.trim();
     if (!text) return;
 
-    const cleanedBody = filterProfanity(text);
+    const blockedWord = findBlockedWord(text);
+    if (blockedWord) {
+      setErrorMsg("Mesajınız topluluk kurallarına aykırı argo içeriyor ve gönderilmedi.");
+      return;
+    }
 
     postComment({
       ticker: activeTicker,
       nickname: nickname.trim() || "Anonim Yatırımcı",
       portfolioBand: band,
-      body: cleanedBody,
+      body: text,
     });
 
     setBody("");
@@ -312,7 +306,7 @@ export function ForumSection() {
                 <span className="app-muted min-w-0 flex-1 text-xs">
                   {cooldownTime > 0 
                     ? `⚠️ Yeni mesaj için kalan süre: ${cooldownTime}s` 
-                    : "Nezaket kuralları geçerlidir. Argo filtrelenir."}
+                    : "Topluluk kuralları: saygılı olun; argo, küfür ve kişisel saldırılar kaydedilmez."}
                 </span>
                 <button
                   onClick={handlePost}

@@ -251,6 +251,7 @@ create table if not exists public.app_users (
   id uuid primary key default gen_random_uuid(),
   supabase_user_id uuid not null unique references auth.users(id) on delete cascade,
   email text not null unique,
+  username text not null unique,
   name text,
   avatar_url text,
   role text not null default 'USER' check (role in ('USER', 'PREMIUM', 'ADMIN')),
@@ -310,6 +311,13 @@ create table if not exists public.forum_comments (
   created_at timestamptz not null default now()
 );
 
+alter table public.app_users add column if not exists username text;
+update public.app_users set username = 'user_' || replace(substr(id::text, 1, 8), '-', '') where username is null or btrim(username) = '';
+create unique index if not exists app_users_username_unique_idx on public.app_users(lower(username));
+alter table public.app_users alter column username set not null;
+alter table public.app_users drop constraint if exists app_users_username_format_check;
+alter table public.app_users add constraint app_users_username_format_check check (username ~ '^[A-Za-z0-9_]{3,30}$');
+
 create index if not exists portfolios_user_id_idx on public.portfolios(user_id);
 create index if not exists portfolio_transactions_portfolio_date_idx on public.portfolio_transactions(portfolio_id, transaction_date desc);
 create index if not exists watchlists_user_id_idx on public.watchlists(user_id);
@@ -342,10 +350,11 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.app_users (supabase_user_id, email, name, avatar_url)
+  insert into public.app_users (supabase_user_id, email, username, name, avatar_url)
   values (
     new.id,
     coalesce(new.email, concat(new.id::text, '@unknown.local')),
+    coalesce(nullif(btrim(new.raw_user_meta_data ->> 'username'), ''), 'user_' || replace(substr(new.id::text, 1, 8), '-', '')),
     coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
     new.raw_user_meta_data ->> 'avatar_url'
   )
@@ -353,6 +362,25 @@ begin
   return new;
 end;
 $$;
+
+create or replace function public.reject_blocked_content()
+returns trigger
+language plpgsql
+as $$
+begin
+  if lower(coalesce(new.body, '')) ~ '(^|[^a-zçğıöşü0-9])(aq|amina|orospu|amk|sik|piç|mal|gerizekalı)([^a-zçğıöşü0-9]|$)' then
+    raise exception 'İçerik topluluk kurallarına aykırı argo içeriyor.' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists reject_comments_blocked_content on public.comments;
+create trigger reject_comments_blocked_content before insert or update on public.comments for each row execute function public.reject_blocked_content();
+drop trigger if exists reject_forum_posts_blocked_content on public.forum_posts;
+create trigger reject_forum_posts_blocked_content before insert or update on public.forum_posts for each row execute function public.reject_blocked_content();
+drop trigger if exists reject_forum_comments_blocked_content on public.forum_comments;
+create trigger reject_forum_comments_blocked_content before insert or update on public.forum_comments for each row execute function public.reject_blocked_content();
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

@@ -11,6 +11,7 @@ import {
   tickerTabs,
   type TickerTab,
 } from "@/data/demoRealtime";
+import { findBlockedWord } from "@/lib/contentModeration";
 
 export type CommentItem = {
   id: string;
@@ -230,6 +231,11 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
   }, [comments, reactions]);
 
   async function postComment(payload: { ticker: string; nickname: string; portfolioBand: string; body: string }) {
+    if (findBlockedWord(payload.body)) {
+      setDemoMode(true);
+      return;
+    }
+
     const newItem: CommentItem = {
       id: crypto.randomUUID(),
       ticker: payload.ticker,
