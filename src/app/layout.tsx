@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AdSenseConsent } from "@/components/AdSenseConsent";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -118,6 +119,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="tr" className={`h-full antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
       <body className="app-text min-h-full">
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
       <AdSenseConsent client={adsenseClient} />
       <Script id="jsonld-webapp" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />

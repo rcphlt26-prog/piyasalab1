@@ -102,9 +102,8 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
       },
     });
 
-    // Doğrudan chart instance metodları kullanılarak tip güvenliği sağlandı
     if (filteredCandles && filteredCandles.length > 0) {
-      // @ts-ignore
+      // @ts-expect-error lightweight-charts API typing differs across installed versions.
       const series = chart.addCandlestickSeries({
         upColor: "#10b981",
         downColor: "#f43f5e",
@@ -115,7 +114,7 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
       });
       series.setData(filteredCandles);
     } else if (filteredData.length > 0) {
-      // @ts-ignore
+      // @ts-expect-error lightweight-charts API typing differs across installed versions.
       const series = chart.addLineSeries({
         color: "#38bdf8",
         lineWidth: 2.5,

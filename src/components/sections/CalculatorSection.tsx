@@ -9,7 +9,7 @@ import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
 import { AdSlot } from "@/components/AdSlot";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { assetList, calculateReturn, toAssetLabel, type CurrencyCode } from "@/lib/finance";
-import { bigMacSeries, dailyBasketSeries, gramGoldSeries, minimumWageSeries, quarterGoldSeries } from "@/data/historicalData";
+import { bigMacSeries, dailyBasketSeries, gramGoldSeries, minimumWageSeries, quarterGoldSeries, breadSeries, milkSeries } from "@/data/historicalData";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
 const SimpleBarChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.SimpleBarChart), { ssr: false });
@@ -87,13 +87,15 @@ export function CalculatorSection() {
   }, [powerAmount, powerYear]);
 
   const nostalgia = useMemo(() => {
-    const byYear = (series: { year: number; value: number }[]) => series.find((x) => x.year === powerYear)?.value || series[0].value;
-    const byNow = (series: { year: number; value: number }[]) => series[series.length - 1].value;
+    const byYear = (series: { year: number; value: number }[] | undefined) => series?.find((x) => x.year === powerYear)?.value || series?.[0]?.value || 1;
+    const byNow = (series: { year: number; value: number }[] | undefined) => series?.[series.length - 1]?.value || 1;
     return {
       wagePast: powerAmount / byYear(minimumWageSeries), wageNow: nowPower / byNow(minimumWageSeries),
       quarterPast: powerAmount / byYear(quarterGoldSeries), quarterNow: nowPower / byNow(quarterGoldSeries),
       bigMacPast: powerAmount / byYear(bigMacSeries), bigMacNow: nowPower / byNow(bigMacSeries),
       gramPast: powerAmount / byYear(gramGoldSeries), gramNow: nowPower / byNow(gramGoldSeries),
+      breadPast: powerAmount / byYear(breadSeries), breadNow: nowPower / byNow(breadSeries),
+      milkPast: powerAmount / byYear(milkSeries), milkNow: nowPower / byNow(milkSeries),
     };
   }, [powerAmount, powerYear, nowPower]);
 
@@ -209,42 +211,42 @@ export function CalculatorSection() {
         Hesaplama sonuçları tahmini olup yatırım tavsiyesi değildir.
       </p>
 
-      {/* Sade, Anlaşılır "O Zaman vs. Şimdi" Alım Gücü Karşılaştırması */}
-      <div className="app-surface-2 app-border mt-6 rounded-xl border p-4">
-        <h3 className="app-text mb-2 text-base font-semibold flex items-center gap-2">
-          <Coins className="text-gold h-4 w-4" /> Geçmiş Alım Gücü Karşılaştırması
-        </h3>
-        <p className="app-muted mb-3 text-xs">Seçtiğiniz yıldaki paranın bugün aynı alım gücünü koruması için kaç TL olması gerektiğini ve temel ihtiyaçlardaki değişimi görün.</p>
-
-        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input type="number" value={powerAmount} onChange={(e) => setPowerAmount(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" placeholder="Tutar" />
-          <select value={powerYear} onChange={(e) => setPowerYear(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none">{years.map((y) => <option key={y}>{y}</option>)}</select>
+      {/* Alım Gücü & Ekmek/Süt/Temel İhtiyaç Karşılaştırması */}
+      <div className="app-surface-2 app-border mt-6 rounded-xl border p-3">
+        <h3 className="app-text mb-2 text-lg font-semibold"><Coins className="text-gold mr-1 inline h-4 w-4" />Alım Gücü & Temel Gıda Simülatörü</h3>
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <input type="number" value={powerAmount} onChange={(e) => setPowerAmount(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm" />
+          <select value={powerYear} onChange={(e) => setPowerYear(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm">{years.map((y) => <option key={y}>{y}</option>)}</select>
         </div>
-
-        <div className="app-surface app-border mb-3 rounded-lg border p-3 text-sm">
-          {powerYear} yılında olan <strong>{formatCurrency(powerAmount)}</strong>, bugün yaklaşık <strong className="text-emerald-400">{formatCurrency(nowPower)}</strong> değerine denk gelmektedir.
-        </div>
-
-        {/* Anlaşılması kolay, net tablo / kart yapısı */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
-          <div className="app-surface app-border rounded-lg border p-2.5">
-            <span className="app-muted block mb-1">Asgari Ücret</span>
+        <p className="app-surface app-border mb-2 rounded-lg border p-2 text-sm">{powerYear} yılındaki {formatCurrency(powerAmount)} bugün yaklaşık <strong>{formatCurrency(nowPower)}</strong> satın alma gücüne denk gelir.</p>
+        
+        {/* Ekmek, Süt ve diğer temel gıda/ihtiyaç karşılaştırmaları */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs mb-3">
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">🍞 Ekmek</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.breadPast, 0)} → {formatNumber(nostalgia.breadNow, 0)} adet</span>
+          </div>
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">🥛 1L Süt</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.milkPast, 0)} → {formatNumber(nostalgia.milkNow, 0)} litre</span>
+          </div>
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">👷 Asgari Ücret</span>
             <span className="font-bold text-sm">{formatNumber(nostalgia.wagePast, 1)} → {formatNumber(nostalgia.wageNow, 1)} adet</span>
           </div>
-          <div className="app-surface app-border rounded-lg border p-2.5">
-            <span className="app-muted block mb-1">Çeyrek Altın</span>
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">🥇 Çeyrek Altın</span>
             <span className="font-bold text-sm">{formatNumber(nostalgia.quarterPast, 1)} → {formatNumber(nostalgia.quarterNow, 1)} adet</span>
           </div>
-          <div className="app-surface app-border rounded-lg border p-2.5">
-            <span className="app-muted block mb-1">Big Mac Menü</span>
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">🍔 Big Mac</span>
             <span className="font-bold text-sm">{formatNumber(nostalgia.bigMacPast, 0)} → {formatNumber(nostalgia.bigMacNow, 0)} adet</span>
           </div>
-          <div className="app-surface app-border rounded-lg border p-2.5">
-            <span className="app-muted block mb-1">Gram Altın</span>
+          <div className="app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-0.5">✨ Gram Altın</span>
             <span className="font-bold text-sm">{formatNumber(nostalgia.gramPast, 1)} → {formatNumber(nostalgia.gramNow, 1)} gram</span>
           </div>
         </div>
-
         <SimpleBarChart data={[{ etiket: `${powerYear} alım gücü`, deger: powerAmount }, { etiket: "Bugünkü karşılık", deger: nowPower }]} xKey="etiket" yKey="deger" />
       </div>
     </section>
