@@ -21,6 +21,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
   const [open, setOpen] = useState(openInitially);
   const [loading, setLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [signupCompleted, setSignupCompleted] = useState(false);
 
   // Supabase Dashboard > Authentication > Providers > Google:
   // Google Cloud OAuth Client ID ve Client Secret değerlerini Google sağlayıcısına ekleyin.
@@ -86,10 +87,24 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
       document.cookie = `veriakis-remember-me=${rememberMe ? "1" : "0"}; Path=/; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
       setMessage("Giriş yapıldı.");
     } else {
+      setSignupCompleted(true);
       setMessage("Kayıt işleminiz başarıyla gerçekleşti! Lütfen e-posta kutunuza gönderilen doğrulama bağlantısına tıklayarak hesabınızı onaylayın.");
     }
     setPassword("");
     if (mode === "login") setOpen(false);
+    setLoading(false);
+  }
+
+  async function resendConfirmationEmail() {
+    if (!email) return;
+    setLoading(true);
+    setMessage(null);
+    const { error } = await authClient.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setMessage(error ? `Doğrulama e-postası yeniden gönderilemedi: ${error.message}` : "Doğrulama e-postası yeniden gönderildi. Spam klasörünü de kontrol edin.");
     setLoading(false);
   }
 
@@ -162,6 +177,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
             {mode === "login" ? "Hesabın yok mu? Üye ol" : "Zaten hesabın var mı? Giriş yap"}
           </button>
           {message ? <p role="alert" className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${mode === "signup" && message.includes("başarıyla") ? "border-[var(--color-bull)]/30 bg-[var(--color-bull)]/10 text-bull" : "border-[var(--color-gold)]/30 bg-[var(--color-gold)]/10 text-gold"}`}>{message}</p> : null}
+          {signupCompleted ? <button type="button" disabled={loading} onClick={() => void resendConfirmationEmail()} className="app-text-secondary mt-2 text-xs underline disabled:opacity-50">Doğrulama e-postasını yeniden gönder</button> : null}
         </div>
       ) : null}
     </div>

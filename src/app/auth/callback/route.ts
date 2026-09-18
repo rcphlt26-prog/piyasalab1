@@ -11,6 +11,9 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
+  if (requestUrl.searchParams.get("error") || requestUrl.searchParams.get("error_code")) {
+    return NextResponse.redirect(new URL("/login?error=email-link-expired", requestUrl.origin));
+  }
   const code = requestUrl.searchParams.get("code");
   const requestedNext = requestUrl.searchParams.get("next") ?? requestUrl.searchParams.get("redirect");
   const nextPath = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/";

@@ -13,6 +13,15 @@ function copyCookies(source: NextResponse, target: NextResponse) {
 }
 
 export async function middleware(request: NextRequest) {
+  const authError = request.nextUrl.searchParams.get("error");
+  const authErrorCode = request.nextUrl.searchParams.get("error_code");
+  if (request.nextUrl.pathname === "/" && (authError === "access_denied" || authErrorCode === "otp_expired")) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "?error=email-link-expired";
+    return NextResponse.redirect(loginUrl);
+  }
+
   if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.has("code")) {
     const callbackUrl = request.nextUrl.clone();
     callbackUrl.pathname = "/auth/callback";
