@@ -6,12 +6,9 @@ import { ArrowDownRight, ArrowUpRight, Search, Star, ChevronLeft, ChevronRight }
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchStar } from "@/components/WatchStar";
-import { PriceChart } from "@/components/PriceChart";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { Card } from "@/components/ui/Card";
 import { formatNumber } from "@/lib/utils";
 import { marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
-import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { MarketNewsStrip } from "@/components/MarketNewsStrip";
 
 type TabKey = "borsa" | "doviz" | "emtia" | "kripto";
@@ -25,7 +22,7 @@ const TABS: Array<{ key: TabKey; label: string; categories: MarketCategory[] }> 
 
 const categoryOf = (code: string): MarketCategory | undefined => marketSymbolByCode.get(code)?.category;
 
-const ITEMS_PER_PAGE = 40;
+const ITEMS_PER_PAGE = 20;
 
 export function MarketSection() {
   const { quotes, tickerTape, liveAvailable, updatedAt } = useLiveQuotes();
@@ -58,8 +55,6 @@ export function MarketSection() {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return visibleQuotes.slice(start, start + ITEMS_PER_PAGE);
   }, [visibleQuotes, currentPage]);
-
-  const { data: marketChartData } = useHistoricalPrices(paginatedQuotes[0]?.code ?? visibleQuotes[0]?.code ?? "");
 
   const handleTabChange = (key: TabKey) => {
     setActiveTab(key);
@@ -207,14 +202,6 @@ export function MarketSection() {
           </button>
         </div>
       )}
-
-      <Card padded={false} className="mt-4 p-2">
-        <div className="px-2 pt-2">
-          <h3 className="app-text text-sm font-semibold">{paginatedQuotes[0]?.label ?? visibleQuotes[0]?.label ?? "Piyasa"} Fiyat Grafiği</h3>
-          <p className="app-muted text-xs">Seçili sayfadaki ilk varlığın son hareketi</p>
-        </div>
-        {marketChartData.length > 0 ? <PriceChart data={marketChartData} height={380} /> : <p className="app-muted px-2 py-12 text-center text-sm">Tarihsel veri yükleniyor veya alınamadı.</p>}
-      </Card>
 
       <MarketNewsStrip tab={activeTab} />
 

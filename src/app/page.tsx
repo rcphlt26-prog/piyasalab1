@@ -6,7 +6,6 @@ import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SpkBanner } from "@/components/SpkBanner";
 import { Footer } from "@/components/Footer";
-import { AdSlot } from "@/components/AdSlot";
 import { MarketSection } from "@/components/sections/MarketSection";
 import { CalculatorSection } from "@/components/sections/CalculatorSection";
 import { ScorecardSection } from "@/components/sections/ScorecardSection";
@@ -142,8 +141,6 @@ export default function HomePage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        <AdSlot label="Üst Leaderboard" width={728} height={90} className="mb-4" />
-
         {activeTab === "piyasa" ? <div className="space-y-6">
           <HomeHero />
           <MarketSection />

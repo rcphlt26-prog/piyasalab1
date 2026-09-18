@@ -6,7 +6,6 @@ import { Coins, Sparkles } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
-import { AdSlot } from "@/components/AdSlot";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { assetList, calculateReturn, toAssetLabel, type CurrencyCode } from "@/lib/finance";
 import { bigMacSeries, dailyBasketSeries, gramGoldSeries, minimumWageSeries, quarterGoldSeries, breadSeries, milkSeries } from "@/data/historicalData";
@@ -187,8 +186,6 @@ export function CalculatorSection() {
           </button>
         </div>
       </div>
-
-      <AdSlot label="Hesaplayıcı Altı Inline" width={300} height={250} className="my-4" />
 
       <LiveCurrencyConverter />
 
