@@ -7,7 +7,7 @@ import { LoaderCircle, LogIn, LogOut, UserPlus } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { isValidUsername } from "@/lib/contentModeration";
 
-export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
+export function AuthPanel({ initialMode = "login", openInitially = false }: { initialMode?: "login" | "signup"; openInitially?: boolean }) {
   const supabase = getSupabaseBrowserClient();
   const client = supabase;
   const [user, setUser] = useState<User | null>(null);
@@ -16,9 +16,9 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
   const [kvkkAccepted, setKvkkAccepted] = useState(false);
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [mode] = useState<"login" | "signup">(initialMode);
+  const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [message, setMessage] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(openInitially);
   const [loading, setLoading] = useState(false);
 
   // Supabase Dashboard > Authentication > Providers > Google:
@@ -83,7 +83,7 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
       setMessage("Kayıt işleminiz başarıyla gerçekleşti! Lütfen e-posta kutunuza gönderilen doğrulama bağlantısına tıklayarak hesabınızı onaylayın.");
     }
     setPassword("");
-    setOpen(false);
+    if (mode === "login") setOpen(false);
     setLoading(false);
   }
 
@@ -140,7 +140,7 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
             {mode === "signup" ? <label className="app-text-secondary flex items-start gap-2 text-[11px]"><input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5" /><span><Link href="/gizlilik" target="_blank" rel="noopener noreferrer" className="text-primary underline">KVKK/Gizlilik Politikası</Link>, <Link href="/cerezler" target="_blank" rel="noopener noreferrer" className="text-primary underline">Çerez Politikası</Link> ve <Link href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-primary underline">Kullanım Şartları</Link>&apos;nı okudum ve kabul ediyorum.</span></label> : null}
             <input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifre (en az 6 karakter)" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
             {mode === "login" ? <label className="app-text-secondary flex items-center gap-2 text-xs"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Beni hatırla (30 gün)</label> : null}
-            <button type="submit" disabled={loading} className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
+            <button type="submit" disabled={loading || (mode === "signup" && !kvkkAccepted)} className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
               {loading ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : mode === "login" ? "Giriş yap" : "Ücretsiz üye ol"}
             </button>
           </form>
@@ -149,8 +149,10 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
             {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <span className="text-base font-bold text-[#4285f4]">G</span>}
             Google ile Devam Et
           </button>
-          {mode === "login" ? <Link href="/register" target="_blank" rel="noopener noreferrer" className="app-text-secondary mt-3 inline-block text-xs underline">Hesabın yok mu? Üye ol</Link> : <Link href="/login" target="_blank" rel="noopener noreferrer" className="app-text-secondary mt-3 inline-block text-xs underline">Zaten hesabın var mı? Giriş yap</Link>}
-          {message ? <p className="app-muted mt-2 text-xs">{message}</p> : null}
+          <button type="button" onClick={() => setMode((value) => value === "login" ? "signup" : "login")} className="app-text-secondary mt-3 text-xs underline">
+            {mode === "login" ? "Hesabın yok mu? Üye ol" : "Zaten hesabın var mı? Giriş yap"}
+          </button>
+          {message ? <p role="alert" className={`mt-3 rounded-lg border p-3 text-xs leading-5 ${mode === "signup" && message.includes("başarıyla") ? "border-[var(--color-bull)]/30 bg-[var(--color-bull)]/10 text-bull" : "border-[var(--color-gold)]/30 bg-[var(--color-gold)]/10 text-gold"}`}>{message}</p> : null}
         </div>
       ) : null}
     </div>

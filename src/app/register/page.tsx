@@ -13,7 +13,7 @@ export default function RegisterPage() {
       <section className="section-card w-full max-w-md">
         <h1 className="app-text text-2xl font-bold">Ücretsiz hesap oluştur</h1>
         <p className="app-text-secondary mt-2 text-sm">Portföyünü, izleme listeni ve alarmlarını tek yerde takip et.</p>
-        <div className="mt-5"><AuthPanel initialMode="signup" /></div>
+        <div className="mt-5"><AuthPanel initialMode="signup" openInitially /></div>
         <Link href="/login" target="_blank" rel="noopener noreferrer" className="app-text-secondary mt-5 inline-block text-sm underline">Zaten hesabın var mı? Giriş yap</Link>
       </section>
     </main>
