@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { formatNumber } from "@/lib/utils";
 import { marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
+import { MarketNewsStrip } from "@/components/MarketNewsStrip";
 
 type TabKey = "borsa" | "doviz" | "emtia" | "kripto";
 
@@ -24,7 +25,7 @@ const TABS: Array<{ key: TabKey; label: string; categories: MarketCategory[] }> 
 
 const categoryOf = (code: string): MarketCategory | undefined => marketSymbolByCode.get(code)?.category;
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 40;
 
 export function MarketSection() {
   const { quotes, tickerTape, liveAvailable, updatedAt } = useLiveQuotes();
@@ -214,6 +215,8 @@ export function MarketSection() {
         </div>
         {marketChartData.length > 0 ? <PriceChart data={marketChartData} height={380} /> : <p className="app-muted px-2 py-12 text-center text-sm">Tarihsel veri yükleniyor veya alınamadı.</p>}
       </Card>
+
+      <MarketNewsStrip tab={activeTab} />
 
       <p className="app-muted mt-3 text-xs">
         Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. Son güncelleme: {updatedAt ? new Date(updatedAt).toLocaleString("tr-TR") : "-"} · {liveAvailable ? "Canlı kaynak" : "Canlı veri bekleniyor"}

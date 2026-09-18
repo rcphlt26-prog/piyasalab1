@@ -49,40 +49,45 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const styles = getComputedStyle(container);
+    const textColor = styles.getPropertyValue("--text-secondary").trim() || "#94a3b8";
+    const borderColor = styles.getPropertyValue("--border").trim() || "rgba(148, 163, 184, 0.18)";
+    const primary = styles.getPropertyValue("--color-primary-light").trim() || "#22d3ee";
+    const surface = styles.getPropertyValue("--surface-2").trim() || "#0f172a";
 
     const chart = createChart(container, {
       width: container.clientWidth,
       height,
       layout: {
         background: { color: "transparent" },
-        textColor: "#94a3b8",
+        textColor,
         fontFamily: "inherit",
       },
       grid: {
-        vertLines: { color: "rgba(255, 255, 255, 0.03)" },
-        horzLines: { color: "rgba(255, 255, 255, 0.03)" },
+        vertLines: { color: borderColor },
+        horzLines: { color: borderColor },
       },
       crosshair: {
         mode: 1,
         vertLine: {
-          color: "rgba(56, 189, 248, 0.4)",
+          color: primary,
           width: 1,
           style: 3,
-          labelBackgroundColor: "#0284c7",
+          labelBackgroundColor: primary,
         },
         horzLine: {
-          color: "rgba(56, 189, 248, 0.4)",
+          color: primary,
           width: 1,
           style: 3,
-          labelBackgroundColor: "#0284c7",
+          labelBackgroundColor: primary,
         },
       },
       rightPriceScale: {
-        borderColor: "rgba(255, 255, 255, 0.08)",
+        borderColor,
         scaleMargins: { top: 0.2, bottom: 0.1 },
       },
       timeScale: {
-        borderColor: "rgba(255, 255, 255, 0.08)",
+        borderColor,
         timeVisible: true,
         secondsVisible: false,
       },
@@ -90,24 +95,24 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
 
     if (filteredCandles && filteredCandles.length > 0) {
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: "#10b981",
+        upColor: "#22c55e",
         downColor: "#f43f5e",
-        borderUpColor: "#10b981",
+        borderUpColor: "#22c55e",
         borderDownColor: "#f43f5e",
-        wickUpColor: "#10b981",
+        wickUpColor: "#22c55e",
         wickDownColor: "#f43f5e",
       });
       series.setData(filteredCandles);
     } else if (filteredData.length > 0) {
       const series = chart.addSeries(AreaSeries, {
-        lineColor: "#22d3ee",
-        topColor: "rgba(34, 211, 238, 0.28)",
-        bottomColor: "rgba(34, 211, 238, 0.02)",
+        lineColor: primary,
+        topColor: `${primary}55`,
+        bottomColor: `${surface}00`,
         lineWidth: 2,
-        crosshairMarkerBackgroundColor: "#0891b2",
-        crosshairMarkerBorderColor: "#ecfeff",
+        crosshairMarkerBackgroundColor: primary,
+        crosshairMarkerBorderColor: textColor,
         crosshairMarkerRadius: 5,
-        priceLineColor: "#22d3ee",
+        priceLineColor: primary,
         lastValueVisible: true,
       });
       series.setData(filteredData);
@@ -131,16 +136,16 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
   return (
     <div className="w-full flex flex-col p-2">
       <div className="flex items-center justify-between mb-3 px-1">
-        <span className="text-xs font-medium text-gray-400">Grafik Zaman Dilimi</span>
-        <div className="flex items-center gap-1 bg-gray-900/60 p-1 rounded-lg border border-gray-800">
+        <span className="app-muted text-xs font-medium">Grafik Zaman Dilimi</span>
+        <div className="app-surface-2 app-border flex items-center gap-1 rounded-lg border p-1">
           {(["1A", "3A", "6A", "1Y", "5Y", "MAX"] as TimeFrame[]).map((tf) => (
             <button
               key={tf}
               onClick={() => setTimeFrame(tf)}
               className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                 timeFrame === tf
-                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+                  ? "bg-[var(--color-primary)] text-white shadow-md shadow-cyan-500/20"
+                  : "app-text-secondary hover:app-surface-3"
               }`}
             >
               {tf}

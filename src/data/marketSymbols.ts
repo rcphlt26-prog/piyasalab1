@@ -63,6 +63,16 @@ const cryptoRaw: Array<[string, string]> = [
   ["LDO", "Lido DAO"],
   ["STX", "Stacks"],
   ["KAS", "Kaspa"],
+  ["USDC", "USD Coin"],
+  ["DAI", "Dai"],
+  ["WBTC", "Wrapped Bitcoin"],
+  ["BONK", "Bonk"],
+  ["FLOKI", "FLOKI"],
+  ["JUP", "Jupiter"],
+  ["TIA", "Celestia"],
+  ["RAY", "Raydium"],
+  ["JTO", "Jito"],
+  ["PYTH", "Pyth Network"],
 ];
 
 const cryptoSymbols: MarketSymbol[] = cryptoRaw.map(([sym, name]) => ({

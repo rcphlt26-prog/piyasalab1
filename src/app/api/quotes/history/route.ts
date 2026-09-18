@@ -101,6 +101,12 @@ export async function GET(request: Request) {
       symbol = "GC=F + TRY=X";
     }
 
+    const recentCutoff = new Date();
+    recentCutoff.setUTCDate(recentCutoff.getUTCDate() - 365);
+    const recentValues = data.filter((point) => point.time >= recentCutoff.toISOString().slice(0, 10)).map((point) => point.value);
+    const weekHigh52 = recentValues.length ? Math.max(...recentValues) : null;
+    const weekLow52 = recentValues.length ? Math.min(...recentValues) : null;
+
     return NextResponse.json({
       code,
       symbol,
@@ -109,9 +115,11 @@ export async function GET(request: Request) {
       meta: {
         currency: isGramMetal || GOLD_FACTORS[code ?? ""] ? "TRY" : "TRY",
         unit: isGramMetal || GOLD_FACTORS[code ?? ""] ? "TL/gram" : undefined,
+        weekHigh52,
+        weekLow52,
       },
-    });
+    }, { status: data.length ? 200 : 503 });
   } catch {
-    return NextResponse.json({ data: [], error: "Tarihsel piyasa verisi alınamadı." }, { status: 503 });
+    return NextResponse.json({ data: [], error: `Tarihsel piyasa verisi alınamadı (${code}).` }, { status: 503 });
   }
 }

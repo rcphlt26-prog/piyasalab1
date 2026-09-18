@@ -71,12 +71,10 @@ export function HomeTickerRail() {
         </div>
         <div className="ticker-window h-24">
           <div className="ticker-track ticker-track-news flex h-full w-max items-center gap-3 px-4">
-            {repeatedNews.map((item, index) => (
-              <a key={`${item.slug || item.title}-${index}`} href={item.url || "#"} target={item.url ? "_blank" : undefined} rel={item.url ? "noreferrer" : undefined} className="app-surface-2 app-border card-hover flex w-64 shrink-0 items-center gap-3 rounded-xl border p-3">
+            {repeatedNews.map((item, index) => item.url ? <a key={`${item.slug || item.title}-${index}`} href={item.url} target="_blank" rel="noreferrer" className="app-surface-2 app-border card-hover flex w-64 shrink-0 items-center gap-3 rounded-xl border p-3">
                 <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)]/15 text-xs font-bold text-primary">{item.category?.slice(0, 1) || "G"}</span>
                 <span className="app-text line-clamp-2 text-xs font-semibold">{item.title}</span>
-              </a>
-            ))}
+              </a> : <Link key={`${item.slug || item.title}-${index}`} href={`/haber/${item.slug}`} className="app-surface-2 app-border card-hover flex w-64 shrink-0 items-center gap-3 rounded-xl border p-3"><span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary)]/15 text-xs font-bold text-primary">{item.category?.slice(0, 1) || "G"}</span><span className="app-text line-clamp-2 text-xs font-semibold">{item.title}</span></Link>)}
           </div>
         </div>
       </div>

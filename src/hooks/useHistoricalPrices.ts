@@ -9,12 +9,14 @@ type HistoryResponse = {
   data?: HistoricalPrice[];
   source?: string;
   error?: string;
+  meta?: { weekHigh52?: number | null; weekLow52?: number | null; unit?: string };
 };
 
 export function useHistoricalPrices(code: string, range = "MAX") {
   const [data, setData] = useState<HistoricalPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<string | null>(null);
+  const [meta, setMeta] = useState<HistoryResponse["meta"]>(undefined);
 
   useEffect(() => {
     let mounted = true;
@@ -33,9 +35,13 @@ export function useHistoricalPrices(code: string, range = "MAX") {
         if (mounted) {
           setData(payload.data ?? []);
           setSource(payload.source ?? null);
+          setMeta(payload.meta);
         }
       } catch {
-        if (mounted) setData([]);
+        if (mounted) {
+          setData([]);
+          setMeta(undefined);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -47,5 +53,5 @@ export function useHistoricalPrices(code: string, range = "MAX") {
     };
   }, [code, range]);
 
-  return { data: code ? data : [], loading: code ? loading : false, source: code ? source : null };
+  return { data: code ? data : [], loading: code ? loading : false, source: code ? source : null, meta: code ? meta : undefined };
 }

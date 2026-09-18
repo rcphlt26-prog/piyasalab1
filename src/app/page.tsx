@@ -23,18 +23,19 @@ import { HomeHero } from "@/components/HomeHero";
 import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
+import { HomeTickerRail } from "@/components/HomeTickerRail";
 
 type TabId = "piyasa" | "hesaplayici" | "karne" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof LineChart }> = [
   { id: "piyasa", label: "Piyasa", icon: LineChart },
+  { id: "haberler", label: "Haberler", icon: Newspaper },
   { id: "hesaplayici", label: "Hesaplayıcı", icon: Calculator },
   { id: "karne", label: "Hisse Karnesi", icon: ClipboardList },
   { id: "portfoy", label: "Portföyüm", icon: BriefcaseBusiness },
   { id: "izleme", label: "İzleme Listem", icon: Star },
   { id: "forum", label: "Forum", icon: MessagesSquare },
   { id: "oyunlar", label: "Oyunlar", icon: Gamepad2 },
-  { id: "haberler", label: "Haberler", icon: Newspaper },
   { id: "hakkinda", label: "Hakkında", icon: Info },
 ];
 
@@ -145,13 +146,14 @@ export default function HomePage() {
 
         {activeTab === "piyasa" ? <div className="space-y-6">
           <HomeHero />
+          <MarketSection />
+          <HomeTickerRail />
           <HomePersonalPanel />
           <HomeDailyFlow />
           <HomeTools onNavigate={handleNavigate} />
         </div> : null}
 
         <div className="space-y-6">
-          {activeTab === "piyasa" ? <MarketSection /> : null}
           {activeTab === "hesaplayici" ? <CalculatorSection /> : null}
           {activeTab === "karne" ? <ScorecardSection /> : null}
           {activeTab === "portfoy" ? <PortfolioSection /> : null}

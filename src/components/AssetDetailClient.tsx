@@ -73,7 +73,7 @@ export function AssetDetailClient({
   const { isWatched, toggle } = useWatchlist();
   const name = market?.label ?? entry?.name ?? ticker;
   const liveQuote = useLiveQuote(ticker);
-  const { data: historicalPrices, loading: historyLoading, source: historySource } = useHistoricalPrices(ticker);
+  const { data: historicalPrices, loading: historyLoading, source: historySource, meta: historyMeta } = useHistoricalPrices(ticker);
   const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
   const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
   const isStock = market ? market.category === "hisse" : Boolean(entry);
@@ -128,13 +128,15 @@ export function AssetDetailClient({
         ["PD/DD", score ? String(score.pddd) : "-"],
         ["Piyasa Değeri", score?.marketCap ?? "-"],
         ["Temettü Verimi", score ? `%${formatNumber(score.dividendYield, 1)}` : "-"],
+        ["52H En Yüksek", historyMeta?.weekHigh52 == null ? "-" : formatNumber(historyMeta.weekHigh52)],
+        ["52H En Düşük", historyMeta?.weekLow52 == null ? "-" : formatNumber(historyMeta.weekLow52)],
       ]
     : [
         ["Tür", categoryLabel],
         ["Kaynak Sembol", market?.yahooSymbol ?? "-"],
-        ["52H En Yüksek", "-"],
-        ["52H En Düşük", "-"],
         ["Günlük Değişim", changePct === undefined ? "-" : `%${formatNumber(changePct, 2)}`],
+        ["52H En Yüksek", historyMeta?.weekHigh52 == null ? "-" : formatNumber(historyMeta.weekHigh52)],
+        ["52H En Düşük", historyMeta?.weekLow52 == null ? "-" : formatNumber(historyMeta.weekLow52)],
       ];
 
   return (
