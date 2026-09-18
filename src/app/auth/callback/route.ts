@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // Supabase Dashboard > Authentication > URL Configuration:
 // Site URL: https://piyasalab.com.tr (local: http://localhost:3000)
@@ -40,12 +41,20 @@ export async function GET(request: Request) {
   const { data: authData } = await supabase.auth.getUser();
   if (!authData.user) return NextResponse.redirect(loginUrl);
 
-  const { data: appUser } = await supabase
+  const database = getSupabaseAdminClient() ?? supabase;
+  const { data: appUser } = await database
     .from("app_users")
     .select("id, username")
     .eq("supabase_user_id", authData.user.id)
     .maybeSingle();
 
+  if (!appUser) {
+    await database.from("app_users").insert({
+      supabase_user_id: authData.user.id,
+      email: authData.user.email ?? `${authData.user.id}@unknown.local`,
+      username: `user_${authData.user.id.replace(/-/g, "").slice(0, 8)}`,
+    });
+  }
   const incompleteUsername = !appUser?.username || /^user_[a-f0-9]{8}$/i.test(appUser.username);
   if (incompleteUsername) return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(nextPath)}`, requestUrl.origin));
 

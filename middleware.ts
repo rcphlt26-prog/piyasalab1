@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const protectedPrefixes = ["/portfoy", "/ayarlar"];
+const protectedPrefixes = ["/portfoy", "/profil", "/ayarlar"];
 const authRoutes = ["/login", "/register"];
 const publicPrefixes = ["/onboarding", "/auth", "/api", "/gizlilik", "/cerezler", "/kullanim-sartlari", "/yasal-uyari", "/iletisim"];
 
@@ -13,6 +13,12 @@ function copyCookies(source: NextResponse, target: NextResponse) {
 }
 
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
   let response = NextResponse.next({ request });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

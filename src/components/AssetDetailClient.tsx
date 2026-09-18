@@ -16,6 +16,7 @@ import { scorecardData } from "@/data/scorecardData";
 import { formatNumber } from "@/lib/utils";
 import { StockInsightCard } from "@/components/StockInsightCard";
 import { StockCommunityWidget } from "@/components/StockCommunityWidget";
+import { ShareButtons } from "@/components/ShareButtons";
 import type { StockEntry, MarketSymbol } from "@/data/marketSymbols";
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
@@ -153,6 +154,8 @@ export function AssetDetailClient({
       <Link href="/" className="app-text-secondary mb-4 inline-flex items-center gap-2 text-sm hover:text-primary">
         <ArrowLeft className="h-4 w-4" /> Geri dön
       </Link>
+
+      <div className="mb-4"><ShareButtons title={`${ticker} Canlı Fiyatı, Bilanço ve KAP Haberleri`} /></div>
 
       {/* Başlık kartı */}
       <div className="section-card mb-4">

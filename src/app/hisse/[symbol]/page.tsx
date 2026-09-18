@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: { params: Promise<{ symbol: s
     title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`,
     description,
     alternates: { canonical: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` },
-    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, type: "article", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` },
-    twitter: { card: "summary", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description },
+    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, type: "article", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}`, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
+    twitter: { card: "summary_large_image", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, images: [`/api/og?ticker=${encodeURIComponent(ticker)}`] },
   };
 }
 

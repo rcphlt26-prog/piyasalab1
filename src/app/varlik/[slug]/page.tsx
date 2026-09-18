@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`,
     description: `${ticker} hisse senedi güncel fiyatı, F/K, PD/DD rasyoları, son çeyrek bilanço analizi ve güncel KAP bildirimleri.`,
     alternates: { canonical: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` },
-    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} (${name}) için canlı fiyat, bilanço ve KAP analizleri.`, type: "article", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` },
-    twitter: { card: "summary", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} için canlı piyasa ve finansal analiz.` },
+    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} (${name}) için canlı fiyat, bilanço ve KAP analizleri.`, type: "article", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}`, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
+    twitter: { card: "summary_large_image", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} için canlı piyasa ve finansal analiz.`, images: [`/api/og?ticker=${encodeURIComponent(ticker)}`] },
   };
 }
 
