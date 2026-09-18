@@ -5,6 +5,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { BriefcaseBusiness, Plus, RefreshCw } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { scorecardData } from "@/data/scorecardData";
+import { marketSymbols } from "@/data/marketSymbols";
 
 const AllocationChart = dynamic(() => import("@/components/ClientCharts").then((module) => module.AllocationChart), { ssr: false });
 const PortfolioComparisonChart = dynamic(() => import("@/components/ClientCharts").then((module) => module.PortfolioComparisonChart), { ssr: false });
@@ -118,6 +119,12 @@ export function PortfolioSection() {
   }, [historyKey, historySymbols]);
 
   const quoteMap = useMemo(() => new Map(quotes.map((quote) => [quote.code, quote])), [quotes]);
+  const assetGroups = useMemo(() => [
+    { label: "Endeks ve Hisseler", category: "hisse", items: marketSymbols.filter((item) => item.category === "endeks" || item.category === "hisse") },
+    { label: "Döviz", category: "doviz", items: marketSymbols.filter((item) => item.category === "doviz") },
+    { label: "Emtia", category: "emtia", items: marketSymbols.filter((item) => item.category === "emtia") },
+    { label: "Kripto", category: "kripto", items: marketSymbols.filter((item) => item.category === "kripto") },
+  ], []);
   const holdingRows = useMemo(() => holdings.map((holding) => {
     const quote = quoteMap.get(holding.symbol);
     const currentPrice = quote?.price ?? holding.cost / holding.quantity;
@@ -186,6 +193,17 @@ export function PortfolioSection() {
     await load();
   }
 
+  function selectAsset(nextSymbol: string) {
+    setSymbol(nextSymbol);
+    const selected = marketSymbols.find((item) => item.code === nextSymbol);
+    const quote = quoteMap.get(nextSymbol);
+    if (quote) setPrice(String(quote.price));
+    if (selected?.category === "emtia") setAssetType("GOLD");
+    else if (selected?.category === "doviz") setAssetType("CURRENCY");
+    else if (selected?.category === "kripto") setAssetType("CRYPTO");
+    else setAssetType("STOCK");
+  }
+
   return (
     <section className="section-card fade-in">
       <div className="mb-5 flex items-start justify-between gap-3">
@@ -202,7 +220,7 @@ export function PortfolioSection() {
         <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Pozisyon</p><p className="app-text text-xl font-bold">{holdingRows.length}</p></div>
       </div>
 
-      <form onSubmit={addTransaction} className="app-surface-2 app-border mb-4 rounded-xl border p-4"><div className="mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /><h2 className="app-text text-sm font-semibold">Varlık ekle</h2></div><div className="grid gap-2 sm:grid-cols-5"><input required value={symbol} onChange={(event) => setSymbol(event.target.value.toUpperCase())} placeholder="THYAO / ALTIN / USDTRY" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><select value={assetType} onChange={(event) => setAssetType(event.target.value)} className="app-surface app-border app-text rounded-lg border px-2 py-2 text-sm"><option value="STOCK">Hisse</option><option value="GOLD">Altın</option><option value="CURRENCY">Dolar</option></select><input required type="number" min="0" step="any" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Alış fiyatı" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><input required type="number" min="0" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Lot / miktar" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><div className="flex gap-2"><select value={type} onChange={(event) => setType(event.target.value as "BUY" | "SELL")} className="app-surface app-border app-text min-w-0 flex-1 rounded-lg border px-2 py-2 text-sm"><option value="BUY">Alış</option><option value="SELL">Satış</option></select><button type="submit" className="rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white">Ekle</button></div></div></form>
+      <form onSubmit={addTransaction} className="app-surface-2 app-border mb-4 rounded-xl border p-4"><div className="mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /><h2 className="app-text text-sm font-semibold">Varlık ekle</h2><span className="app-muted ml-auto text-[11px]">Canlı fiyat seçince dolar</span></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"><select required value={symbol} onChange={(event) => selectAsset(event.target.value)} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none"><option value="">Varlık seçin</option>{assetGroups.map((group) => <optgroup key={group.category} label={group.label}>{group.items.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.label}</option>)}</optgroup>)}</select><div className="app-surface app-border app-text flex items-center rounded-lg border px-3 py-2 text-sm"><span className="app-muted mr-2 text-xs">Tür</span>{assetType === "GOLD" ? "Emtia" : assetType === "CURRENCY" ? "Döviz" : assetType === "CRYPTO" ? "Kripto" : "Hisse / Endeks"}</div><input required type="number" min="0" step="any" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Alış fiyatı" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><input required type="number" min="0" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Lot / miktar" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><div className="flex gap-2"><select value={type} onChange={(event) => setType(event.target.value as "BUY" | "SELL")} className="app-surface app-border app-text min-w-0 flex-1 rounded-lg border px-2 py-2 text-sm"><option value="BUY">Alış</option><option value="SELL">Satış</option></select><button type="submit" className="rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white">Ekle</button></div></div></form>
 
       {loading ? <p className="app-muted py-8 text-center text-sm">Portföy yükleniyor...</p> : null}
       {!loading && message ? <div className="rounded-xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-4 text-sm text-gold">{message}</div> : null}
