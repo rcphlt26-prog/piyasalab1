@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, Search, Star } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Search, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchStar } from "@/components/WatchStar";
@@ -24,14 +24,18 @@ const TABS: Array<{ key: TabKey; label: string; categories: MarketCategory[] }> 
 
 const categoryOf = (code: string): MarketCategory | undefined => marketSymbolByCode.get(code)?.category;
 
+const ITEMS_PER_PAGE = 20;
+
 export function MarketSection() {
   const { quotes, tickerTape, liveAvailable, updatedAt } = useLiveQuotes();
   const { isWatched, toggle, tickers, localOnly } = useWatchlist();
   const [activeTab, setActiveTab] = useState<TabKey>("borsa");
   const [cryptoSearch, setCryptoSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const watchedQuotes = quotes.filter((q) => tickers.includes(q.code));
 
+  // Filtrelenmiş liste
   const visibleQuotes = useMemo(() => {
     const activeCategories = TABS.find((t) => t.key === activeTab)?.categories ?? [];
     let list = quotes.filter((q) => {
@@ -47,7 +51,19 @@ export function MarketSection() {
     return list;
   }, [quotes, activeTab, cryptoSearch]);
 
-  const { data: marketChartData } = useHistoricalPrices(visibleQuotes[0]?.code ?? "");
+  // Sayfalandırma (Pagination) Hesaplamaları
+  const totalPages = Math.ceil(visibleQuotes.length / ITEMS_PER_PAGE);
+  const paginatedQuotes = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return visibleQuotes.slice(start, start + ITEMS_PER_PAGE);
+  }, [visibleQuotes, currentPage]);
+
+  const { data: marketChartData } = useHistoricalPrices(paginatedQuotes[0]?.code ?? visibleQuotes[0]?.code ?? "");
+
+  const handleTabChange = (key: TabKey) => {
+    setActiveTab(key);
+    setCurrentPage(1); // Sekme değiştiğinde ilk sayfaya dön
+  };
 
   return (
     <section className="section-card fade-in">
@@ -107,7 +123,7 @@ export function MarketSection() {
           <button
             key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
               activeTab === tab.key
                 ? "border-transparent bg-[var(--color-primary)] text-white"
@@ -124,15 +140,19 @@ export function MarketSection() {
           <Search className="app-muted h-4 w-4" />
           <input
             value={cryptoSearch}
-            onChange={(e) => setCryptoSearch(e.target.value)}
+            onChange={(e) => {
+              setCryptoSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Kripto ara (BTC, Ethereum, SOL...)"
             className="app-text w-full bg-transparent text-sm outline-none placeholder:opacity-60"
           />
         </div>
       )}
 
+      {/* Grid Listesi (Her sayfada max 20 adet) */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleQuotes.map((q) => {
+        {paginatedQuotes.map((q) => {
           return (
             <Link
               key={q.code}
@@ -157,15 +177,40 @@ export function MarketSection() {
             </Link>
           );
         })}
-        {visibleQuotes.length === 0 && (
+        {paginatedQuotes.length === 0 && (
           <p className="app-muted col-span-full py-6 text-center text-sm">Sonuç bulunamadı.</p>
         )}
       </div>
 
+      {/* Sayfalandırma (Pagination) Kontrolleri */}
+      {totalPages > 1 && (
+        <div className="my-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
+          >
+            <ChevronLeft className="h-4 w-4" /> Önceki
+          </button>
+          
+          <span className="text-xs text-gray-500">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
+          >
+            Sonraki <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <Card padded={false} className="mt-4 p-2">
         <div className="px-2 pt-2">
-          <h3 className="app-text text-sm font-semibold">{visibleQuotes[0]?.label ?? "Piyasa"} Fiyat Grafiği</h3>
-          <p className="app-muted text-xs">Seçili kategorideki ilk varlığın son hareketi</p>
+          <h3 className="app-text text-sm font-semibold">{paginatedQuotes[0]?.label ?? visibleQuotes[0]?.label ?? "Piyasa"} Fiyat Grafiği</h3>
+          <p className="app-muted text-xs">Seçili sayfadaki ilk varlığın son hareketi</p>
         </div>
         {marketChartData.length > 0 ? <PriceChart data={marketChartData} height={380} /> : <p className="app-muted px-2 py-12 text-center text-sm">Tarihsel veri yükleniyor veya alınamadı.</p>}
       </Card>

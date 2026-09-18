@@ -52,6 +52,17 @@ const reactionEmojis: Array<{ emoji: "🚀" | "🔥" | "😭"; key: "rocket" | "
   { emoji: "😭", key: "cry" },
 ];
 
+const profanityList = ["aq", "amina", "orospu", "amk", "sik", "piç", "mal", "gerizekalı"];
+
+function filterProfanity(text: string): string {
+  let filtered = text;
+  profanityList.forEach((word) => {
+    const regex = new RegExp(`\\b${word}\\b`, "gi");
+    filtered = filtered.replace(regex, "*".repeat(word.length));
+  });
+  return filtered;
+}
+
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.max(1, Math.round(diffMs / 60000));
@@ -87,24 +98,30 @@ export function ForumSection() {
   const [band, setBand] = useState<string>(portfolioBands[0]);
   const [body, setBody] = useState("");
 
-  // Tek oy takibi (localStorage)
+  const [cooldownTime, setCooldownTime] = useState<number>(0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const [votedSide, setVotedSide] = useState<string | null>(null);
   const [pollVoted, setPollVoted] = useState<string | null>(null);
-
-  // Hisse arama
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVotedSide(localStorage.getItem(`VeriAkış-sentiment-${activeTicker}`));
   }, [activeTicker]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPollVoted(localStorage.getItem(`VeriAkış-poll-${poll.id}`));
   }, [poll.id]);
+
+  useEffect(() => {
+    if (cooldownTime <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownTime((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownTime]);
 
   const categoryTickers = activeCategory.tickers;
 
@@ -117,15 +134,27 @@ export function ForumSection() {
   }, [search]);
 
   function handlePost() {
+    setErrorMsg(null);
+    if (cooldownTime > 0) {
+      setErrorMsg(`Çok hızlı mesaj gönderiyorsunuz. Lütfen ${cooldownTime} saniye bekleyin.`);
+      return;
+    }
+
     const text = body.trim();
     if (!text) return;
+
+    const cleanedBody = filterProfanity(text);
+
     postComment({
       ticker: activeTicker,
       nickname: nickname.trim() || "Anonim Yatırımcı",
       portfolioBand: band,
-      body: text,
+      body: cleanedBody,
     });
+
     setBody("");
+    // Cooldown süresi 30 saniye olarak güncellendi
+    setCooldownTime(30);
   }
 
   function handleSentiment(side: "boga" | "ayi") {
@@ -168,9 +197,8 @@ export function ForumSection() {
         </span>
       </div>
 
-      {/* Hisse arama */}
       <div className="relative mb-4">
-          <div className="app-surface-2 app-border flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-xl border px-3 py-2">
+        <div className="app-surface-2 app-border flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-xl border px-3 py-2">
           <Search className="app-muted h-4 w-4" />
           <input
             value={search}
@@ -196,7 +224,6 @@ export function ForumSection() {
       </div>
 
       <div className="grid min-w-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
-        {/* Sol: Kategoriler */}
         <aside className="app-surface-2 app-border rounded-xl border p-3">
           <h3 className="app-muted mb-2 text-xs font-semibold uppercase tracking-wide">Kategoriler</h3>
           <nav className="space-y-1">
@@ -223,7 +250,6 @@ export function ForumSection() {
           <p className="app-muted mt-3 text-xs">{activeCategory.description}</p>
         </aside>
 
-        {/* Orta: Akış */}
         <div className="min-w-0 space-y-3">
           <div className="app-surface-2 app-border rounded-xl border p-3">
             <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto">
@@ -245,7 +271,6 @@ export function ForumSection() {
               )}
             </div>
 
-            {/* Yorum formu */}
             <div className="app-surface app-border rounded-xl border p-3">
               <div className="mb-2 flex flex-wrap gap-2">
                 <input
@@ -274,18 +299,31 @@ export function ForumSection() {
                 rows={2}
                 className="app-surface-2 app-border app-text block max-w-full resize-none rounded-lg border px-3 py-2 text-sm"
               />
+              
+              {errorMsg && (
+                <p className="mt-2 text-xs font-medium text-red-500">{errorMsg}</p>
+              )}
+
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="app-muted min-w-0 flex-1 text-xs">Nezaket kuralları geçerlidir. Yatırım tavsiyesi paylaşmayın.</span>
+                <span className="app-muted min-w-0 flex-1 text-xs">
+                  {cooldownTime > 0 
+                    ? `⚠️ Yeni mesaj için kalan süre: ${cooldownTime}s` 
+                    : "Nezaket kuralları geçerlidir. Argo filtrelenir."}
+                </span>
                 <button
                   onClick={handlePost}
-                  className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--color-primary-dark)]"
+                  disabled={cooldownTime > 0}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
+                    cooldownTime > 0 
+                      ? "bg-gray-400 cursor-not-allowed opacity-60" 
+                      : "bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]"
+                  }`}
                 >
-                  Gönder
+                  {cooldownTime > 0 ? `Bekleyin (${cooldownTime}s)` : "Gönder"}
                 </button>
               </div>
             </div>
 
-            {/* Akış */}
             <div className="mt-3 space-y-2">
               {tickerComments.length === 0 ? (
                 <p className="app-muted py-6 text-center text-sm">Bu başlıkta henüz yorum yok. İlk yorumu sen yaz!</p>
@@ -325,7 +363,6 @@ export function ForumSection() {
           </div>
         </div>
 
-        {/* Sağ: Boğa/Ayı + Hype + Anket */}
         <aside className="space-y-3">
           <div className="app-surface-2 app-border rounded-xl border p-3">
             <h3 className="app-text mb-2 break-words text-sm font-semibold">{activeTicker} Boğa / Ayı Barometresi</h3>

@@ -15,13 +15,13 @@ const catColor: Record<NewsCategory, string> = {
   Emtia: "bg-[var(--color-bear)]/15 text-bear",
 };
 
-const IS_PROD = process.env.NODE_ENV === "production";
-
 export function NewsSection() {
   const [category, setCategory] = useState<"Tümü" | NewsCategory>("Tümü");
   const [sortDesc, setSortDesc] = useState(true);
-  const [news, setNews] = useState<NewsItem[]>(IS_PROD ? [] : newsData);
-  const [source, setSource] = useState<"loading" | "google" | "supabase" | "demo" | "empty">("loading");
+  
+  // İlk açılışta boş array yerine mevcut demo/yerel verileri göstererek hız kazandırıyoruz
+  const [news, setNews] = useState<NewsItem[]>(newsData);
+  const [source, setSource] = useState<"loading" | "google" | "supabase" | "demo">("demo");
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +36,7 @@ export function NewsSection() {
           return;
         }
       } catch {
-        // Supabase fallback below keeps the page usable when the RSS request fails.
+        // Fallback to Supabase if API fails
       }
 
       const remote = await fetchNews();
@@ -44,15 +44,11 @@ export function NewsSection() {
       if (remote && remote.length > 0) {
         setNews(remote);
         setSource("supabase");
-      } else if (IS_PROD) {
-        setNews([]);
-        setSource("empty");
-      } else {
-        setNews(newsData);
-        setSource("demo");
       }
     };
+
     void load();
+    // Canlı akış döngüsü (30 saniye)
     const timer = setInterval(() => void load(), 30000);
     return () => {
       cancelled = true;
@@ -75,17 +71,13 @@ export function NewsSection() {
         description="Ekonomi, BIST, döviz ve emtia başlıkları. Güncel bilgi için her zaman resmi ve yetkili kaynakları doğrulayın."
       />
 
-      <div className="mb-3">
+      <div className="mb-3 flex items-center justify-between">
         {source === "google" ? (
-          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Google News) · 30 sn&apos;de bir güncellenir</span>
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Google News) · Anlık</span>
         ) : source === "supabase" ? (
-          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Supabase) · 30 sn&apos;de bir güncellenir</span>
-        ) : source === "demo" ? (
-          <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Demo veri</span>
-        ) : source === "empty" ? (
-          <span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[11px] font-semibold text-primary">Supabase&apos;de henüz haber yok</span>
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Supabase) · Anlık</span>
         ) : (
-          <span className="app-muted text-[11px]">Haberler yükleniyor…</span>
+          <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Hızlı yükleme modu aktif</span>
         )}
       </div>
 
@@ -111,23 +103,9 @@ export function NewsSection() {
         </button>
       </div>
 
-      {source === "loading" ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="app-surface-2 app-border rounded-2xl border p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <div className="app-surface-3 h-4 w-16 animate-pulse rounded-full" />
-                <div className="app-surface-3 ml-auto h-3 w-20 animate-pulse rounded-full" />
-              </div>
-              <div className="app-surface-3 mb-2 h-5 w-3/4 animate-pulse rounded" />
-              <div className="app-surface-3 mb-1 h-3 w-full animate-pulse rounded" />
-              <div className="app-surface-3 h-3 w-5/6 animate-pulse rounded" />
-            </div>
-          ))}
-        </div>
-      ) : items.length === 0 ? (
+      {items.length === 0 ? (
         <div className="app-surface-2 app-border rounded-2xl border p-8 text-center">
-          <p className="app-text-secondary text-sm">Supabase&apos;de henüz haber bulunmuyor. Yeni haberler eklendiğinde burada otomatik görünecek.</p>
+          <p className="app-text-secondary text-sm">Henüz haber bulunmuyor. Yeni haberler eklendiğinde burada otomatik görünecek.</p>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">

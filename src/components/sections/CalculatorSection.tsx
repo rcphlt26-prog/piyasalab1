@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useRef, useState } from "react";
-import { Coins } from "lucide-react";
+import { Coins, Sparkles, TrendingUp } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
@@ -109,31 +109,47 @@ export function CalculatorSection() {
         title="Gelişmiş Getiri ve ABD-TÜFE Reel Kazanç Hesaplayıcı"
         description="Tüm hesaplamalar yalnızca tarayıcı içinde yapılır. Sunucuda ağır işleme yoktur."
       />
-      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
-        <label className="app-text-secondary text-xs">Başlangıç tutarı
-          <input type="number" value={initialAmount} onChange={(e) => setInitialAmount(Number(e.target.value))} className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-        </label>
-        <label className="app-text-secondary text-xs">Para birimi
-          <select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)} className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm">{currencies.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select>
-        </label>
-        <label className="app-text-secondary text-xs">Başlangıç yılı
-          <select value={startYear} onChange={(e) => setStartYear(Number(e.target.value))} className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm">{years.map((y) => <option key={y}>{y}</option>)}</select>
-        </label>
-        <label className="app-text-secondary text-xs">Bitiş yılı
-          <select value={endYear} onChange={(e) => setEndYear(Number(e.target.value))} className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm">{years.filter((y) => y >= startYear).map((y) => <option key={y}>{y}</option>)}</select>
-        </label>
-        <label className="app-text-secondary text-xs md:col-span-2">Varlık
-          <select value={asset} onChange={(e) => setAsset(e.target.value as (typeof assetList)[number])} className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-            {assetList.map((a) => <option key={a} value={a}>{toAssetLabel(a)}</option>)}
-          </select>
-        </label>
-        <label className="app-text-secondary flex items-center gap-2 text-xs"><input type="checkbox" checked={drip} onChange={(e) => setDrip(e.target.checked)} /> Temettü Yeniden Yatırımı (DRIP)</label>
-        <label className="app-text-secondary flex items-center gap-2 text-xs"><input type="checkbox" checked={usCpiAdjusted} onChange={(e) => setUsCpiAdjusted(e.target.checked)} /> ABD Doları Enflasyonundan Arındırılmış Reel Getiri</label>
-      </div>
+      
+      {/* Sade ve net form alanı */}
+      <div className="app-surface-2 app-border rounded-xl border p-4 mb-4">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <label className="app-text-secondary text-xs">Başlangıç tutarı
+            <input type="number" value={initialAmount} onChange={(e) => setInitialAmount(Number(e.target.value))} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none" />
+          </label>
+          <label className="app-text-secondary text-xs">Para birimi
+            <select value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none">{currencies.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</select>
+          </label>
+          <label className="app-text-secondary text-xs">Başlangıç yılı
+            <select value={startYear} onChange={(e) => setStartYear(Number(e.target.value))} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none">{years.map((y) => <option key={y}>{y}</option>)}</select>
+          </label>
+          <label className="app-text-secondary text-xs">Bitiş yılı
+            <select value={endYear} onChange={(e) => setEndYear(Number(e.target.value))} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none">{years.filter((y) => y >= startYear).map((y) => <option key={y}>{y}</option>)}</select>
+          </label>
+          <label className="app-text-secondary text-xs md:col-span-2">Varlık
+            <select value={asset} onChange={(e) => setAsset(e.target.value as (typeof assetList)[number])} className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none">
+              {assetList.map((a) => <option key={a} value={a}>{toAssetLabel(a)}</option>)}
+            </select>
+          </label>
+          <div className="flex flex-col justify-end gap-1.5 md:col-span-2">
+            <label className="app-text-secondary flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={drip} onChange={(e) => setDrip(e.target.checked)} className="rounded" /> Temettü Yeniden Yatırımı (DRIP)
+            </label>
+            <label className="app-text-secondary flex items-center gap-2 text-xs cursor-pointer">
+              <input type="checkbox" checked={usCpiAdjusted} onChange={(e) => setUsCpiAdjusted(e.target.checked)} className="rounded" /> ABD Doları Enflasyonundan Arındırılmış Reel Getiri
+            </label>
+          </div>
+        </div>
 
-      <button type="button" onClick={focusResults} className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110">
-        Hesapla ve sonucu göster
-      </button>
+        <div className="mt-4 flex justify-end">
+          <button 
+            type="button" 
+            onClick={focusResults} 
+            className="rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            Hesapla
+          </button>
+        </div>
+      </div>
 
       <AdSlot label="Hesaplayıcı Altı Inline" width={300} height={250} className="my-4" />
 
@@ -193,20 +209,42 @@ export function CalculatorSection() {
         Hesaplama sonuçları tahmini olup yatırım tavsiyesi değildir.
       </p>
 
-      {/* Alım Gücü */}
-      <div className="app-surface-2 app-border mt-6 rounded-xl border p-3">
-        <h3 className="app-text mb-2 text-lg font-semibold"><Coins className="text-gold mr-1 inline h-4 w-4" />Alım Gücü & Nostalji Simülatörü</h3>
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <input type="number" value={powerAmount} onChange={(e) => setPowerAmount(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm" />
-          <select value={powerYear} onChange={(e) => setPowerYear(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm">{years.map((y) => <option key={y}>{y}</option>)}</select>
+      {/* Sade, Anlaşılır "O Zaman vs. Şimdi" Alım Gücü Karşılaştırması */}
+      <div className="app-surface-2 app-border mt-6 rounded-xl border p-4">
+        <h3 className="app-text mb-2 text-base font-semibold flex items-center gap-2">
+          <Coins className="text-gold h-4 w-4" /> Geçmiş Alım Gücü Karşılaştırması
+        </h3>
+        <p className="app-muted mb-3 text-xs">Seçtiğiniz yıldaki paranın bugün aynı alım gücünü koruması için kaç TL olması gerektiğini ve temel ihtiyaçlardaki değişimi görün.</p>
+
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="number" value={powerAmount} onChange={(e) => setPowerAmount(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" placeholder="Tutar" />
+          <select value={powerYear} onChange={(e) => setPowerYear(Number(e.target.value))} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none">{years.map((y) => <option key={y}>{y}</option>)}</select>
         </div>
-        <p className="app-surface app-border mb-2 rounded-lg border p-2 text-sm">{powerYear} yılındaki {formatCurrency(powerAmount)} bugün yaklaşık <strong>{formatCurrency(nowPower)}</strong> satın alma gücüne denk gelir.</p>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="app-border rounded-lg border p-2">Asgari ücret: {formatNumber(nostalgia.wagePast)} → {formatNumber(nostalgia.wageNow)}</div>
-          <div className="app-border rounded-lg border p-2">Çeyrek altın: {formatNumber(nostalgia.quarterPast)} → {formatNumber(nostalgia.quarterNow)}</div>
-          <div className="app-border rounded-lg border p-2">Big Mac: {formatNumber(nostalgia.bigMacPast)} → {formatNumber(nostalgia.bigMacNow)}</div>
-          <div className="app-border rounded-lg border p-2">Gram altın: {formatNumber(nostalgia.gramPast)} → {formatNumber(nostalgia.gramNow)}</div>
+
+        <div className="app-surface app-border mb-3 rounded-lg border p-3 text-sm">
+          {powerYear} yılında olan <strong>{formatCurrency(powerAmount)}</strong>, bugün yaklaşık <strong className="text-emerald-400">{formatCurrency(nowPower)}</strong> değerine denk gelmektedir.
         </div>
+
+        {/* Anlaşılması kolay, net tablo / kart yapısı */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
+          <div className="app-surface app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-1">Asgari Ücret</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.wagePast, 1)} → {formatNumber(nostalgia.wageNow, 1)} adet</span>
+          </div>
+          <div className="app-surface app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-1">Çeyrek Altın</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.quarterPast, 1)} → {formatNumber(nostalgia.quarterNow, 1)} adet</span>
+          </div>
+          <div className="app-surface app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-1">Big Mac Menü</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.bigMacPast, 0)} → {formatNumber(nostalgia.bigMacNow, 0)} adet</span>
+          </div>
+          <div className="app-surface app-border rounded-lg border p-2.5">
+            <span className="app-muted block mb-1">Gram Altın</span>
+            <span className="font-bold text-sm">{formatNumber(nostalgia.gramPast, 1)} → {formatNumber(nostalgia.gramNow, 1)} gram</span>
+          </div>
+        </div>
+
         <SimpleBarChart data={[{ etiket: `${powerYear} alım gücü`, deger: powerAmount }, { etiket: "Bugünkü karşılık", deger: nowPower }]} xKey="etiket" yKey="deger" />
       </div>
     </section>

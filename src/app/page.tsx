@@ -16,6 +16,7 @@ import { NewsSection } from "@/components/sections/NewsSection";
 import { AboutSection } from "@/components/sections/AboutSection";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import MostCurious from "@/components/MostCurious"; // <--- Yeni eklenen bileşen import edildi
 
 type TabId = "piyasa" | "hesaplayici" | "karne" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
@@ -132,6 +133,9 @@ export default function HomePage() {
 
       <div className="mx-auto max-w-7xl px-4 py-6">
         <AdSlot label="Üst Leaderboard" width={728} height={90} className="mb-4" />
+
+        {/* En Çok Merak Edilenler Bölümü (Piyasa sekmesindeyken veya her an yukarılarda görünmesi için eklendi) */}
+        {activeTab === "piyasa" && <MostCurious />}
 
         <div className="space-y-6">
           {activeTab === "piyasa" ? <MarketSection /> : null}

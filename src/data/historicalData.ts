@@ -228,10 +228,48 @@ export const dailyBasketSeries = interpolateSeries({
   2026: 340,
 });
 
+/**
+ * 1 adet standart ekmek fiyatı yaklaşımı (temsili): tarihsel fırın/haber arşivlerinden yaklaşık seri.
+ */
+export const breadSeries = interpolateSeries({
+  1980: 0.01,
+  1990: 0.50,
+  2000: 100,
+  2005: 0.35,
+  2010: 0.50,
+  2015: 1.00,
+  2018: 1.25,
+  2020: 1.75,
+  2022: 4.00,
+  2023: 7.00,
+  2024: 10.00,
+  2025: 12.50,
+  2026: 15.00,
+});
+
+/**
+ * 1 Litre süt fiyatı yaklaşımı (temsili): market/TÜİK ortalamalarından türetilmiş seri.
+ */
+export const milkSeries = interpolateSeries({
+  1980: 0.02,
+  1990: 0.80,
+  2000: 250,
+  2005: 1.20,
+  2010: 2.00,
+  2015: 3.00,
+  2018: 4.50,
+  2020: 6.50,
+  2022: 15.00,
+  2023: 28.00,
+  2024: 40.00,
+  2025: 50.00,
+  2026: 60.00,
+});
+
 export const historicalSources = [
   "TÜİK TÜFE ve fiyat göstergeleri (uzun dönem yayınları, yaklaşıklaştırılmış)",
   "TCMB ve piyasa arşivlerinden USD/TRY ve EUR/TRY yıl sonu değerleri (yaklaşık)",
   "Borsa İstanbul tarihsel endeks kapanışları (BIST 100, yaklaşık)",
   "BLS CPI-U (ABD TÜFE) tarihsel seri (yaklaşık)",
-  "Kamuya açık haber/arşiv verilerinden gram/çeyrek altın, Big Mac ve gündelik ürün fiyatları (temsili)",
+  "Kamuya açık haber/arşiv verilerinden ekmek, süt, gram/çeyrek altın, Big Mac ve gündelik ürün fiyatları (temsili)",
 ] as const;
