@@ -33,7 +33,12 @@ const blockedWords = [
 
 export function findBlockedWord(text: string): string | null {
   const normalized = text.toLocaleLowerCase("tr-TR");
-  return blockedWords.find((word) => new RegExp(`(^|[^a-zçğıöşü0-9])${word}([^a-zçğıöşü0-9]|$)`, "i").test(normalized)) ?? null;
+  const separated = normalized.replace(/[._-]+/g, " ");
+  return blockedWords.find((word) => {
+    const boundaryPattern = new RegExp(`(^|[^a-zçğıöşü0-9])${word}([^a-zçğıöşü0-9]|$)`, "i");
+    const compactPattern = new RegExp(`(^|[^a-zçğıöşü0-9])${word.split("").join("[^a-zçğıöşü0-9]*")}([^a-zçğıöşü0-9]|$)`, "i");
+    return boundaryPattern.test(separated) || compactPattern.test(normalized);
+  }) ?? null;
 }
 
 export function containsProfanity(text: string): boolean {

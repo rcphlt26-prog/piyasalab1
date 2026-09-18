@@ -8,6 +8,7 @@ language plpgsql
 as $$
 declare
   content text := lower(coalesce(to_jsonb(new)->>'body', '') || ' ' || coalesce(to_jsonb(new)->>'nickname', ''));
+  compact_content text := regexp_replace(content, '[^a-zçğıöşü0-9]', '', 'g');
   blocked_terms text[] := array[
     'aq', 'amina', 'orospu', 'amk', 'sik', 'piç', 'mal', 'gerizekalı',
     'salak', 'aptal', 'şerefsiz', 'haysiyetsiz', 'ibne', 'yavşak',
@@ -18,7 +19,7 @@ declare
   term text;
 begin
   foreach term in array blocked_terms loop
-    if content ~ ('(^|[^a-zçğıöşü0-9])' || term || '([^a-zçğıöşü0-9]|$)') then
+    if content ~ ('(^|[^a-zçğıöşü0-9])' || term || '([^a-zçğıöşü0-9]|$)') or compact_content ~ term then
       raise exception 'İçerik topluluk kurallarına aykırı argo içeriyor.' using errcode = 'check_violation';
     end if;
   end loop;

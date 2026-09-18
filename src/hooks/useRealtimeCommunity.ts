@@ -242,7 +242,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
   }, [comments, reactions]);
 
   async function postComment(payload: { ticker: string; nickname: string; portfolioBand: string; body: string }) {
-    if (findBlockedWord(payload.body)) {
+    if (findBlockedWord(`${payload.nickname} ${payload.body}`)) {
       setDemoMode(true);
       return;
     }

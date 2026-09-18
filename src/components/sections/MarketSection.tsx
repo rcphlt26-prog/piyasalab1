@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Search, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
@@ -22,7 +22,21 @@ const TABS: Array<{ key: TabKey; label: string; categories: MarketCategory[] }> 
 
 const categoryOf = (code: string): MarketCategory | undefined => marketSymbolByCode.get(code)?.category;
 
-const ITEMS_PER_PAGE = 20;
+const mobileMediaQuery = "(max-width: 767px)";
+
+function subscribeToMobile(callback: () => void) {
+  const media = window.matchMedia(mobileMediaQuery);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getMobileSnapshot() {
+  return window.matchMedia(mobileMediaQuery).matches;
+}
+
+function getServerMobileSnapshot() {
+  return false;
+}
 
 export function MarketSection() {
   const { quotes, tickerTape, liveAvailable, updatedAt } = useLiveQuotes();
@@ -30,6 +44,8 @@ export function MarketSection() {
   const [activeTab, setActiveTab] = useState<TabKey>("borsa");
   const [cryptoSearch, setCryptoSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const isMobile = useSyncExternalStore(subscribeToMobile, getMobileSnapshot, getServerMobileSnapshot);
+  const itemsPerPage = isMobile ? 10 : 20;
 
   const watchedQuotes = quotes.filter((q) => tickers.includes(q.code));
 
@@ -50,11 +66,11 @@ export function MarketSection() {
   }, [quotes, activeTab, cryptoSearch]);
 
   // Sayfalandırma (Pagination) Hesaplamaları
-  const totalPages = Math.ceil(visibleQuotes.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(visibleQuotes.length / itemsPerPage);
   const paginatedQuotes = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return visibleQuotes.slice(start, start + ITEMS_PER_PAGE);
-  }, [visibleQuotes, currentPage]);
+    const start = (currentPage - 1) * itemsPerPage;
+    return visibleQuotes.slice(start, start + itemsPerPage);
+  }, [visibleQuotes, currentPage, itemsPerPage]);
 
   const handleTabChange = (key: TabKey) => {
     setActiveTab(key);

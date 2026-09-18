@@ -35,6 +35,17 @@ export async function POST(request: Request) {
     .eq("supabase_user_id", authData.user.id)
     .select("id")
     .maybeSingle();
+  if (updateError && (updateError.code === "42703" || updateError.message.includes("is_kvkk_accepted") || updateError.message.includes("kvkk_accepted_at"))) {
+    const { data: legacyProfile, error: legacyError } = await database
+      .from("app_users")
+      .update({ username })
+      .eq("supabase_user_id", authData.user.id)
+      .select("id")
+      .maybeSingle();
+    if (!legacyError && legacyProfile) return NextResponse.json({ ok: true, username, warning: "KVKK kolonları henüz migration ile eklenmemiş." });
+    if (legacyError) return NextResponse.json({ error: `Takma ad kaydedilemedi: ${legacyError.message}` }, { status: 500 });
+  }
+
   if (updateError) {
     if (updateError.code === "23505") return NextResponse.json({ error: "Bu takma ad zaten kullanılıyor." }, { status: 409 });
     return NextResponse.json({ error: `Takma ad kaydedilemedi: ${updateError.message}` }, { status: 500 });
