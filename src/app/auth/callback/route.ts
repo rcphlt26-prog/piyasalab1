@@ -2,10 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-// Supabase Dashboard > Authentication > URL Configuration > Redirect URLs:
-// http://localhost:3000/auth/callback
-// https://veriakis.com/auth/callback
-// https://www.veriakis.com/auth/callback
+// Supabase Dashboard > Authentication > URL Configuration:
+// Site URL: https://piyasalab.com.tr (local: http://localhost:3000)
+// Redirect URLs: https://piyasalab.com.tr/auth/callback
+//                 http://localhost:3000/auth/callback
+// Authentication > Email Templates > Confirm signup: use {{ .RedirectTo }} in the link.
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -36,5 +37,19 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(loginUrl);
 
-  return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) return NextResponse.redirect(loginUrl);
+
+  const { data: appUser } = await supabase
+    .from("app_users")
+    .select("id, username")
+    .eq("supabase_user_id", authData.user.id)
+    .maybeSingle();
+
+  const incompleteUsername = !appUser?.username || /^user_[a-f0-9]{8}$/i.test(appUser.username);
+  if (incompleteUsername) return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(nextPath)}`, requestUrl.origin));
+
+  const redirectUrl = new URL(nextPath, requestUrl.origin);
+  redirectUrl.searchParams.set("auth", "verified");
+  return NextResponse.redirect(redirectUrl);
 }

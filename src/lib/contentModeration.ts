@@ -14,6 +14,10 @@ export function findBlockedWord(text: string): string | null {
   return blockedWords.find((word) => new RegExp(`(^|[^a-zçğıöşü0-9])${word}([^a-zçğıöşü0-9]|$)`, "i").test(normalized)) ?? null;
 }
 
+export function containsProfanity(text: string): boolean {
+  return findBlockedWord(text) !== null;
+}
+
 export function isValidUsername(username: string): boolean {
   return /^[a-zA-Z0-9_]{3,30}$/.test(username) && !findBlockedWord(username);
 }

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const protectedPrefixes = ["/portfoy", "/ayarlar"];
 const authRoutes = ["/login", "/register"];
+const publicPrefixes = ["/onboarding", "/auth", "/api", "/gizlilik", "/cerezler", "/kullanim-sartlari", "/yasal-uyari", "/iletisim"];
 
 function copyCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => {
@@ -47,12 +48,33 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isProtected = protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const isAuthRoute = authRoutes.includes(pathname);
+  const isPublic = publicPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
   if (!user && isProtected) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = `?redirect=${encodeURIComponent(`${pathname}${request.nextUrl.search}`)}`;
     return copyCookies(response, NextResponse.redirect(loginUrl));
+  }
+
+  if (user && !isPublic && pathname !== "/onboarding") {
+    const { data: appUser } = await supabase.from("app_users").select("username").eq("supabase_user_id", user.id).maybeSingle();
+    if (!appUser?.username || /^user_[a-f0-9]{8}$/i.test(appUser.username)) {
+      const onboardingUrl = request.nextUrl.clone();
+      onboardingUrl.pathname = "/onboarding";
+      onboardingUrl.search = `?next=${encodeURIComponent(`${pathname}${request.nextUrl.search}`)}`;
+      return copyCookies(response, NextResponse.redirect(onboardingUrl));
+    }
+  }
+
+  if (user && pathname === "/onboarding") {
+    const { data: appUser } = await supabase.from("app_users").select("username").eq("supabase_user_id", user.id).maybeSingle();
+    if (appUser?.username && !/^user_[a-f0-9]{8}$/i.test(appUser.username)) {
+      const portfolioUrl = request.nextUrl.clone();
+      portfolioUrl.pathname = "/portfoy";
+      portfolioUrl.search = "";
+      return copyCookies(response, NextResponse.redirect(portfolioUrl));
+    }
   }
 
   if (user && isAuthRoute) {
