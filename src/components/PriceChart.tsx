@@ -52,8 +52,7 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
     const styles = getComputedStyle(container);
     const textColor = styles.getPropertyValue("--text-secondary").trim() || "#94a3b8";
     const borderColor = styles.getPropertyValue("--border").trim() || "rgba(148, 163, 184, 0.18)";
-    const primary = styles.getPropertyValue("--color-primary-light").trim() || "#22d3ee";
-    const surface = styles.getPropertyValue("--surface-2").trim() || "#0f172a";
+    const chartBlack = "#000000";
 
     const chart = createChart(container, {
       width: container.clientWidth,
@@ -70,16 +69,16 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
       crosshair: {
         mode: 1,
         vertLine: {
-          color: primary,
+          color: chartBlack,
           width: 1,
           style: 3,
-          labelBackgroundColor: primary,
+          labelBackgroundColor: chartBlack,
         },
         horzLine: {
-          color: primary,
+          color: chartBlack,
           width: 1,
           style: 3,
-          labelBackgroundColor: primary,
+          labelBackgroundColor: chartBlack,
         },
       },
       rightPriceScale: {
@@ -95,24 +94,24 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
 
     if (filteredCandles && filteredCandles.length > 0) {
       const series = chart.addSeries(CandlestickSeries, {
-        upColor: "#22c55e",
-        downColor: "#f43f5e",
-        borderUpColor: "#22c55e",
-        borderDownColor: "#f43f5e",
-        wickUpColor: "#22c55e",
-        wickDownColor: "#f43f5e",
+        upColor: chartBlack,
+        downColor: chartBlack,
+        borderUpColor: chartBlack,
+        borderDownColor: chartBlack,
+        wickUpColor: chartBlack,
+        wickDownColor: chartBlack,
       });
       series.setData(filteredCandles);
     } else if (filteredData.length > 0) {
       const series = chart.addSeries(AreaSeries, {
-        lineColor: primary,
-        topColor: `${primary}55`,
-        bottomColor: `${surface}00`,
+        lineColor: chartBlack,
+        topColor: "rgba(0, 0, 0, 0.18)",
+        bottomColor: "rgba(0, 0, 0, 0.02)",
         lineWidth: 2,
-        crosshairMarkerBackgroundColor: primary,
+        crosshairMarkerBackgroundColor: chartBlack,
         crosshairMarkerBorderColor: textColor,
         crosshairMarkerRadius: 5,
-        priceLineColor: primary,
+        priceLineColor: chartBlack,
         lastValueVisible: true,
       });
       series.setData(filteredData);
@@ -137,15 +136,15 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
     <div className="w-full flex flex-col p-2">
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="app-muted text-xs font-medium">Grafik Zaman Dilimi</span>
-        <div className="app-surface-2 app-border flex items-center gap-1 rounded-lg border p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-black bg-white p-1">
           {(["1A", "3A", "6A", "1Y", "5Y", "MAX"] as TimeFrame[]).map((tf) => (
             <button
               key={tf}
               onClick={() => setTimeFrame(tf)}
               className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                 timeFrame === tf
-                  ? "bg-[var(--color-primary)] text-white shadow-md shadow-cyan-500/20"
-                  : "app-text-secondary hover:app-surface-3"
+                  ? "bg-black text-white"
+                  : "text-black hover:bg-black/10"
               }`}
             >
               {tf}
@@ -154,7 +153,7 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
         </div>
       </div>
 
-      <div ref={containerRef} className="w-full overflow-hidden rounded-xl bg-[#0b1220]/60 p-2 border border-gray-800/60 shadow-inner" style={{ minHeight: height }} />
+      <div ref={containerRef} className="w-full overflow-hidden rounded-xl border border-black bg-white p-2 shadow-inner" style={{ minHeight: height }} />
     </div>
   );
 }
