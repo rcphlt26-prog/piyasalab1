@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { AssetDetailClient } from "@/components/AssetDetailClient";
 import { SpkBanner } from "@/components/SpkBanner";
 import { Footer } from "@/components/Footer";
@@ -21,6 +22,8 @@ export default async function AssetPage({ params }: { params: Promise<{ slug: st
   const ticker = decodeURIComponent(slug).toUpperCase();
   const entry = stockByTicker.get(ticker) ?? null;
   const market = marketSymbolByCode.get(ticker) ?? null;
+
+  if (!entry && !market) notFound();
 
   return (
     <main className="app-bg min-h-screen">

@@ -356,5 +356,12 @@ for (const [ticker, name] of [...rawBist100, ...rawMidCap]) {
   marketCodes.add(ticker);
 }
 
+const globalYahooSymbols: Record<string, string> = { "BRK.B": "BRK-B" };
+for (const [ticker, name] of rawGlobal) {
+  if (marketCodes.has(ticker)) continue;
+  marketSymbols.push({ code: ticker, label: name, yahooSymbol: globalYahooSymbols[ticker] ?? ticker, category: "hisse" });
+  marketCodes.add(ticker);
+}
+
 export const marketSymbolByCode = new Map(marketSymbols.map((s) => [s.code, s]));
 export const stockByTicker = new Map(stockDirectory.map((s) => [s.ticker, s]));

@@ -8,9 +8,10 @@ export type HistoricalPrice = LineData<Time>;
 type HistoryResponse = {
   data?: HistoricalPrice[];
   source?: string;
+  error?: string;
 };
 
-export function useHistoricalPrices(code: string) {
+export function useHistoricalPrices(code: string, range = "MAX") {
   const [data, setData] = useState<HistoricalPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [source, setSource] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export function useHistoricalPrices(code: string) {
     const load = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/quotes/history?symbol=${encodeURIComponent(code)}`, { cache: "no-store" });
+        const response = await fetch(`/api/quotes/history?symbol=${encodeURIComponent(code)}&range=${range}`, { cache: "no-store" });
         const payload = (await response.json()) as HistoryResponse;
         if (mounted) {
           setData(payload.data ?? []);
@@ -44,7 +45,7 @@ export function useHistoricalPrices(code: string) {
     return () => {
       mounted = false;
     };
-  }, [code]);
+  }, [code, range]);
 
   return { data: code ? data : [], loading: code ? loading : false, source: code ? source : null };
 }

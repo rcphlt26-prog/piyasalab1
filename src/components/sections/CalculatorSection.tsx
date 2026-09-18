@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo, useRef, useState } from "react";
-import { Coins, Sparkles, TrendingUp } from "lucide-react";
+import { Coins } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";

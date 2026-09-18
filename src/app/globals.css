@@ -149,3 +149,15 @@ a {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.ticker-window { position: relative; overflow: hidden; }
+.ticker-track { animation: tickerSlide 32s linear infinite; }
+.ticker-track:hover { animation-play-state: paused; }
+.ticker-track-news { animation-duration: 42s; }
+@keyframes tickerSlide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+}

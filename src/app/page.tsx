@@ -17,6 +17,7 @@ import { AboutSection } from "@/components/sections/AboutSection";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import MostCurious from "@/components/MostCurious"; // <--- Yeni eklenen bileşen import edildi
+import { HomeTickerRail } from "@/components/HomeTickerRail";
 
 type TabId = "piyasa" | "hesaplayici" | "karne" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
@@ -136,6 +137,8 @@ export default function HomePage() {
 
         {/* En Çok Merak Edilenler Bölümü (Piyasa sekmesindeyken veya her an yukarılarda görünmesi için eklendi) */}
         {activeTab === "piyasa" && <MostCurious />}
+
+        {activeTab === "piyasa" && <HomeTickerRail />}
 
         <div className="space-y-6">
           {activeTab === "piyasa" ? <MarketSection /> : null}

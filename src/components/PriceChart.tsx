@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
+  AreaSeries,
+  CandlestickSeries,
   createChart,
   type CandlestickData,
   type LineData,
@@ -17,48 +19,32 @@ type PriceChartProps = {
   height?: number;
 };
 
-type TimeFrame = "1A" | "3A" | "6A" | "1Y" | "TÜMÜ";
+type TimeFrame = "1A" | "3A" | "6A" | "1Y" | "5Y" | "MAX";
+
+function toUnixTime(time: Time) {
+  if (typeof time === "number") return time;
+  if (typeof time === "string") return new Date(time).getTime() / 1000;
+  return new Date(`${time.year}-${String(time.month).padStart(2, "0")}-${String(time.day).padStart(2, "0")}`).getTime() / 1000;
+}
+
+function filterDataByTimeFrame<T extends { time: Time }>(items: T[], timeFrame: TimeFrame): T[] {
+  if (!items.length || timeFrame === "MAX") return items;
+
+  const latestTime = Math.max(...items.map((item) => toUnixTime(item.time)));
+  const daysByFrame: Partial<Record<TimeFrame, number>> = { "1A": 30, "3A": 90, "6A": 180, "1Y": 365, "5Y": 365 * 5 };
+  const days = daysByFrame[timeFrame];
+  if (!days) return items;
+
+  const cutoffTime = latestTime - days * 24 * 60 * 60;
+  return items.filter((item) => toUnixTime(item.time) >= cutoffTime);
+}
 
 export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>("TÜMÜ");
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>("MAX");
 
-  const filterDataByTimeFrame = <T extends { time: Time }>(items: T[]): T[] => {
-    if (!items || items.length === 0 || timeFrame === "TÜMÜ") return items;
-
-    const now = Date.now() / 1000;
-    let cutoffTime = now;
-
-    switch (timeFrame) {
-      case "1A":
-        cutoffTime = now - 30 * 24 * 60 * 60;
-        break;
-      case "3A":
-        cutoffTime = now - 90 * 24 * 60 * 60;
-        break;
-      case "6A":
-        cutoffTime = now - 180 * 24 * 60 * 60;
-        break;
-      case "1Y":
-        cutoffTime = now - 365 * 24 * 60 * 60;
-        break;
-      default:
-        return items;
-    }
-
-    return items.filter((item) => {
-      let itemTime = 0;
-      if (typeof item.time === "number") {
-        itemTime = item.time;
-      } else if (typeof item.time === "string") {
-        itemTime = new Date(item.time).getTime() / 1000;
-      }
-      return itemTime >= cutoffTime;
-    });
-  };
-
-  const filteredData = useMemo(() => filterDataByTimeFrame(data), [data, timeFrame]);
-  const filteredCandles = useMemo(() => filterDataByTimeFrame(candles || []), [candles, timeFrame]);
+  const filteredData = useMemo(() => filterDataByTimeFrame(data, timeFrame), [data, timeFrame]);
+  const filteredCandles = useMemo(() => filterDataByTimeFrame(candles || [], timeFrame), [candles, timeFrame]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -103,8 +89,7 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
     });
 
     if (filteredCandles && filteredCandles.length > 0) {
-      // @ts-expect-error lightweight-charts API typing differs across installed versions.
-      const series = chart.addCandlestickSeries({
+      const series = chart.addSeries(CandlestickSeries, {
         upColor: "#10b981",
         downColor: "#f43f5e",
         borderUpColor: "#10b981",
@@ -114,14 +99,15 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
       });
       series.setData(filteredCandles);
     } else if (filteredData.length > 0) {
-      // @ts-expect-error lightweight-charts API typing differs across installed versions.
-      const series = chart.addLineSeries({
-        color: "#38bdf8",
-        lineWidth: 2.5,
-        crosshairMarkerBackgroundColor: "#0ea5e9",
-        crosshairMarkerBorderColor: "#ffffff",
+      const series = chart.addSeries(AreaSeries, {
+        lineColor: "#22d3ee",
+        topColor: "rgba(34, 211, 238, 0.28)",
+        bottomColor: "rgba(34, 211, 238, 0.02)",
+        lineWidth: 2,
+        crosshairMarkerBackgroundColor: "#0891b2",
+        crosshairMarkerBorderColor: "#ecfeff",
         crosshairMarkerRadius: 5,
-        priceLineColor: "#38bdf8",
+        priceLineColor: "#22d3ee",
         lastValueVisible: true,
       });
       series.setData(filteredData);
@@ -147,7 +133,7 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
       <div className="flex items-center justify-between mb-3 px-1">
         <span className="text-xs font-medium text-gray-400">Grafik Zaman Dilimi</span>
         <div className="flex items-center gap-1 bg-gray-900/60 p-1 rounded-lg border border-gray-800">
-          {(["1A", "3A", "6A", "1Y", "TÜMÜ"] as TimeFrame[]).map((tf) => (
+          {(["1A", "3A", "6A", "1Y", "5Y", "MAX"] as TimeFrame[]).map((tf) => (
             <button
               key={tf}
               onClick={() => setTimeFrame(tf)}

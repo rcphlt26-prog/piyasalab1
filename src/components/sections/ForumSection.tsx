@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -107,12 +107,16 @@ export function ForumSection() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setVotedSide(localStorage.getItem(`VeriAkış-sentiment-${activeTicker}`));
+    startTransition(() => {
+      setVotedSide(localStorage.getItem(`VeriAkış-sentiment-${activeTicker}`));
+    });
   }, [activeTicker]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setPollVoted(localStorage.getItem(`VeriAkış-poll-${poll.id}`));
+    startTransition(() => {
+      setPollVoted(localStorage.getItem(`VeriAkış-poll-${poll.id}`));
+    });
   }, [poll.id]);
 
   useEffect(() => {

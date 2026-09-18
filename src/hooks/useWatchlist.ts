@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 import { getClientId } from "@/lib/clientId";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { addToWatchlist, getWatchlist, removeFromWatchlist } from "@/lib/supabase/data";
@@ -39,7 +39,9 @@ export function useWatchlist() {
   useEffect(() => {
     let cancelled = false;
     const hasSupabase = Boolean(getSupabaseBrowserClient());
-    setLocalOnly(!hasSupabase);
+    startTransition(() => {
+      setLocalOnly(!hasSupabase);
+    });
 
     async function load() {
       const local = readLocal();

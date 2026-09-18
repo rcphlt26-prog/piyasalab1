@@ -9,7 +9,9 @@ export const maxDuration = 30;
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 export async function GET(request: Request) {
-  const code = new URL(request.url).searchParams.get("symbol")?.trim().toUpperCase();
+  const searchParams = new URL(request.url).searchParams;
+  const code = searchParams.get("symbol")?.trim().toUpperCase();
+  const range = searchParams.get("range")?.trim().toUpperCase() ?? "MAX";
   const market = code ? marketSymbolByCode.get(code) : undefined;
 
   if (!market) {
@@ -18,7 +20,8 @@ export async function GET(request: Request) {
 
   try {
     const period1 = new Date();
-    period1.setUTCDate(period1.getUTCDate() - 365);
+    const days = range === "1Y" ? 365 : range === "5Y" ? 365 * 5 : 365 * 10;
+    period1.setUTCDate(period1.getUTCDate() - days);
     const result = await yahooFinance.chart(market.yahooSymbol, {
       period1,
       interval: "1d",
