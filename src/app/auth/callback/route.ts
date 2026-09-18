@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const requestedNext = requestUrl.searchParams.get("next") ?? requestUrl.searchParams.get("redirect");
-  const nextPath = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/portfoy";
+  const nextPath = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/";
   const loginUrl = new URL("/login?error=auth-code-error", requestUrl.origin);
 
   if (!code) return NextResponse.redirect(loginUrl);

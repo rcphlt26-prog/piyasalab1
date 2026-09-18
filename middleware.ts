@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
     const { data: appUser } = await supabase.from("app_users").select("username").eq("supabase_user_id", user.id).maybeSingle();
     if (appUser?.username && !/^user_[a-f0-9]{8}$/i.test(appUser.username)) {
       const portfolioUrl = request.nextUrl.clone();
-      portfolioUrl.pathname = "/portfoy";
+      portfolioUrl.pathname = "/";
       portfolioUrl.search = "";
       return copyCookies(response, NextResponse.redirect(portfolioUrl));
     }
