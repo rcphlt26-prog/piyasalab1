@@ -20,6 +20,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
   const [message, setMessage] = useState<string | null>(null);
   const [open, setOpen] = useState(openInitially);
   const [loading, setLoading] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   // Supabase Dashboard > Authentication > Providers > Google:
   // Google Cloud OAuth Client ID ve Client Secret değerlerini Google sağlayıcısına ekleyin.
@@ -32,11 +33,16 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
     const { data: subscription } = client.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       startTransition(() => setUser(session?.user ?? null));
     });
+    startTransition(() => setAuthReady(true));
     return () => subscription.subscription.unsubscribe();
   }, [client]);
 
   if (!client) return null;
   const authClient = client;
+
+  if (!authReady) {
+    return <button type="button" className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-2.5 py-2 text-xs font-semibold text-white" aria-label="Üye girişi yükleniyor">Üye girişi</button>;
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
