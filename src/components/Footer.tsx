@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { TrendingUp, Mail } from "lucide-react";
+import Image from "next/image";
+import { Mail } from "lucide-react";
 
 export function Footer() {
   return (
@@ -10,9 +11,7 @@ export function Footer() {
         <div className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
           <div>
             <div className="mb-3 flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
-                <TrendingUp className="h-5 w-5" />
-              </span>
+              <Image src="/gemini-svg.svg" alt="VeriAkış Gemini sembolü" width={32} height={32} className="rounded-lg" />
               <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
                 VeriAkış
               </span>

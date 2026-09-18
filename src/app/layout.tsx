@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   publisher: "VeriAkış",
   alternates: { canonical: "https://piyasalab.com.tr" },
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    icon: "/gemini-svg.svg",
+    shortcut: "/gemini-svg.svg",
+    apple: "/gemini-svg.svg",
   },
   openGraph: {
     title: "VeriAkış | Canlı BIST100 ve Finans Analizi",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VeriAkış",
     description: "Canlı BIST100, portföy takibi, KAP haberleri ve finans araçları.",
-    images: ["/icon.svg"],
+    images: ["/gemini-svg.svg"],
   },
   robots: {
     index: true,
@@ -119,7 +119,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: "VeriAkış",
   url: "https://piyasalab.com.tr",
-  logo: "https://piyasalab.com.tr/icon.svg",
+  logo: "https://piyasalab.com.tr/gemini-svg.svg",
   email: "rcphlt26@gmail.com",
 };
 

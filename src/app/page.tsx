@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, TrendingUp, Menu, X, BriefcaseBusiness, Star } from "lucide-react";
+import Image from "next/image";
+import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, Menu, X, BriefcaseBusiness, Star } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SpkBanner } from "@/components/SpkBanner";
@@ -65,9 +66,7 @@ export default function HomePage() {
               className="flex shrink-0 items-center gap-2"
               aria-label="VeriAkış ana sayfa"
             >
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white">
-                <TrendingUp className="h-5 w-5" />
-              </span>
+              <Image src="/gemini-svg.svg" alt="VeriAkış Gemini sembolü" width={36} height={36} className="rounded-xl" priority />
               <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
                 VeriAkış
               </span>
