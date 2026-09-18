@@ -57,6 +57,8 @@ drop policy if exists comments_select_anon on public.comments;
 create policy comments_select_anon on public.comments for select to anon using (true);
 drop policy if exists comments_insert_anon on public.comments;
 create policy comments_insert_anon on public.comments for insert to anon with check (true);
+drop policy if exists comments_delete_admin on public.comments;
+create policy comments_delete_admin on public.comments for delete to authenticated using (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN'));
 
 drop policy if exists comment_reactions_select_anon on public.comment_reactions;
 create policy comment_reactions_select_anon on public.comment_reactions for select to anon using (true);
@@ -373,10 +375,16 @@ create or replace function public.reject_blocked_content()
 returns trigger
 language plpgsql
 as $$
+declare
+  content text := lower(coalesce(to_jsonb(new)->>'body', '') || ' ' || coalesce(to_jsonb(new)->>'nickname', ''));
+  blocked_terms text[] := array['aq', 'amina', 'orospu', 'amk', 'sik', 'piç', 'mal', 'gerizekalı', 'salak', 'aptal', 'şerefsiz', 'haysiyetsiz', 'ibne', 'yavşak', 'pezevenk', 'kahpe', 'sürtük', 'bok', 'boktan', 'siktir', 'sikik', 'ananı', 'avradını', 'göt', 'götveren', 'dalyarak', 'it', 'eşek', 'lan', 'ulan'];
+  term text;
 begin
-  if lower(coalesce(new.body, '')) ~ '(^|[^a-zçğıöşü0-9])(aq|amina|orospu|amk|sik|piç|mal|gerizekalı)([^a-zçğıöşü0-9]|$)' then
-    raise exception 'İçerik topluluk kurallarına aykırı argo içeriyor.' using errcode = 'check_violation';
-  end if;
+  foreach term in array blocked_terms loop
+    if content ~ ('(^|[^a-zçğıöşü0-9])' || term || '([^a-zçğıöşü0-9]|$)') then
+      raise exception 'İçerik topluluk kurallarına aykırı argo içeriyor.' using errcode = 'check_violation';
+    end if;
+  end loop;
   return new;
 end;
 $$;

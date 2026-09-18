@@ -18,30 +18,9 @@ export type TickerTab = string;
 
 export const portfolioBands = ["%0-10", "%10-20", "%20-30", "%30-40", "%40-50", "%50-75", "%75-100"] as const;
 
-export const demoComments = [
-  {
-    id: "d1",
-    ticker: "THYAO",
-    nickname: "BorsaGezgini",
-    portfolio_band: "%30-40",
-    body: "Hacim güçlü, 320 üzeri kalıcılık gelirse yeni ivme bekliyorum.",
-    created_at: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
-  },
-  {
-    id: "d2",
-    ticker: "EREGL",
-    nickname: "TemettüAvcısı",
-    portfolio_band: "%50-75",
-    body: "Çelik tarafı zayıf ama bilanço savunması iyi, kademeli birikim devam.",
-    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-  },
-];
+export const demoComments: Array<{ id: string; ticker: string; nickname: string; portfolio_band: string; body: string; created_at: string }> = [];
 
-export const demoReactions = [
-  { id: "r1", comment_id: "d1", emoji: "🚀", created_at: new Date().toISOString() },
-  { id: "r2", comment_id: "d1", emoji: "🔥", created_at: new Date().toISOString() },
-  { id: "r3", comment_id: "d2", emoji: "😭", created_at: new Date().toISOString() },
-];
+export const demoReactions: Array<{ id: string; comment_id: string; emoji: string; created_at: string }> = [];
 
 export const demoPoll = {
   id: "poll-demo",
@@ -49,16 +28,6 @@ export const demoPoll = {
   options: ["Güçlü yükseliş", "Hafif yükseliş", "Yatay", "Hafif düşüş", "Sert düşüş"],
 };
 
-export const demoPollVotes = [
-  { id: "pv1", poll_id: "poll-demo", choice: "Hafif yükseliş", created_at: new Date().toISOString() },
-  { id: "pv2", poll_id: "poll-demo", choice: "Yatay", created_at: new Date().toISOString() },
-  { id: "pv3", poll_id: "poll-demo", choice: "Hafif yükseliş", created_at: new Date().toISOString() },
-  { id: "pv4", poll_id: "poll-demo", choice: "Sert düşüş", created_at: new Date().toISOString() },
-];
+export const demoPollVotes: Array<{ id: string; poll_id: string; choice: string; created_at: string }> = [];
 
-export const demoSentimentVotes = [
-  { id: "s1", ticker: "THYAO", side: "boga", weight: 4, created_at: new Date().toISOString() },
-  { id: "s2", ticker: "THYAO", side: "ayi", weight: 1, created_at: new Date().toISOString() },
-  { id: "s3", ticker: "EREGL", side: "boga", weight: 5, created_at: new Date().toISOString() },
-  { id: "s4", ticker: "SASA", side: "ayi", weight: 2, created_at: new Date().toISOString() },
-];
+export const demoSentimentVotes: Array<{ id: string; ticker: string; side: string; weight: number; created_at: string }> = [];

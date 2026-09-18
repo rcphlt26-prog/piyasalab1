@@ -71,6 +71,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
   const [activeTicker, setActiveTicker] = useState<TickerTab>("THYAO");
   const [onlineCount, setOnlineCount] = useState<number>(24);
   const [demoMode, setDemoMode] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -88,6 +89,12 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
           supabase.from("poll_votes").select("*").order("created_at", { ascending: false }).limit(1000),
           supabase.from("sentiment_votes").select("*").order("created_at", { ascending: false }).limit(1000),
         ]);
+
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser.user) {
+          const { data: appUser } = await supabase.from("app_users").select("role").eq("supabase_user_id", authUser.user.id).maybeSingle();
+          if (isMounted) setIsAdmin(appUser?.role === "ADMIN");
+        }
 
         if (!isMounted) return;
 
@@ -126,6 +133,10 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
       .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, (payload) => {
         if (payload.eventType === "INSERT" && payload.new) {
           setComments((prev) => [payload.new as CommentItem, ...prev]);
+        }
+        if (payload.eventType === "DELETE" && payload.old) {
+          setComments((prev) => prev.filter((comment) => comment.id !== String(payload.old.id)));
+          setReactions((prev) => prev.filter((reaction) => reaction.comment_id !== String(payload.old.id)));
         }
       })
       .subscribe();
@@ -279,6 +290,13 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
     if (error) setDemoMode(true);
   }
 
+  async function deleteComment(commentId: string) {
+    if (!supabase || !isAdmin) return;
+    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) setDemoMode(true);
+  }
+
   async function castPollVote(choice: string) {
     const vote: PollVote = {
       id: crypto.randomUUID(),
@@ -332,5 +350,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
     pollStats,
     onlineCount,
     demoMode,
+    isAdmin,
+    deleteComment,
   };
 }

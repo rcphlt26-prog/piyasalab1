@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useRealtimeCommunity } from "@/hooks/useRealtimeCommunity";
@@ -81,6 +81,8 @@ export function ForumSection() {
     castPollVote,
     onlineCount,
     demoMode,
+    isAdmin,
+    deleteComment,
   } = community;
 
   const [activeCategory, setActiveCategory] = useState<ForumCategory>(forumCategories[0]);
@@ -137,7 +139,7 @@ export function ForumSection() {
     const text = body.trim();
     if (!text) return;
 
-    const blockedWord = findBlockedWord(text);
+    const blockedWord = findBlockedWord(nickname.trim()) ?? findBlockedWord(text);
     if (blockedWord) {
       setErrorMsg("Mesajınız topluluk kurallarına aykırı argo içeriyor ve gönderilmedi.");
       return;
@@ -151,8 +153,8 @@ export function ForumSection() {
     });
 
     setBody("");
-    // Cooldown süresi 30 saniye olarak güncellendi
-    setCooldownTime(30);
+    // Aynı kullanıcı iki dakika içinde ikinci yorum gönderemez.
+    setCooldownTime(120);
   }
 
   function handleSentiment(side: "boga" | "ayi") {
@@ -338,7 +340,7 @@ export function ForumSection() {
                           </span>
                           <span className="app-muted text-[10px]">{c.ticker}</span>
                         </div>
-                        <span className="app-muted text-[10px]">{relativeTime(c.created_at)}</span>
+                        <div className="flex items-center gap-2"><span className="app-muted text-[10px]">{relativeTime(c.created_at)}</span>{isAdmin ? <button type="button" onClick={() => void deleteComment(c.id)} className="app-muted hover:text-bear" title="Yorumu sil"><Trash2 className="h-3.5 w-3.5" /></button> : null}</div>
                       </div>
                       <p className="app-text-secondary break-words text-sm">{c.body}</p>
                       <div className="mt-2 flex gap-2">

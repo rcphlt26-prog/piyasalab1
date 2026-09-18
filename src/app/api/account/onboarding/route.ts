@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { containsProfanity, isValidUsername } from "@/lib/contentModeration";
 
 export async function POST(request: Request) {
@@ -16,14 +17,36 @@ export async function POST(request: Request) {
   }
   if (!body.accepted) return NextResponse.json({ error: "Topluluk kurallarını kabul etmelisiniz." }, { status: 400 });
 
-  const { data: conflict } = await supabase.from("app_users").select("id").ilike("username", username).neq("supabase_user_id", authData.user.id).maybeSingle();
+  const database = getSupabaseAdminClient() ?? supabase;
+  const { data: conflict, error: conflictError } = await database.from("app_users").select("id").ilike("username", username).neq("supabase_user_id", authData.user.id).maybeSingle();
+  if (conflictError) return NextResponse.json({ error: "Takma ad kontrolü yapılamadı." }, { status: 500 });
   if (conflict) return NextResponse.json({ error: "Bu takma ad zaten kullanılıyor." }, { status: 409 });
 
-  const { error } = await supabase
+  const profile = {
+    supabase_user_id: authData.user.id,
+    email: authData.user.email ?? `${authData.user.id}@unknown.local`,
+    username,
+    is_kvkk_accepted: true,
+    kvkk_accepted_at: new Date().toISOString(),
+  };
+  const { data: updatedProfile, error: updateError } = await database
     .from("app_users")
-    .update({ username, is_kvkk_accepted: true, kvkk_accepted_at: new Date().toISOString() })
-    .eq("supabase_user_id", authData.user.id);
-  if (error) return NextResponse.json({ error: "Takma ad kaydedilemedi." }, { status: 500 });
+    .update({ username, is_kvkk_accepted: true, kvkk_accepted_at: profile.kvkk_accepted_at })
+    .eq("supabase_user_id", authData.user.id)
+    .select("id")
+    .maybeSingle();
+  if (updateError) {
+    if (updateError.code === "23505") return NextResponse.json({ error: "Bu takma ad zaten kullanılıyor." }, { status: 409 });
+    return NextResponse.json({ error: `Takma ad kaydedilemedi: ${updateError.message}` }, { status: 500 });
+  }
+
+  if (!updatedProfile) {
+    const { error: insertError } = await database.from("app_users").insert(profile);
+    if (insertError) {
+      if (insertError.code === "23505") return NextResponse.json({ error: "Bu takma ad zaten kullanılıyor." }, { status: 409 });
+      return NextResponse.json({ error: `Profil oluşturulamadı: ${insertError.message}` }, { status: 500 });
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -7,6 +7,28 @@ const blockedWords = [
   "piç",
   "mal",
   "gerizekalı",
+  "salak",
+  "aptal",
+  "şerefsiz",
+  "haysiyetsiz",
+  "ibne",
+  "yavşak",
+  "pezevenk",
+  "kahpe",
+  "sürtük",
+  "bok",
+  "boktan",
+  "siktir",
+  "sikik",
+  "ananı",
+  "avradını",
+  "göt",
+  "götveren",
+  "dalyarak",
+  "it",
+  "eşek",
+  "lan",
+  "ulan",
 ];
 
 export function findBlockedWord(text: string): string | null {
@@ -15,7 +37,8 @@ export function findBlockedWord(text: string): string | null {
 }
 
 export function containsProfanity(text: string): boolean {
-  return findBlockedWord(text) !== null;
+  const normalized = text.toLocaleLowerCase("tr-TR").replace(/[._-]+/g, " ");
+  return findBlockedWord(normalized) !== null;
 }
 
 export function isValidUsername(username: string): boolean {
