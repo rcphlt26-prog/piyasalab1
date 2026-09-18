@@ -10,6 +10,8 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const requestedNext = requestUrl.searchParams.get("next") ?? requestUrl.searchParams.get("redirect");
+  const nextPath = requestedNext?.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/portfoy";
   const loginUrl = new URL("/login?error=auth-code-error", requestUrl.origin);
 
   if (!code) return NextResponse.redirect(loginUrl);
@@ -34,5 +36,5 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) return NextResponse.redirect(loginUrl);
 
-  return NextResponse.redirect(new URL("/portfoy", requestUrl.origin));
+  return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
 }

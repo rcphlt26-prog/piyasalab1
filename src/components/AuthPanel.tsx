@@ -13,7 +13,9 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
   const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [kvkkAccepted, setKvkkAccepted] = useState(false);
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [mode] = useState<"login" | "signup">(initialMode);
   const [message, setMessage] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -45,23 +47,41 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
       setLoading(false);
       return;
     }
-    const result = mode === "login"
-      ? await authClient.auth.signInWithPassword({ email, password })
-      : await authClient.auth.signUp({
+    if (mode === "signup" && !kvkkAccepted) {
+      setMessage("Kayıt olmak için KVKK, Gizlilik ve Çerez metinlerini kabul etmelisiniz.");
+      setLoading(false);
+      return;
+    }
+    let result;
+    try {
+      result = mode === "login"
+        ? await authClient.auth.signInWithPassword({ email, password })
+        : await authClient.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
-            data: { username },
+            data: { username, isKvkkAccepted: true, kvkkAcceptedAt: new Date().toISOString() },
           },
         });
+    } catch {
+      setMessage("Kimlik doğrulama servisine ulaşılamadı. Lütfen tekrar deneyin.");
+      setLoading(false);
+      return;
+    }
 
     if (result.error) {
       setMessage(result.error.message);
       setLoading(false);
       return;
     }
-    setMessage(mode === "signup" ? "Kayıt başarılı. E-posta onayını kontrol edin." : "Giriş yapıldı.");
+    if (mode === "login") {
+      window.localStorage.setItem("VeriAkis-remember-me", String(rememberMe));
+      document.cookie = `veriakis-remember-me=${rememberMe ? "1" : "0"}; Path=/; SameSite=Lax${window.location.protocol === "https:" ? "; Secure" : ""}`;
+      setMessage("Giriş yapıldı.");
+    } else {
+      setMessage("Kayıt işleminiz başarıyla gerçekleşti! Lütfen e-posta kutunuza gönderilen doğrulama bağlantısına tıklayarak hesabınızı onaylayın.");
+    }
     setPassword("");
     setOpen(false);
     setLoading(false);
@@ -70,14 +90,17 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
   async function handleGoogleLogin() {
     setMessage(null);
     setLoading(true);
-    const { error } = await authClient.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      setMessage(error.message);
+    try {
+      const { error } = await authClient.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) {
+        setMessage(`${error.message} Supabase Dashboard > Authentication > Providers > Google bölümünde sağlayıcının Enabled olduğundan emin olun.`);
+        setLoading(false);
+      }
+    } catch {
+      setMessage("Google ile giriş başlatılamadı. Supabase Dashboard > Authentication > Providers > Google sağlayıcısını etkinleştirin ve Client ID/Secret bilgilerini kontrol edin.");
       setLoading(false);
     }
   }
@@ -114,7 +137,9 @@ export function AuthPanel({ initialMode = "login" }: { initialMode?: "login" | "
           <form onSubmit={submit} className="space-y-2">
             <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="E-posta" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
             {mode === "signup" ? <input required minLength={3} maxLength={30} value={username} onChange={(event) => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, ""))} placeholder="Takma ad: borsa_kaplani34" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" /> : null}
+            {mode === "signup" ? <label className="app-text-secondary flex items-start gap-2 text-[11px]"><input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5" /><span><Link href="/gizlilik" target="_blank" rel="noopener noreferrer" className="text-primary underline">KVKK/Gizlilik Politikası</Link>, <Link href="/cerezler" target="_blank" rel="noopener noreferrer" className="text-primary underline">Çerez Politikası</Link> ve <Link href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-primary underline">Kullanım Şartları</Link>&apos;nı okudum ve kabul ediyorum.</span></label> : null}
             <input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifre (en az 6 karakter)" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
+            {mode === "login" ? <label className="app-text-secondary flex items-center gap-2 text-xs"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Beni hatırla (30 gün)</label> : null}
             <button type="submit" disabled={loading} className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60">
               {loading ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : mode === "login" ? "Giriş yap" : "Ücretsiz üye ol"}
             </button>

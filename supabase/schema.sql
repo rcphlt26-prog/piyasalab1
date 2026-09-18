@@ -252,6 +252,8 @@ create table if not exists public.app_users (
   supabase_user_id uuid not null unique references auth.users(id) on delete cascade,
   email text not null unique,
   username text not null unique,
+  is_kvkk_accepted boolean not null default false,
+  kvkk_accepted_at timestamptz,
   name text,
   avatar_url text,
   role text not null default 'USER' check (role in ('USER', 'PREMIUM', 'ADMIN')),
@@ -312,6 +314,8 @@ create table if not exists public.forum_comments (
 );
 
 alter table public.app_users add column if not exists username text;
+alter table public.app_users add column if not exists is_kvkk_accepted boolean not null default false;
+alter table public.app_users add column if not exists kvkk_accepted_at timestamptz;
 update public.app_users set username = 'user_' || replace(substr(id::text, 1, 8), '-', '') where username is null or btrim(username) = '';
 create unique index if not exists app_users_username_unique_idx on public.app_users(lower(username));
 alter table public.app_users alter column username set not null;
@@ -350,11 +354,13 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.app_users (supabase_user_id, email, username, name, avatar_url)
+  insert into public.app_users (supabase_user_id, email, username, is_kvkk_accepted, kvkk_accepted_at, name, avatar_url)
   values (
     new.id,
     coalesce(new.email, concat(new.id::text, '@unknown.local')),
     coalesce(nullif(btrim(new.raw_user_meta_data ->> 'username'), ''), 'user_' || replace(substr(new.id::text, 1, 8), '-', '')),
+    coalesce((new.raw_user_meta_data ->> 'isKvkkAccepted')::boolean, false),
+    case when coalesce((new.raw_user_meta_data ->> 'isKvkkAccepted')::boolean, false) then coalesce((new.raw_user_meta_data ->> 'kvkkAcceptedAt')::timestamptz, now()) else null end,
     coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
     new.raw_user_meta_data ->> 'avatar_url'
   )

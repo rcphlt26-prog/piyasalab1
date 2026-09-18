@@ -24,11 +24,13 @@ export async function middleware(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
+        const rememberMe = request.cookies.get("veriakis-remember-me")?.value === "1";
         const cookieOptions = {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax" as const,
           path: "/",
+          ...(rememberMe ? { maxAge: 60 * 60 * 24 * 30 } : {}),
         };
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set({ name, value, ...options, ...cookieOptions });

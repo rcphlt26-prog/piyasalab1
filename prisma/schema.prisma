@@ -11,6 +11,8 @@ model User {
   supabaseUserId String         @unique
   email          String         @unique
   username       String         @unique
+  isKvkkAccepted Boolean        @default(false)
+  kvkkAcceptedAt DateTime?
   name           String?
   avatarUrl      String?
   role           Role           @default(USER)

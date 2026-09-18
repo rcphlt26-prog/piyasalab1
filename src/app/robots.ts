@@ -5,7 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      disallow: ["/portfoy", "/ayarlar", "/admin", "/api/", "/auth/"],
     },
-    sitemap: "https://veriakis.com/sitemap.xml",
+    sitemap: "https://piyasalab.com.tr/sitemap.xml",
   };
 }

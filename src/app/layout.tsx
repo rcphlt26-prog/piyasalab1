@@ -21,37 +21,39 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "VeriAkış | Borsa Getiri Hesaplama ve Enflasyon Araçları",
+  metadataBase: new URL("https://piyasalab.com.tr"),
+  title: {
+    default: "VeriAkış | Canlı BIST100, Portföy Takibi ve Finans Analizi",
+    template: "%s | VeriAkış",
+  },
   description:
-    "Borsa getiri hesaplama, enflasyon hesaplama, dolar bazlı reel getiri analizi, alım gücü simülatörü ve canlı piyasa forumu.",
+    "BIST 100 hisseleri, canlı altın/döviz fiyatları, temettü hesaplama, portföy takibi ve dinamik bilanço analizleri tek platformda.",
   keywords: [
-    "borsa getiri hesaplama",
-    "enflasyon hesaplama",
-    "dolar bazlı reel getiri",
-    "alım gücü hesaplama",
-    "BIST 100",
-    "temettü yeniden yatırım",
-    "piyasa sentiment",
+    "BIST100", "Borsa İstanbul", "Hisse Analiz", "Portföy Takibi", "Temettü Hesaplama", "KAP Haberleri", "Finans",
   ],
-  alternates: { canonical: "https://veriakis.com" },
+  authors: [{ name: "VeriAkış" }],
+  creator: "VeriAkış",
+  publisher: "VeriAkış",
+  alternates: { canonical: "https://piyasalab.com.tr" },
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
     apple: "/icon.svg",
   },
   openGraph: {
-    title: "VeriAkış - Borsa, Enflasyon ve Reel Getiri Platformu",
+    title: "VeriAkış | Canlı BIST100 ve Finans Analizi",
     description:
       "Canlı BIST akışı, reel getiri araçları, nostalji simülatörü, viral mini oyunlar ve topluluk forumu.",
     type: "website",
     locale: "tr_TR",
-    url: "https://veriakis.com",
+    url: "https://piyasalab.com.tr",
     siteName: "VeriAkış",
   },
   twitter: {
     card: "summary_large_image",
     title: "VeriAkış",
-    description: "Borsa ve enflasyon odaklı interaktif finans platformu.",
+    description: "Canlı BIST100, portföy takibi, KAP haberleri ve finans araçları.",
+    images: ["/icon.svg"],
   },
   robots: {
     index: true,
@@ -83,7 +85,7 @@ const webAppJsonLd = {
   name: "VeriAkış",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
-  url: "https://veriakis.com",
+  url: "https://piyasalab.com.tr",
   description:
     "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
   inLanguage: "tr-TR",
@@ -109,7 +111,28 @@ const articleJsonLd = {
   author: { "@type": "Organization", name: "VeriAkış" },
   publisher: { "@type": "Organization", name: "VeriAkış" },
   inLanguage: "tr-TR",
-  mainEntityOfPage: "https://veriakis.com",
+  mainEntityOfPage: "https://piyasalab.com.tr",
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "VeriAkış",
+  url: "https://piyasalab.com.tr",
+  logo: "https://piyasalab.com.tr/icon.svg",
+  email: "rcphlt26@gmail.com",
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "VeriAkış",
+  url: "https://piyasalab.com.tr",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: "https://piyasalab.com.tr/?q={search_term_string}",
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -125,6 +148,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <Script id="jsonld-webapp" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
       <Script id="jsonld-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <Script id="jsonld-article" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <Script id="jsonld-organization" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+      <Script id="jsonld-website" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
     </html>
   );
 }
