@@ -112,10 +112,13 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
 
   if (user) {
     return (
-      <button type="button" onClick={signOut} className="app-border app-text-secondary inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs" title="Oturumu kapat">
-        <LogOut className="h-4 w-4" />
-        <span className="hidden lg:inline">{user.email?.split("@")[0] ?? "Hesabım"}</span>
-      </button>
+      <div className="flex items-center gap-1">
+        <Link href="/profil" className="app-border app-text-secondary inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs">Profilim</Link>
+        <button type="button" onClick={signOut} className="app-border app-text-secondary inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs" title="Oturumu kapat">
+          <LogOut className="h-4 w-4" />
+          <span className="hidden lg:inline">{user.email?.split("@")[0] ?? "Çıkış"}</span>
+        </button>
+      </div>
     );
   }
 

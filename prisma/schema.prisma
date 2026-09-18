@@ -11,6 +11,7 @@ model User {
   supabaseUserId String         @unique
   email          String         @unique
   username       String         @unique
+  usernameLastChangedAt DateTime?
   isKvkkAccepted Boolean        @default(false)
   kvkkAcceptedAt DateTime?
   name           String?
