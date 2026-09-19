@@ -16,7 +16,7 @@ declare global {
 
 export function AdSlot({ label, width, height, className = "" }: Props) {
   const [consent, setConsent] = useState(false);
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-7925528729215112";
   const slot = label.includes("Leaderboard")
     ? process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD
     : label.includes("Inline")

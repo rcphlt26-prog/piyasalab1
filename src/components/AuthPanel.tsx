@@ -79,6 +79,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
 
     if (result.error) {
       setMessage(result.error.message);
+      if (mode === "signup") setSignupCompleted(true);
       setLoading(false);
       return;
     }
@@ -104,7 +105,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-    setMessage(error ? `Doğrulama e-postası yeniden gönderilemedi: ${error.message}` : "Doğrulama e-postası yeniden gönderildi. Spam klasörünü de kontrol edin.");
+    setMessage(error ? `Doğrulama e-postası yeniden gönderilemedi: ${error.message}. Supabase e-posta rate limitine takıldıysa bir süre bekleyin veya özel SMTP tanımlayın.` : "Doğrulama e-postası yeniden gönderildi. Spam klasörünü de kontrol edin.");
     setLoading(false);
   }
 
