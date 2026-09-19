@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect, useState } from "react";
 
 const CONSENT_KEY = "VeriAkis-ads-consent";
@@ -36,18 +35,6 @@ export function AdSenseConsent({ client }: { client?: string }) {
     }
     setConsent(value);
     window.dispatchEvent(new Event(CONSENT_EVENT));
-  }
-
-  if (client && consent === "accepted") {
-    return (
-      <Script
-        async
-        id="adsense-loader"
-        strategy="afterInteractive"
-        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
-        crossOrigin="anonymous"
-      />
-    );
   }
 
   if (!client || consent) return null;

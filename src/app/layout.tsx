@@ -143,6 +143,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="app-text min-h-full">
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
+        <Script
+          id="adsense-loader"
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+          crossOrigin="anonymous"
+        />
         <AdSenseConsent client={adsenseClient} />
         <Script id="jsonld-webapp" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
         <Script id="jsonld-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
