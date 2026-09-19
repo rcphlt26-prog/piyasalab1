@@ -21,7 +21,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://piyasalab.com.tr"),
+  metadataBase: new URL("https://veriakis.com"),
   title: {
     default: "VeriAkış | Canlı BIST100, Portföy Takibi ve Finans Analizi",
     template: "%s | VeriAkış",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   authors: [{ name: "VeriAkış" }],
   creator: "VeriAkış",
   publisher: "VeriAkış",
-  alternates: { canonical: "https://piyasalab.com.tr" },
+  alternates: { canonical: "https://veriakis.com" },
   icons: {
     icon: "/gemini-svg.svg",
     shortcut: "/gemini-svg.svg",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
       "Canlı BIST akışı, reel getiri araçları, nostalji simülatörü, viral mini oyunlar ve topluluk forumu.",
     type: "website",
     locale: "tr_TR",
-    url: "https://piyasalab.com.tr",
+    url: "https://veriakis.com",
     siteName: "VeriAkış",
   },
   twitter: {
@@ -85,7 +85,7 @@ const webAppJsonLd = {
   name: "VeriAkış",
   applicationCategory: "FinanceApplication",
   operatingSystem: "Web",
-  url: "https://piyasalab.com.tr",
+  url: "https://veriakis.com",
   description:
     "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
   inLanguage: "tr-TR",
@@ -111,15 +111,15 @@ const articleJsonLd = {
   author: { "@type": "Organization", name: "VeriAkış" },
   publisher: { "@type": "Organization", name: "VeriAkış" },
   inLanguage: "tr-TR",
-  mainEntityOfPage: "https://piyasalab.com.tr",
+  mainEntityOfPage: "https://veriakis.com",
 };
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "VeriAkış",
-  url: "https://piyasalab.com.tr",
-  logo: "https://piyasalab.com.tr/gemini-svg.svg",
+  url: "https://veriakis.com",
+  logo: "https://veriakis.com/gemini-svg.svg",
   email: "rcphlt26@gmail.com",
 };
 
@@ -127,10 +127,10 @@ const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "VeriAkış",
-  url: "https://piyasalab.com.tr",
+  url: "https://veriakis.com",
   potentialAction: {
     "@type": "SearchAction",
-    target: "https://piyasalab.com.tr/?q={search_term_string}",
+    target: "https://veriakis.com/?q={search_term_string}",
     "query-input": "required name=search_term_string",
   },
 };

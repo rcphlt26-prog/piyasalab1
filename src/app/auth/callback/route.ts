@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 // Supabase Dashboard > Authentication > URL Configuration:
-// Site URL: https://piyasalab.com.tr (local: http://localhost:3000)
-// Redirect URLs: https://piyasalab.com.tr/auth/callback
+// Site URL: https://veriakis.com (local: http://localhost:3000)
+// Redirect URLs: https://veriakis.com/auth/callback
 //                 http://localhost:3000/auth/callback
 // Authentication > Email Templates > Confirm signup: use {{ .RedirectTo }} in the link.
 

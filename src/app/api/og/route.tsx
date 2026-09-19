@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       <div style={{ background: "#080b12", color: "#f8fafc", display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between", padding: "64px 72px", width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://piyasalab.com.tr/gemini-svg.svg" alt="VeriAkış" width="76" height="76" style={{ borderRadius: "18px" }} />
+          <img src="https://veriakis.com/gemini-svg.svg" alt="VeriAkış" width="76" height="76" style={{ borderRadius: "18px" }} />
           <div style={{ color: "#34d399", display: "flex", fontSize: 30, fontWeight: 700 }}>VeriAkış</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", maxWidth: "1000px" }}>
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
           <div style={{ display: "flex", fontSize: 58, fontWeight: 800, lineHeight: 1.08 }}>{title}</div>
           <div style={{ color: "#cbd5e1", display: "flex", fontSize: 28 }}>{subtitle}</div>
         </div>
-        <div style={{ color: "#94a3b8", display: "flex", fontSize: 22 }}>piyasalab.com.tr · Bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.</div>
+        <div style={{ color: "#94a3b8", display: "flex", fontSize: 22 }}>veriakis.com · Bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.</div>
       </div>
     ),
     { width: 1200, height: 630 },

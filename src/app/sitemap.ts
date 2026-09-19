@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { marketSymbols, stockDirectory } from "@/data/marketSymbols";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl = "https://piyasalab.com.tr";
+  const siteUrl = "https://veriakis.com";
   const lastModified = new Date("2026-09-19T00:00:00.000Z");
   const calculatorPaths = [
     "hesaplayicilar/bilesik-getiri",

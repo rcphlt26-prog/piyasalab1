@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Finans Hesaplayıcıları",
   description: "Bileşik getiri, temettü, maliyet ortalaması ve hisse-altın karşılaştırma hesaplayıcıları.",
-  alternates: { canonical: "https://piyasalab.com.tr/hesaplayicilar" },
+  alternates: { canonical: "https://veriakis.com/hesaplayicilar" },
 };
 
 const calculators = [

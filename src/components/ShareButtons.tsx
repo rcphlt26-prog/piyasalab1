@@ -3,7 +3,7 @@
 import { Copy, Send } from "lucide-react";
 import { useState } from "react";
 
-const siteOrigin = "https://piyasalab.com.tr";
+const siteOrigin = "https://veriakis.com";
 
 export function ShareButtons({ title, url }: { title: string; url?: string }) {
   const [copied, setCopied] = useState(false);

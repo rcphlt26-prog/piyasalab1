@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ symbol: s
   return {
     title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`,
     description,
-    alternates: { canonical: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` },
-    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, type: "article", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}`, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
+    alternates: { canonical: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}` },
+    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, type: "article", url: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}`, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
     twitter: { card: "summary_large_image", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description, images: [`/api/og?ticker=${encodeURIComponent(ticker)}`] },
   };
 }
@@ -26,6 +26,6 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
   const market = marketSymbolByCode.get(ticker) ?? null;
   if (!entry && !market) notFound();
 
-  const jsonLd = { "@context": "https://schema.org", "@type": "FinancialProduct", name: market?.label ?? entry?.name ?? ticker, tickerSymbol: ticker, category: "Borsa İstanbul", url: `https://piyasalab.com.tr/hisse/${encodeURIComponent(ticker)}` };
+  const jsonLd = { "@context": "https://schema.org", "@type": "FinancialProduct", name: market?.label ?? entry?.name ?? ticker, tickerSymbol: ticker, category: "Borsa İstanbul", url: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}` };
   return <main className="app-bg min-h-screen"><Script id={`financial-product-${ticker}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} /><SpkBanner /><AssetDetailClient ticker={ticker} entry={entry} market={market} /><Footer /></main>;
 }
