@@ -77,7 +77,7 @@ export async function GET(request: Request) {
       return {
         code: item.code,
         label: item.label,
-        price: Number(price.toFixed(price >= 100 ? 2 : 4)),
+        price: item.category === "kripto" ? Number(price.toPrecision(8)) : Number(price.toFixed(price >= 100 ? 2 : 4)),
         changePct: Number(changePct.toFixed(2)),
         source: "Yahoo Finance",
         timestamp: new Date().toISOString(),

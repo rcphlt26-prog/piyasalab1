@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, TrendingUp, Wrench, Newspaper } from "lucide-react";
-import { stockDirectory } from "@/data/marketSymbols";
+import { marketSymbols } from "@/data/marketSymbols";
 import { newsData } from "@/data/newsData";
 
 type ToolEntry = { id: string; label: string };
@@ -19,7 +19,7 @@ const tools: ToolEntry[] = [
 ];
 
 type Result =
-  | { type: "stock"; ticker: string; name: string; sector: string }
+  | { type: "asset"; code: string; label: string; category: string }
   | { type: "tool"; id: string; label: string }
   | { type: "news"; slug: string; title: string };
 
@@ -66,10 +66,10 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
   const results = useMemo<Result[]>(() => {
     const q = debounced.trim().toLowerCase();
     if (!q) return [];
-    const stocks: Result[] = stockDirectory
-      .filter((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+    const assets: Result[] = marketSymbols
+      .filter((asset) => asset.code.toLowerCase().includes(q) || asset.label.toLowerCase().includes(q))
       .slice(0, 6)
-      .map((s) => ({ type: "stock", ticker: s.ticker, name: s.name, sector: s.sector }));
+      .map((asset) => ({ type: "asset", code: asset.code, label: asset.label, category: asset.category }));
     const toolHits: Result[] = tools
       .filter((t) => t.label.toLowerCase().includes(q))
       .slice(0, 4)
@@ -78,7 +78,7 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
       .filter((n) => n.title.toLowerCase().includes(q))
       .slice(0, 3)
       .map((n) => ({ type: "news", slug: n.slug, title: n.title }));
-    return [...stocks, ...toolHits, ...newsHits];
+    return [...assets, ...toolHits, ...newsHits];
   }, [debounced]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -87,8 +87,8 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
   const choose = (r: Result) => {
     setOpen(false);
     setQuery("");
-    if (r.type === "stock") {
-      router.push(`/varlik/${r.ticker}`);
+    if (r.type === "asset") {
+      router.push(`/varlik/${r.code}`);
     } else if (r.type === "tool") {
       onNavigateTab?.(r.id);
     } else {
@@ -124,7 +124,7 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Hisse, araç veya haber ara..."
+          placeholder="Hisse, döviz, kripto, emtia veya haber ara..."
           aria-label="Site içi arama"
           className="app-text w-full bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
         />
@@ -136,13 +136,13 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
           {results.map((r, idx) => {
             const active = idx === activeIndex;
             const base = `flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm ${active ? "app-surface-3" : ""}`;
-            if (r.type === "stock") {
+            if (r.type === "asset") {
               return (
-                <button key={`s-${r.ticker}`} className={base} onMouseEnter={() => setActiveIndex(idx)} onClick={() => choose(r)}>
+                <button key={`a-${r.code}`} className={base} onMouseEnter={() => setActiveIndex(idx)} onClick={() => choose(r)}>
                   <TrendingUp className="text-bull h-4 w-4 shrink-0" />
-                  <span className="app-text font-semibold">{r.ticker}</span>
-                  <span className="app-muted truncate">{r.name}</span>
-                  <span className="app-muted ml-auto text-xs">{r.sector}</span>
+                  <span className="app-text font-semibold">{r.code}</span>
+                  <span className="app-muted truncate">{r.label}</span>
+                  <span className="app-muted ml-auto text-xs">{r.category}</span>
                 </button>
               );
             }

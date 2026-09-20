@@ -73,6 +73,14 @@ const cryptoRaw: Array<[string, string]> = [
   ["RAY", "Raydium"],
   ["JTO", "Jito"],
   ["PYTH", "Pyth Network"],
+  ["USDT", "Tether"],
+  ["XMR", "Monero"],
+  ["TAO", "Bittensor"],
+  ["ONDO", "Ondo"],
+  ["ENA", "Ethena"],
+  ["WIF", "dogwifhat"],
+  ["MNT", "Mantle"],
+  ["KAIA", "Kaia"],
 ];
 
 const cryptoSymbols: MarketSymbol[] = cryptoRaw.map(([sym, name]) => ({
@@ -340,6 +348,16 @@ const rawGlobal: Array<[string, string, string]> = [
   ["DIS", "Walt Disney", "Medya & Eğlence"],
   ["BABA", "Alibaba Group", "E-Ticaret"],
   ["BRK.B", "Berkshire Hathaway", "Holding"],
+  ["JPM", "JPMorgan Chase", "Bankacılık"],
+  ["V", "Visa", "Finansal Hizmetler"],
+  ["MA", "Mastercard", "Finansal Hizmetler"],
+  ["KO", "Coca-Cola", "Tüketim"],
+  ["JNJ", "Johnson & Johnson", "Sağlık"],
+  ["ORCL", "Oracle", "Yazılım"],
+  ["INTC", "Intel", "Yarı İletken"],
+  ["BA", "Boeing", "Havacılık"],
+  ["UBER", "Uber Technologies", "Ulaşım Teknolojisi"],
+  ["SPY", "S&P 500 ETF", "ETF"],
 ];
 
 const dedupe = (rows: Array<[string, string, string]>, category: StockCategory): StockEntry[] => {
@@ -376,3 +394,28 @@ for (const [ticker, name] of rawGlobal) {
 
 export const marketSymbolByCode = new Map(marketSymbols.map((s) => [s.code, s]));
 export const stockByTicker = new Map(stockDirectory.map((s) => [s.ticker, s]));
+
+export type MarketPriceMeta = {
+  currency: "TRY" | "USD" | "POINT";
+  currencyLabel: "TL" | "USD" | "Puan";
+  unitLabel: "Adet" | "Lot" | "Birim" | "Gram" | "Ons";
+};
+
+const TRY_METAL_CODES = new Set(["GRAMALTIN", "CEYREKALTIN", "YARIMALTIN", "TAMALTIN", "ATAALTIN", "RESATALTIN", "BILEZIK22", "GRAMGUMUS"]);
+
+export function getMarketPriceMeta(symbol: MarketSymbol | null | undefined): MarketPriceMeta {
+  if (!symbol) return { currency: "TRY", currencyLabel: "TL", unitLabel: "Adet" };
+  if (symbol.category === "endeks") return { currency: "POINT", currencyLabel: "Puan", unitLabel: "Birim" };
+  if (symbol.category === "kripto") return { currency: "USD", currencyLabel: "USD", unitLabel: "Adet" };
+  if (symbol.category === "doviz") return { currency: "TRY", currencyLabel: "TL", unitLabel: "Birim" };
+  if (symbol.category === "hisse") {
+    return symbol.yahooSymbol.endsWith(".IS")
+      ? { currency: "TRY", currencyLabel: "TL", unitLabel: "Lot" }
+      : { currency: "USD", currencyLabel: "USD", unitLabel: "Adet" };
+  }
+  if (TRY_METAL_CODES.has(symbol.code)) {
+    return { currency: "TRY", currencyLabel: "TL", unitLabel: symbol.code.startsWith("GRAM") || symbol.code === "BILEZIK22" ? "Gram" : "Adet" };
+  }
+  if (symbol.code === "ALTIN" || symbol.code === "GUMUS") return { currency: "USD", currencyLabel: "USD", unitLabel: "Ons" };
+  return { currency: "USD", currencyLabel: "USD", unitLabel: "Birim" };
+}

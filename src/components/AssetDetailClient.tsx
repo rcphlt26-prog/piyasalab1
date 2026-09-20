@@ -13,11 +13,11 @@ import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { scorecardData } from "@/data/scorecardData";
-import { formatNumber } from "@/lib/utils";
+import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { StockInsightCard } from "@/components/StockInsightCard";
 import { StockCommunityWidget } from "@/components/StockCommunityWidget";
 import { ShareButtons } from "@/components/ShareButtons";
-import type { StockEntry, MarketSymbol } from "@/data/marketSymbols";
+import { getMarketPriceMeta, type StockEntry, type MarketSymbol } from "@/data/marketSymbols";
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
@@ -69,6 +69,7 @@ export function AssetDetailClient({
   market: MarketSymbol | null;
 }) {
   const [detailTab, setDetailTab] = useState<"financials" | "news" | "sector" | "community">("financials");
+  const [quantity, setQuantity] = useState("1");
   const [statements, setStatements] = useState<FinancialStatement[]>([]);
   const [kapNotifications, setKapNotifications] = useState<KapNotification[]>([]);
   const { isWatched, toggle } = useWatchlist();
@@ -78,10 +79,13 @@ export function AssetDetailClient({
   const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
   const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
   const isStock = market ? market.category === "hisse" : Boolean(entry);
+  const priceMeta = getMarketPriceMeta(market);
   const spark = historicalPrices.slice(-24).map((point) => point.value);
   const trend: "up" | "down" = spark.length < 2 || spark[spark.length - 1] >= spark[0] ? "up" : "down";
   const changePct = liveQuote?.changePct;
   const currentPrice = liveQuote?.price;
+  const quantityValue = Math.max(0, Number(quantity) || 0);
+  const positionValue = currentPrice === undefined ? undefined : currentPrice * quantityValue;
   const score = isStock ? scorecardData[ticker] : undefined;
 
   useEffect(() => {
@@ -177,11 +181,11 @@ export function AssetDetailClient({
           <div className="flex items-center gap-4">
             {spark.length > 1 ? <Sparkline data={spark} width={120} height={44} trend={trend} /> : null}
             <div className="text-right">
-              <p className="app-text text-xl font-bold">{currentPrice === undefined ? "-" : formatNumber(currentPrice, currentPrice >= 100 ? 2 : 4)}</p>
+              <p className="app-text text-xl font-bold">{currentPrice === undefined ? "-" : `${formatMarketPrice(currentPrice)} ${priceMeta.currencyLabel}`}</p>
               {changePct === undefined ? <p className="app-muted text-sm">-</p> : <p className={`text-sm font-bold ${changePct >= 0 ? "text-bull" : "text-bear"}`}>
                 {changePct >= 0 ? "+" : ""}{formatNumber(changePct)}%
               </p>}
-              <p className="app-muted text-xs">{liveQuote ? "Canlı fiyat · 30 sn" : "Canlı veri bekleniyor"}</p>
+              <p className="app-muted text-xs">{liveQuote ? `${priceMeta.unitLabel} fiyatı · Canlı · 30 sn` : "Canlı veri bekleniyor"}</p>
             </div>
           </div>
         </div>
@@ -189,6 +193,32 @@ export function AssetDetailClient({
           Bu sayfadaki fiyat dışı veriler temsili/eğitim amaçlıdır ve yatırım tavsiyesi değildir.
         </p>
       </div>
+
+      <section className="section-card mb-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div>
+            <h2 className="app-text text-base font-semibold">Hızlı değer hesapla</h2>
+            <p className="app-muted mt-1 text-xs">Kaç {priceMeta.unitLabel.toLowerCase()} {name} tuttuğunuzu girin.</p>
+          </div>
+          <div className="grid grid-cols-[minmax(0,140px)_1fr] items-end gap-3 sm:min-w-[340px]">
+            <label className="app-text-secondary min-w-0 text-xs">
+              {priceMeta.unitLabel}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+                className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+              />
+            </label>
+            <div className="app-surface-2 app-border min-w-0 rounded-lg border px-3 py-2">
+              <p className="app-muted text-[11px]">Toplam değer</p>
+              <p className="app-text truncate text-base font-bold">{positionValue === undefined ? "Canlı fiyat bekleniyor" : `${formatMarketPrice(positionValue)} ${priceMeta.currencyLabel}`}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {statements.length > 0 ? <StockInsightCard ticker={ticker} statements={statements} changePct={changePct} /> : null}
 

@@ -5,7 +5,8 @@ import { Newspaper, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { newsData, type NewsItem } from "@/data/newsData";
-import { formatNumber } from "@/lib/utils";
+import { getMarketPriceMeta, marketSymbolByCode } from "@/data/marketSymbols";
+import { formatMarketPrice, formatNumber } from "@/lib/utils";
 
 export function HomeTickerRail() {
   const { quotes } = useLiveQuotes();
@@ -53,7 +54,7 @@ export function HomeTickerRail() {
                   <span className="app-text text-xs font-semibold">{quote.label}</span>
                   {quote.changePct >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-bull" /> : <TrendingDown className="h-3.5 w-3.5 text-bear" />}
                 </div>
-                <p className="app-text mt-2 text-sm font-bold">{formatNumber(quote.price)}</p>
+                <p className="app-text mt-2 text-sm font-bold">{formatMarketPrice(quote.price)} {getMarketPriceMeta(marketSymbolByCode.get(quote.code)).currencyLabel}</p>
                 <p className={`text-[11px] font-semibold ${quote.changePct >= 0 ? "text-bull" : "text-bear"}`}>{quote.changePct >= 0 ? "+" : ""}{formatNumber(quote.changePct, 2)}%</p>
               </Link>
             )) : <p className="app-muted px-1 text-xs">Canlı hisseler yükleniyor...</p>}

@@ -7,8 +7,8 @@ import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchStar } from "@/components/WatchStar";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { formatNumber } from "@/lib/utils";
-import { marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
+import { formatMarketPrice, formatNumber } from "@/lib/utils";
+import { getMarketPriceMeta, marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
 import { MarketNewsStrip } from "@/components/MarketNewsStrip";
 
 type TabKey = "borsa" | "doviz" | "emtia" | "kripto";
@@ -101,7 +101,7 @@ export function MarketSection() {
                   <WatchStar watched onToggle={() => toggle(q.code)} size={13} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="app-text text-sm font-bold">{formatNumber(q.price)}</span>
+                  <span className="app-text text-sm font-bold">{formatMarketPrice(q.price)} {getMarketPriceMeta(marketSymbolByCode.get(q.code)).currencyLabel}</span>
                   <span className={`text-[11px] ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>
                     {q.changePct >= 0 ? "+" : ""}{formatNumber(q.changePct, 2)}%
                   </span>
@@ -123,7 +123,7 @@ export function MarketSection() {
           {tickerTape.map((q) => (
             <div key={q.code} className="app-surface app-border min-w-[130px] rounded-lg border px-2 py-1 text-xs">
               <p className="app-text font-semibold">{q.label}</p>
-              <p className={`font-bold ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>{formatNumber(q.price)}</p>
+              <p className={`font-bold ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>{formatMarketPrice(q.price)} {getMarketPriceMeta(marketSymbolByCode.get(q.code)).currencyLabel}</p>
             </div>
           ))}
         </div>
@@ -163,18 +163,18 @@ export function MarketSection() {
       )}
 
       {/* Grid Listesi (Her sayfada max 20 adet) */}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {paginatedQuotes.map((q) => {
           return (
             <Link
               key={q.code}
               href={`/varlik/${q.code}`}
-              className={`app-surface-2 app-border card-hover cursor-pointer rounded-xl border p-3 ${
+              className={`app-surface-2 app-border card-hover min-w-0 cursor-pointer rounded-xl border p-2.5 sm:p-3 ${
                 q.direction === "up" ? "flash-up" : q.direction === "down" ? "flash-down" : ""
               }`}
             >
               <div className="mb-1 flex items-center justify-between gap-1">
-                <h3 className="app-text text-sm font-semibold">{q.label}</h3>
+                <h3 className="app-text truncate text-sm font-semibold">{q.label}</h3>
                 <div className="flex items-center gap-1">
                   <span className={`text-xs ${q.changePct >= 0 ? "text-bull" : "text-bear"}`}>
                     {q.changePct >= 0 ? <ArrowUpRight className="inline h-3 w-3" /> : <ArrowDownRight className="inline h-3 w-3" />} %{formatNumber(Math.abs(q.changePct), 2)}
@@ -183,9 +183,9 @@ export function MarketSection() {
                 </div>
               </div>
               <div className="flex items-end justify-between gap-2">
-                <p className="app-text text-lg font-bold">{formatNumber(q.price)}</p>
+                <p className="app-text truncate text-base font-bold sm:text-lg">{formatMarketPrice(q.price)} {getMarketPriceMeta(marketSymbolByCode.get(q.code)).currencyLabel}</p>
               </div>
-              <p className="app-muted text-[11px]">{q.source} · Detay için tıkla</p>
+              <p className="app-muted truncate text-[11px]">{getMarketPriceMeta(marketSymbolByCode.get(q.code)).unitLabel} fiyatı · Detay</p>
             </Link>
           );
         })}
