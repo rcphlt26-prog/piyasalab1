@@ -17,7 +17,7 @@ export function Footer() {
               </span>
             </div>
             <p className="app-text-secondary max-w-xl text-sm leading-relaxed">
-              VeriAkış; borsa, döviz, altın ve enflasyon verileriyle çalışan interaktif hesaplayıcılar, hisse karnesi,
+              Veri Akış (veriakis.com) kullanıcılarına anlık finansal analizler sunar. VeriAkış; borsa, döviz, altın ve enflasyon verileriyle çalışan interaktif hesaplayıcılar, hisse karnesi,
               yatırımcı forumu ve finansal oyunlar sunan bir bilgilendirme ve eğitim platformudur. Tüm hesaplamalar
               tarayıcınızda çalışır.
             </p>
