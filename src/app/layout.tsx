@@ -23,13 +23,13 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL("https://veriakis.com"),
   title: {
-    default: "VeriAkış | Canlı BIST100, Portföy Takibi ve Finans Analizi",
+    default: "Veri Akış | Canlı Borsa, Piyasa ve Portföy Takip Platformu",
     template: "%s | VeriAkış",
   },
   description:
-    "BIST 100 hisseleri, canlı altın/döviz fiyatları, temettü hesaplama, portföy takibi ve dinamik bilanço analizleri tek platformda.",
+    "Veri Akış (veriakis.com) ile borsa, hisse senetleri, döviz ve piyasa verilerini canlı takip edin. Portföyünüzü ücretsiz yönetin.",
   keywords: [
-    "BIST100", "Borsa İstanbul", "Hisse Analiz", "Portföy Takibi", "Temettü Hesaplama", "KAP Haberleri", "Finans",
+    "veri akış", "veri akışı", "veriakis", "veriakis.com", "borsa takip", "canlı piyasa", "portföy yönetimi",
   ],
   authors: [{ name: "VeriAkış" }],
   creator: "VeriAkış",
@@ -126,7 +126,8 @@ const organizationJsonLd = {
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "VeriAkış",
+  name: "Veri Akış",
+  alternateName: ["VeriAkis", "veriakis.com", "Veri Akışı"],
   url: "https://veriakis.com",
   potentialAction: {
     "@type": "SearchAction",
