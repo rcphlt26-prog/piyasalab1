@@ -37,7 +37,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
     : null;
 
   return (
-    <section className={compact ? "app-surface app-border w-72 rounded-xl border p-3 shadow-xl" : "w-full"}>
+    <section className={compact ? "app-surface app-border w-60 rounded-lg border p-2.5 shadow-lg" : "w-full"}>
       <div className={compact ? "mb-3 flex items-center justify-between gap-2" : "mb-4 flex items-center justify-between gap-2"}>
         <h2 className={`app-text flex items-center gap-2 font-bold ${compact ? "text-base" : "text-xl"}`}>
           En Çok Merak Edilenler
