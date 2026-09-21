@@ -24,6 +24,7 @@ import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
 import { HomeTickerRail } from "@/components/HomeTickerRail";
+import { MostCurious } from "@/components/MostCurious";
 
 type TabId = "piyasa" | "hesaplayici" | "karne" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
@@ -142,6 +143,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl px-4 py-6">
         {activeTab === "piyasa" ? <div className="space-y-6">
           <HomeHero />
+          <MostCurious />
           <MarketSection />
           <HomeTickerRail />
           <HomePersonalPanel />
