@@ -117,7 +117,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
     setLoading(true);
     setMessage(null);
     const { error } = await authClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/sifre-sifirla`,
+      redirectTo: `${window.location.origin}/auth/recovery`,
     });
     setMessage(error ? `Şifre sıfırlama e-postası gönderilemedi: ${error.message}` : "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Spam klasörünü de kontrol edin.");
     setLoading(false);
