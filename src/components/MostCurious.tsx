@@ -17,7 +17,7 @@ interface ItemData {
 
 export function MostCurious({ compact = false }: { compact?: boolean }) {
   const { quotes, liveAvailable, updatedAt } = useLiveQuotes();
-  const codes = ["XU100", "GRAMALTIN", "GRAMGUMUS", "USDTRY", "EURTRY", "ETHUSD"];
+  const codes = ["XU100", "GRAMALTIN", "GRAMGUMUS", "USDTRY", "EURTRY", "BTCUSD", "ETHUSD"];
   const data: ItemData[] = codes.map((code) => {
     const quote = quotes.find((item) => item.code === code);
     const isPositive = (quote?.changePct ?? 0) >= 0;
