@@ -58,6 +58,7 @@ export async function GET(request: Request) {
       username: `user_${authData.user.id.replace(/-/g, "").slice(0, 8)}`,
     });
   }
+  if (nextPath === "/sifre-sifirla") return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
   const incompleteUsername = !appUser?.username || /^user_[a-f0-9]{8}$/i.test(appUser.username);
   if (incompleteUsername) return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(nextPath)}`, requestUrl.origin));
 

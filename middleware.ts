@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const protectedPrefixes = ["/portfoy", "/profil", "/ayarlar"];
 const authRoutes = ["/login", "/register"];
-const publicPrefixes = ["/onboarding", "/auth", "/api", "/gizlilik", "/cerezler", "/kullanim-sartlari", "/yasal-uyari", "/iletisim"];
+const publicPrefixes = ["/onboarding", "/auth", "/api", "/sifre-sifirla", "/gizlilik", "/cerezler", "/kullanim-sartlari", "/yasal-uyari", "/iletisim"];
 
 function copyCookies(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach((cookie) => {

@@ -109,6 +109,20 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
     setLoading(false);
   }
 
+  async function requestPasswordReset() {
+    if (!email) {
+      setMessage("Şifre sıfırlama bağlantısı için önce e-posta adresinizi girin.");
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    const { error } = await authClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/sifre-sifirla`,
+    });
+    setMessage(error ? `Şifre sıfırlama e-postası gönderilemedi: ${error.message}` : "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Spam klasörünü de kontrol edin.");
+    setLoading(false);
+  }
+
   async function handleGoogleLogin() {
     setMessage(null);
     setLoading(true);
@@ -165,6 +179,7 @@ export function AuthPanel({ initialMode = "login", openInitially = false }: { in
             {mode === "signup" ? <label className="app-text-secondary flex items-start gap-2 text-[11px]"><input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5" /><span><Link href="/gizlilik" target="_blank" rel="noopener noreferrer" className="text-primary underline">KVKK/Gizlilik Politikası</Link>, <Link href="/cerezler" target="_blank" rel="noopener noreferrer" className="text-primary underline">Çerez Politikası</Link> ve <Link href="/kullanim-sartlari" target="_blank" rel="noopener noreferrer" className="text-primary underline">Kullanım Şartları</Link>&apos;nı okudum ve kabul ediyorum.</span></label> : null}
             <input type="password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Şifre (en az 6 karakter)" className="app-surface-2 app-border app-text w-full rounded-lg border px-3 py-2 text-sm outline-none" />
             {mode === "login" ? <label className="app-text-secondary flex items-center gap-2 text-xs"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Beni hatırla (30 gün)</label> : null}
+            {mode === "login" ? <button type="button" disabled={loading} onClick={() => void requestPasswordReset()} className="app-text-secondary text-xs underline disabled:opacity-50">Şifremi unuttum</button> : null}
             <button type="submit" disabled={loading || (mode === "signup" && !kvkkAccepted)} className="w-full rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
               {loading ? <LoaderCircle className="mx-auto h-4 w-4 animate-spin" /> : mode === "login" ? "Giriş yap" : "Ücretsiz üye ol"}
             </button>
