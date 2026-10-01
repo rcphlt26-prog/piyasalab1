@@ -2,10 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, Plus, RefreshCw } from "lucide-react";
+import { BriefcaseBusiness, Check, Plus, RefreshCw, Search, X } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { scorecardData } from "@/data/scorecardData";
-import { marketSymbols } from "@/data/marketSymbols";
+import { getMarketPriceMeta, marketSymbolByCode, marketSymbols } from "@/data/marketSymbols";
 
 const AllocationChart = dynamic(() => import("@/components/ClientCharts").then((module) => module.AllocationChart), { ssr: false });
 const PortfolioComparisonChart = dynamic(() => import("@/components/ClientCharts").then((module) => module.PortfolioComparisonChart), { ssr: false });
@@ -29,8 +29,16 @@ type Portfolio = {
 type HistoryPoint = { time: string; value: number };
 type HistoryMap = Record<string, HistoryPoint[]>;
 type Holding = { symbol: string; assetType: string; quantity: number; cost: number };
+type DisplayCurrency = "TRY" | "USD" | "EUR" | "GBP";
 
 const formatMoney = (value: number) => new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(value);
+const convertValueToTry = (value: number, currency: "TRY" | "USD" | "POINT", usdTry: number) => currency === "USD" ? value * usdTry : value;
+const displayCurrencies: Array<{ code: DisplayCurrency; label: string; symbol: string }> = [
+  { code: "TRY", label: "Türk Lirası", symbol: "TL" },
+  { code: "USD", label: "ABD Doları", symbol: "USD" },
+  { code: "EUR", label: "Euro", symbol: "EUR" },
+  { code: "GBP", label: "Sterlin", symbol: "GBP" },
+];
 const formatPercent = (value: number) => `${value >= 0 ? "+" : ""}${formatMoney(value)}%`;
 
 function valueAt(series: HistoryPoint[] | undefined, date: string) {
@@ -50,6 +58,9 @@ export function PortfolioSection() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [symbol, setSymbol] = useState("");
+  const [assetSearch, setAssetSearch] = useState("");
+  const [assetSearchOpen, setAssetSearchOpen] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("TRY");
   const [assetType, setAssetType] = useState("STOCK");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -94,7 +105,7 @@ export function PortfolioSection() {
     return Array.from(map.values()).filter((holding) => holding.quantity > 0);
   }, [transactions]);
 
-  const historySymbols = useMemo(() => Array.from(new Set([...holdings.map((holding) => holding.symbol), "XU100", "GRAMALTIN", "USDTRY"])), [holdings]);
+  const historySymbols = useMemo(() => Array.from(new Set([...holdings.map((holding) => holding.symbol), "XU100", "GRAMALTIN", "USDTRY", "EURTRY", "GBPTRY"])), [holdings]);
   const historyKey = historySymbols.join(",");
 
   useEffect(() => {
@@ -102,7 +113,8 @@ export function PortfolioSection() {
     const timer = window.setTimeout(() => {
       void Promise.all(historySymbols.map(async (code) => {
         try {
-          const response = await fetch(`/api/quotes/history?symbol=${encodeURIComponent(code)}&range=1Y`, { cache: "no-store" });
+          const range = ["USDTRY", "EURTRY", "GBPTRY"].includes(code) ? "MAX" : "1Y";
+          const response = await fetch(`/api/quotes/history?symbol=${encodeURIComponent(code)}&range=${range}`);
           const payload = (await response.json()) as { data?: HistoryPoint[] };
           return [code, payload.data ?? []] as const;
         } catch {
@@ -119,25 +131,54 @@ export function PortfolioSection() {
   }, [historyKey, historySymbols]);
 
   const quoteMap = useMemo(() => new Map(quotes.map((quote) => [quote.code, quote])), [quotes]);
-  const assetGroups = useMemo(() => [
-    { label: "Endeks ve Hisseler", category: "hisse", items: marketSymbols.filter((item) => item.category === "endeks" || item.category === "hisse") },
-    { label: "Döviz", category: "doviz", items: marketSymbols.filter((item) => item.category === "doviz") },
-    { label: "Emtia", category: "emtia", items: marketSymbols.filter((item) => item.category === "emtia") },
-    { label: "Kripto", category: "kripto", items: marketSymbols.filter((item) => item.category === "kripto") },
-  ], []);
+  const exchangeRates = useMemo(() => ({
+    TRY: 1,
+    USD: quoteMap.get("USDTRY")?.price ?? 1,
+    EUR: quoteMap.get("EURTRY")?.price ?? 1,
+    GBP: quoteMap.get("GBPTRY")?.price ?? 1,
+  }), [quoteMap]);
+  const toDisplayCurrency = (valueInTry: number) => valueInTry / (exchangeRates[displayCurrency] || 1);
+  const currencySymbol = displayCurrencies.find((item) => item.code === displayCurrency)?.symbol ?? "TL";
+  const formatDisplayMoney = (valueInTry: number) => `${formatMoney(toDisplayCurrency(valueInTry))} ${currencySymbol}`;
+  const filteredAssets = useMemo(() => {
+    const term = assetSearch.trim().toLocaleLowerCase("tr-TR");
+    const list = term
+      ? marketSymbols.filter((item) => `${item.code} ${item.label} ${item.category}`.toLocaleLowerCase("tr-TR").includes(term))
+      : marketSymbols.filter((item) => ["THYAO", "ASELS", "GARAN", "GRAMALTIN", "BTCUSD", "ETHUSD", "USDTRY"].includes(item.code));
+    return list.slice(0, 40);
+  }, [assetSearch]);
+  const costBySymbol = useMemo(() => {
+    const costs = new Map<string, number>();
+    for (const transaction of transactions) {
+      const meta = getMarketPriceMeta(marketSymbolByCode.get(transaction.symbol));
+      const date = transaction.transaction_date.slice(0, 10);
+      const historicalRate = meta.currency === "USD"
+        ? valueAt(history.USDTRY, date)
+        : meta.currency === "TRY" ? 1 : 1;
+      const rate = meta.currency === "USD" ? historicalRate || exchangeRates.USD : 1;
+      const sign = transaction.type === "SELL" ? -1 : 1;
+      costs.set(transaction.symbol, (costs.get(transaction.symbol) ?? 0) + sign * transaction.buy_price * transaction.quantity * rate);
+    }
+    return costs;
+  }, [transactions, history.USDTRY, exchangeRates.USD]);
   const holdingRows = useMemo(() => holdings.map((holding) => {
     const quote = quoteMap.get(holding.symbol);
+    const meta = getMarketPriceMeta(marketSymbolByCode.get(holding.symbol));
     const currentPrice = quote?.price ?? holding.cost / holding.quantity;
-    const marketValue = currentPrice * holding.quantity;
-    return { ...holding, quote, currentPrice, marketValue, pnl: marketValue - holding.cost };
-  }), [holdings, quoteMap]);
-  const invested = holdingRows.reduce((sum, row) => sum + row.cost, 0);
+    const rate = meta.currency === "USD" ? exchangeRates.USD : 1;
+    const marketValue = convertValueToTry(currentPrice * holding.quantity, meta.currency, exchangeRates.USD);
+    const costTry = costBySymbol.get(holding.symbol) ?? convertValueToTry(holding.cost, meta.currency, exchangeRates.USD);
+    return { ...holding, quote, meta, currentPrice, currentPriceTry: currentPrice * rate, marketValue, costTry, pnl: marketValue - costTry };
+  }), [holdings, quoteMap, exchangeRates.USD, costBySymbol]);
+  const invested = holdingRows.reduce((sum, row) => sum + row.costTry, 0);
   const marketValue = holdingRows.reduce((sum, row) => sum + row.marketValue, 0);
   const dividendIncome = transactions.reduce((sum, transaction) => {
     if (transaction.type !== "BUY" || transaction.asset_type !== "STOCK") return sum;
     const yieldRate = scorecardData[transaction.symbol]?.dividendYield ?? 0;
     const elapsedYears = Math.max(0, (nowMs - new Date(transaction.transaction_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-    return sum + transaction.buy_price * transaction.quantity * (yieldRate / 100) * elapsedYears;
+    const meta = getMarketPriceMeta(marketSymbolByCode.get(transaction.symbol));
+    const rate = meta.currency === "USD" ? exchangeRates.USD : 1;
+    return sum + transaction.buy_price * transaction.quantity * rate * (yieldRate / 100) * elapsedYears;
   }, 0);
   const totalValue = marketValue + dividendIncome;
   const pnl = totalValue - invested;
@@ -146,8 +187,10 @@ export function PortfolioSection() {
   const monthlyPnl = holdingRows.reduce((sum, row) => {
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
-    const oldPrice = valueAt(history[row.symbol], monthAgo.toISOString().slice(0, 10));
-    return sum + (oldPrice ? (row.currentPrice - oldPrice) * row.quantity : 0);
+    const date = monthAgo.toISOString().slice(0, 10);
+    const oldPrice = valueAt(history[row.symbol], date);
+    const oldFx = row.meta.currency === "USD" ? valueAt(history.USDTRY, date) || exchangeRates.USD : 1;
+    return sum + (oldPrice ? row.marketValue - oldPrice * row.quantity * oldFx : 0);
   }, 0);
 
   const allocation = holdingRows.map((row) => ({ ad: row.symbol, oran: marketValue ? (row.marketValue / marketValue) * 100 : 0 }));
@@ -155,7 +198,11 @@ export function PortfolioSection() {
     const dates = Array.from(new Set(Object.values(history).flatMap((series) => series.map((point) => point.time)))).sort();
     if (!dates.length) return [];
     const raw = dates.map((date) => {
-      const portfolio = holdingRows.reduce((sum, row) => sum + valueAt(history[row.symbol], date) * row.quantity, 0);
+      const portfolio = holdingRows.reduce((sum, row) => {
+        const price = valueAt(history[row.symbol], date);
+        const historicalUsdTry = row.meta.currency === "USD" ? valueAt(history.USDTRY, date) || exchangeRates.USD : 1;
+        return sum + convertValueToTry(price * row.quantity, row.meta.currency, historicalUsdTry);
+      }, 0);
       return {
         date: date.slice(0, 7),
         portfolio,
@@ -172,7 +219,7 @@ export function PortfolioSection() {
       "Gram Altın": first.gold ? (point.gold / first.gold) * 100 : 100,
       Dolar: first.dollar ? (point.dollar / first.dollar) * 100 : 100,
     }));
-  }, [history, holdingRows]);
+  }, [history, holdingRows, exchangeRates.USD]);
 
   async function addTransaction(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -211,16 +258,78 @@ export function PortfolioSection() {
         <button type="button" onClick={() => void load()} className="app-border app-text-secondary rounded-lg border p-2" title="Yenile"><RefreshCw className="h-4 w-4" /></button>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Güncel değer</p><p className="app-text text-xl font-bold">{formatMoney(totalValue)} TL</p><p className="app-muted text-[10px]">Temettü dahil tahmini</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Toplam kâr / zarar</p><p className={`text-xl font-bold ${pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatMoney(pnl)} TL</p><p className={`text-xs ${pnlPct >= 0 ? "text-bull" : "text-bear"}`}>{formatPercent(pnlPct)}</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Günlük performans</p><p className={`text-xl font-bold ${dailyPnl >= 0 ? "text-bull" : "text-bear"}`}>{formatMoney(dailyPnl)} TL</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Son 30 gün</p><p className={`text-xl font-bold ${monthlyPnl >= 0 ? "text-bull" : "text-bear"}`}>{formatMoney(monthlyPnl)} TL</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Birikmiş temettü</p><p className="text-xl font-bold text-gold">{formatMoney(dividendIncome)} TL</p></div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="app-muted text-xs">Tüm pozisyonlar ortak kur verileriyle çevrilir.</p>
+        <label className="app-text-secondary flex items-center gap-2 text-xs">Gösterim para birimi
+          <select value={displayCurrency} onChange={(event) => setDisplayCurrency(event.target.value as DisplayCurrency)} className="app-surface-2 app-border app-text rounded-lg border px-2.5 py-2 text-sm" aria-label="Portföy gösterim para birimi">
+            {displayCurrencies.map((currency) => <option key={currency.code} value={currency.code}>{currency.label} ({currency.symbol})</option>)}
+          </select>
+        </label>
+      </div>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Güncel değer</p><p className="app-text text-xl font-bold">{formatDisplayMoney(totalValue)}</p><p className="app-muted text-[10px]">Temettü dahil tahmini</p></div>
+        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Toplam kâr / zarar</p><p className={`text-xl font-bold ${pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(pnl)}</p><p className={`text-xs ${pnlPct >= 0 ? "text-bull" : "text-bear"}`}>{formatPercent(pnlPct)}</p></div>
+        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Günlük performans</p><p className={`text-xl font-bold ${dailyPnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(dailyPnl)}</p></div>
+        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Son 30 gün</p><p className={`text-xl font-bold ${monthlyPnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(monthlyPnl)}</p></div>
+        <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Birikmiş temettü</p><p className="text-xl font-bold text-gold">{formatDisplayMoney(dividendIncome)}</p></div>
         <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Pozisyon</p><p className="app-text text-xl font-bold">{holdingRows.length}</p></div>
       </div>
 
-      <form onSubmit={addTransaction} className="app-surface-2 app-border mb-4 rounded-xl border p-4"><div className="mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /><h2 className="app-text text-sm font-semibold">Varlık ekle</h2><span className="app-muted ml-auto text-[11px]">Canlı fiyat seçince dolar</span></div><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"><select required value={symbol} onChange={(event) => selectAsset(event.target.value)} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none"><option value="">Varlık seçin</option>{assetGroups.map((group) => <optgroup key={group.category} label={group.label}>{group.items.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.label}</option>)}</optgroup>)}</select><div className="app-surface app-border app-text flex items-center rounded-lg border px-3 py-2 text-sm"><span className="app-muted mr-2 text-xs">Tür</span>{assetType === "GOLD" ? "Emtia" : assetType === "CURRENCY" ? "Döviz" : assetType === "CRYPTO" ? "Kripto" : "Hisse / Endeks"}</div><input required type="number" min="0" step="any" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Alış fiyatı" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><input required type="number" min="0" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Lot / miktar" className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm outline-none" /><div className="flex gap-2"><select value={type} onChange={(event) => setType(event.target.value as "BUY" | "SELL")} className="app-surface app-border app-text min-w-0 flex-1 rounded-lg border px-2 py-2 text-sm"><option value="BUY">Alış</option><option value="SELL">Satış</option></select><button type="submit" className="rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white">Ekle</button></div></div></form>
+      <form onSubmit={addTransaction} className="app-surface-2 app-border mb-4 rounded-xl border p-4">
+        <div className="mb-3 flex items-center gap-2"><Plus className="h-4 w-4 text-primary" /><h2 className="app-text text-sm font-semibold">Portföye varlık ekle</h2></div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.5fr)_minmax(140px,.8fr)_minmax(140px,.8fr)_minmax(120px,.7fr)_auto]">
+          <div className="relative min-w-0">
+            <label htmlFor="portfolio-asset-search" className="app-text-secondary mb-1 block text-xs font-medium">Hisse, kripto, döviz veya emtia ara</label>
+            <div className="app-surface app-border flex items-center gap-2 rounded-lg border px-3">
+              <Search className="app-muted h-4 w-4 shrink-0" />
+              <input
+                id="portfolio-asset-search"
+                role="combobox"
+                aria-label="Portföye eklenecek varlığı ara"
+                aria-expanded={assetSearchOpen}
+                aria-controls="portfolio-asset-results"
+                aria-autocomplete="list"
+                autoComplete="off"
+                value={assetSearch}
+                onFocus={() => setAssetSearchOpen(true)}
+                onChange={(event) => { setAssetSearch(event.target.value); setAssetSearchOpen(true); }}
+                onKeyDown={(event) => { if (event.key === "Escape") setAssetSearchOpen(false); }}
+                placeholder="Örn. THYAO, Bitcoin, Ethereum..."
+                className="app-text min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:opacity-60"
+              />
+              {assetSearch ? <button type="button" onClick={() => { setAssetSearch(""); setAssetSearchOpen(true); }} aria-label="Aramayı temizle" className="app-muted"><X className="h-4 w-4" /></button> : null}
+            </div>
+            {assetSearchOpen ? (
+              <div id="portfolio-asset-results" role="listbox" aria-label="Varlık arama sonuçları" className="app-surface app-border absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border p-1.5 shadow-xl">
+                <p className="app-muted px-2 py-1 text-[11px]">{assetSearch.trim() ? `${filteredAssets.length} eşleşen varlık` : "Öne çıkan varlıklar · tümünü görmek için arayın"}</p>
+                {filteredAssets.length ? filteredAssets.map((item) => {
+                  const meta = getMarketPriceMeta(item);
+                  const quote = quoteMap.get(item.code);
+                  return <button key={item.code} type="button" role="option" aria-selected={symbol === item.code} onClick={() => { selectAsset(item.code); setAssetSearch(""); setAssetSearchOpen(false); }} className="app-text hover:app-surface-2 flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left">
+                    <span className="app-surface-2 app-border flex h-9 w-12 shrink-0 items-center justify-center rounded-md border text-[10px] font-bold">{item.code.slice(0, 5)}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{item.label}</span><span className="app-muted block text-[11px]">{item.code} · {meta.unitLabel} · {meta.currencyLabel}</span></span>
+                    <span className="text-right"><span className="app-text block text-xs font-semibold">{quote ? `${formatMoney(quote.price)} ${meta.currencyLabel}` : "Fiyat bekleniyor"}</span>{symbol === item.code ? <Check className="ml-auto mt-0.5 h-3.5 w-3.5 text-bull" /> : null}</span>
+                  </button>;
+                }) : <p className="app-muted px-2 py-4 text-center text-sm">Bu aramayla eşleşen varlık bulunamadı.</p>}
+              </div>
+            ) : null}
+          </div>
+          <label className="app-text-secondary text-xs">Varlık türü
+            <span className="app-surface app-border app-text mt-1 flex min-h-10 items-center rounded-lg border px-3 text-sm">{assetType === "GOLD" ? "Emtia" : assetType === "CURRENCY" ? "Döviz" : assetType === "CRYPTO" ? "Kripto" : "Hisse / Endeks"}</span>
+          </label>
+          <label className="app-text-secondary text-xs">Alış fiyatı ({symbol ? getMarketPriceMeta(marketSymbolByCode.get(symbol)).currencyLabel : "birim"})
+            <input required type="number" min="0" step="any" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Fiyat" className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none" />
+          </label>
+          <label className="app-text-secondary text-xs">Adet / miktar
+            <input required type="number" min="0" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="Örn. 0,5" className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2.5 text-sm outline-none" />
+          </label>
+          <div className="flex items-end gap-2">
+            <select aria-label="İşlem türü" value={type} onChange={(event) => setType(event.target.value as "BUY" | "SELL")} className="app-surface app-border app-text min-w-0 flex-1 rounded-lg border px-2 py-2.5 text-sm"><option value="BUY">Alış</option><option value="SELL">Satış</option></select>
+            <button type="submit" disabled={!symbol || !price || !quantity} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-primary)] px-3 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-4 w-4" /> Ekle</button>
+          </div>
+        </div>
+        {symbol ? <p className="app-muted mt-3 text-xs">Seçili: <span className="app-text font-semibold">{symbol}</span> · Canlı fiyat varsa alış fiyatı otomatik doldurulur. Portföy toplamı seçtiğiniz gösterim para biriminde hesaplanır.</p> : <p className="app-muted mt-3 text-xs">Arama kutusunda sembolü veya varlık adını arayın; fiyatı bulunan varlıklar otomatik fiyatla gelir.</p>}
+      </form>
 
       {loading ? <p className="app-muted py-8 text-center text-sm">Portföy yükleniyor...</p> : null}
       {!loading && message ? <div className="rounded-xl border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-4 text-sm text-gold">{message}</div> : null}
@@ -228,7 +337,8 @@ export function PortfolioSection() {
 
       {!loading && !message && holdingRows.length > 0 ? <>
         <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_320px]"><div className="app-surface-2 app-border rounded-xl border p-4"><div className="mb-2 flex items-center justify-between"><h2 className="app-text text-sm font-semibold">Portföyüm vs piyasa</h2><span className="app-muted text-xs">Başlangıç = 100</span></div><PortfolioComparisonChart data={comparisonData} /></div><div className="app-surface-2 app-border rounded-xl border p-4"><h2 className="app-text text-sm font-semibold">Varlık dağılımı</h2><AllocationChart data={allocation} /></div></div>
-        <div className="app-surface-2 app-border overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Varlık</th><th className="px-3 py-2">Miktar</th><th className="px-3 py-2">Güncel fiyat</th><th className="px-3 py-2">Değer</th><th className="px-3 py-2">K/Z</th></tr></thead><tbody>{holdingRows.map((row) => <tr key={row.symbol} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{row.symbol}</td><td className="app-text px-3 py-2">{formatMoney(row.quantity)}</td><td className="app-text px-3 py-2">{formatMoney(row.currentPrice)}</td><td className="app-text px-3 py-2">{formatMoney(row.marketValue)} TL</td><td className={`px-3 py-2 font-semibold ${row.pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatMoney(row.pnl)} TL</td></tr>)}</tbody></table></div>
+        <div className="app-surface-2 app-border overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Varlık</th><th className="px-3 py-2">Miktar</th><th className="px-3 py-2">Güncel fiyat ({currencySymbol})</th><th className="px-3 py-2">Değer ({currencySymbol})</th><th className="px-3 py-2">K/Z ({currencySymbol})</th></tr></thead><tbody>{holdingRows.map((row) => <tr key={row.symbol} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{row.symbol}<span className="app-muted ml-1 text-[10px]">{row.meta.currencyLabel}</span></td><td className="app-text px-3 py-2">{formatMoney(row.quantity)}</td><td className="app-text px-3 py-2">{formatMoney(toDisplayCurrency(row.currentPriceTry))} {currencySymbol}</td><td className="app-text px-3 py-2">{formatDisplayMoney(row.marketValue)}</td><td className={`px-3 py-2 font-semibold ${row.pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(row.pnl)}</td></tr>)}</tbody></table></div>
+        <p className="app-muted mt-2 text-[11px]">USD bazlı geçmiş işlem maliyetleri, işlem tarihindeki USD/TRY verisiyle çevrilir. Geçmiş kur bulunamadığında güncel kur kullanılır; sonuç yaklaşık kâr/zarar göstergesidir.</p>
       </> : null}
     </section>
   );
