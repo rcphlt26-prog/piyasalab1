@@ -1,52 +1,35 @@
 import type { MetadataRoute } from "next";
-import { marketSymbols, stockDirectory } from "@/data/marketSymbols";
-import { guideArticles } from "@/data/guideArticles";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = "https://veriakis.com";
   const lastModified = new Date();
-  const calculatorPaths = [
-    "hesaplayicilar/bilesik-getiri",
-    "hesaplayicilar/temettu-getirisi",
-    "hesaplayicilar/maliyet-ortalamasi",
-    "hesaplayicilar/hisse-vs-altin",
+  const staticPaths = [
+    "",
+    "rehber",
+    "gizlilik-politikasi",
+    "kullanim-kosullari",
+    "sorumluluk-reddi",
+    "iletisim",
   ];
-
-  const symbols = Array.from(new Set([
-    ...marketSymbols.map((item) => item.code),
-    ...stockDirectory.map((item) => item.ticker),
-  ]));
-
+  const guideSlugs = [
+    "temettu-emekliligi-ve-birikim-stratejileri",
+    "reel-kazanc-nedir-enflasyondan-korunma",
+    "fk-ve-pddd-oranlari-nasil-yorumlanir",
+  ];
+  const staticEntries: MetadataRoute.Sitemap = staticPaths.map((path) => ({
+    url: path ? `${siteUrl}/${path}` : `${siteUrl}/`,
+    lastModified,
+    changeFrequency: path ? "monthly" : "daily",
+    priority: path ? 0.7 : 1,
+  }));
+  const guideEntries: MetadataRoute.Sitemap = guideSlugs.map((slug) => ({
+    url: `${siteUrl}/rehber/${slug}`,
+    lastModified,
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
   return [
-    {
-      url: siteUrl,
-      lastModified,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    ...["hesaplayicilar", "iletisim", "gizlilik", "gizlilik-politikasi", "cerezler", "kullanim-sartlari", "sorumluluk-reddi", "yasal-uyari", "rehber"].map((path) => ({
-      url: `${siteUrl}/${path}`,
-      lastModified,
-      changeFrequency: "yearly" as const,
-      priority: 0.3,
-    })),
-    ...calculatorPaths.map((path) => ({
-      url: `${siteUrl}/${path}`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
-    ...guideArticles.map((article) => ({
-      url: `${siteUrl}/rehber/${article.slug}`,
-      lastModified,
-      changeFrequency: "monthly" as const,
-      priority: 0.8,
-    })),
-    ...symbols.map((symbol) => ({
-      url: `${siteUrl}/hisse/${encodeURIComponent(symbol)}`,
-      lastModified,
-      changeFrequency: "daily" as const,
-      priority: 0.9,
-    })),
+    ...staticEntries,
+    ...guideEntries,
   ];
 }
