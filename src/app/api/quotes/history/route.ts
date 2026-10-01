@@ -118,7 +118,10 @@ export async function GET(request: Request) {
         weekHigh52,
         weekLow52,
       },
-    }, { status: data.length ? 200 : 503 });
+    }, {
+      status: data.length ? 200 : 503,
+      headers: { "Cache-Control": data.length ? "public, s-maxage=300, stale-while-revalidate=600" : "no-store" },
+    });
   } catch {
     return NextResponse.json({ data: [], error: `Tarihsel piyasa verisi alınamadı (${code}).` }, { status: 503 });
   }

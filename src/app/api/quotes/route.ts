@@ -85,7 +85,10 @@ export async function GET(request: Request) {
     });
 
     const hasLive = data.some((d) => d.price > 0);
-    return NextResponse.json({ demo: false, data: hasLive ? data.filter((item) => item.price > 0) : [] });
+    return NextResponse.json(
+      { demo: false, data: hasLive ? data.filter((item) => item.price > 0) : [] },
+      { headers: { "Cache-Control": hasLive ? "public, s-maxage=30, stale-while-revalidate=60" : "no-store" } },
+    );
   } catch {
     return NextResponse.json({ demo: false, data: [], error: "Canlı piyasa verisi alınamadı." }, { status: 503 });
   }

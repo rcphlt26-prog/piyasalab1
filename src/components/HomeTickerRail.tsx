@@ -2,35 +2,14 @@
 
 import Link from "next/link";
 import { Newspaper, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
-import { newsData, type NewsItem } from "@/data/newsData";
+import { useLiveNews } from "@/hooks/useLiveNews";
 import { getMarketPriceMeta, marketSymbolByCode } from "@/data/marketSymbols";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 
 export function HomeTickerRail() {
   const { quotes } = useLiveQuotes();
-  const [news, setNews] = useState<NewsItem[]>(newsData.slice(0, 8));
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/cron/fetch-news", { cache: "no-store" });
-        const payload = (await response.json()) as { items?: NewsItem[] };
-        if (!cancelled && response.ok && payload.items?.length) setNews(payload.items.slice(0, 8));
-      } catch {
-        // Keep local headlines visible when the news provider is unavailable.
-      }
-    };
-
-    void load();
-    const timer = window.setInterval(() => void load(), 30000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []);
+  const { items: news } = useLiveNews();
 
   const stocks = quotes.filter((quote) => ["XU100", "THYAO", "ASELS", "GARAN", "AKBNK", "EREGL"].includes(quote.code));
   const repeatedStocks = stocks.length ? [...stocks, ...stocks] : [];

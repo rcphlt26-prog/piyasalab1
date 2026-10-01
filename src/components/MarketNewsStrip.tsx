@@ -2,29 +2,13 @@
 
 import Link from "next/link";
 import { Newspaper } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import type { NewsItem } from "@/data/newsData";
+import { useMemo } from "react";
+import { useLiveNews } from "@/hooks/useLiveNews";
 
 type MarketTab = "borsa" | "doviz" | "emtia" | "kripto";
 
 export function MarketNewsStrip({ tab }: { tab: MarketTab }) {
-  const [news, setNews] = useState<NewsItem[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/cron/fetch-news", { cache: "no-store" });
-        const payload = (await response.json()) as { items?: NewsItem[] };
-        if (!cancelled && response.ok) setNews(payload.items ?? []);
-      } catch {
-        if (!cancelled) setNews([]);
-      }
-    };
-    void load();
-    const timer = window.setInterval(() => void load(), 30000);
-    return () => { cancelled = true; window.clearInterval(timer); };
-  }, []);
+  const { items: news } = useLiveNews();
 
   const filtered = useMemo(() => news.filter((item) => {
     const symbols = item.relatedSymbols ?? [];

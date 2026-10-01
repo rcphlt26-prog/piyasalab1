@@ -4,17 +4,23 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export const revalidate = 60;
 
 export async function GET(request: Request) {
-  const ticker = new URL(request.url).searchParams.get("symbol")?.trim().toUpperCase();
-  if (!ticker) return NextResponse.json({ data: [], error: "symbol gerekli." }, { status: 400 });
+  const searchParams = new URL(request.url).searchParams;
+  const symbols = Array.from(new Set((searchParams.get("symbols") ?? searchParams.get("symbol") ?? "")
+    .split(",")
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean)));
+  if (!symbols.length) return NextResponse.json({ data: [], error: "symbol veya symbols gerekli." }, { status: 400 });
   const supabase = await getSupabaseServerClient();
   if (!supabase) return NextResponse.json({ data: [], error: "Supabase yapılandırılmamış." }, { status: 503 });
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("kap_notifications")
     .select("id, title, summary, kap_url, related_symbols, category, publish_date")
-    .contains("related_symbols", [ticker])
-    .order("publish_date", { ascending: false })
-    .limit(20);
+    .order("publish_date", { ascending: false });
+  query = symbols.length === 1
+    ? query.contains("related_symbols", symbols)
+    : query.overlaps("related_symbols", symbols);
+  const { data, error } = await query.limit(symbols.length === 1 ? 20 : 120);
   if (error) return NextResponse.json({ data: [], error: "KAP bildirimleri alınamadı." }, { status: 500 });
-  return NextResponse.json({ data: data ?? [] });
+  return NextResponse.json({ data: data ?? [] }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=60" } });
 }

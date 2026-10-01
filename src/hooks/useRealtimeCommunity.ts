@@ -83,11 +83,11 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
     const init = async () => {
       try {
         const [cRes, rRes, pRes, pvRes, sRes] = await Promise.all([
-          supabase.from("comments").select("*").order("created_at", { ascending: false }).limit(400),
-          supabase.from("comment_reactions").select("*").order("created_at", { ascending: false }).limit(1000),
-          supabase.from("polls").select("*").eq("active", true).limit(1).single(),
-          supabase.from("poll_votes").select("*").order("created_at", { ascending: false }).limit(1000),
-          supabase.from("sentiment_votes").select("*").order("created_at", { ascending: false }).limit(1000),
+          supabase.from("comments").select("id, ticker, nickname, portfolio_band, body, created_at").order("created_at", { ascending: false }).limit(400),
+          supabase.from("comment_reactions").select("id, comment_id, emoji, created_at").order("created_at", { ascending: false }).limit(1000),
+          supabase.from("polls").select("id, question, options, active, created_at").eq("active", true).limit(1).single(),
+          supabase.from("poll_votes").select("id, poll_id, choice, created_at").order("created_at", { ascending: false }).limit(1000),
+          supabase.from("sentiment_votes").select("id, ticker, side, weight, created_at").order("created_at", { ascending: false }).limit(1000),
         ]);
 
         const { data: authUser } = await supabase.auth.getUser();

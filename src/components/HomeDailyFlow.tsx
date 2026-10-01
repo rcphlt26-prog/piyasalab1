@@ -15,12 +15,12 @@ export function HomeDailyFlow() {
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
-      Promise.all(trackedSymbols.map((symbol) => fetch(`/api/kap?symbol=${symbol}`, { cache: "no-store" }).then((response) => response.json()).catch(() => ({ data: [] })))),
-      Promise.all(trackedSymbols.map((symbol) => fetch(`/api/financial-statements?symbol=${symbol}`, { cache: "no-store" }).then((response) => response.json()).catch(() => ({ data: [] })))),
-    ]).then(([kapPayloads, statementPayloads]) => {
+      fetch(`/api/kap?symbols=${trackedSymbols.join(",")}`).then((response) => response.json()).catch(() => ({ data: [] })),
+      fetch(`/api/financial-statements?symbols=${trackedSymbols.join(",")}`).then((response) => response.json()).catch(() => ({ data: [] })),
+    ]).then(([kapPayload, statementPayload]) => {
       if (cancelled) return;
-      const kapItems = kapPayloads.flatMap((payload) => payload.data ?? []) as KapItem[];
-      const statementItems = statementPayloads.flatMap((payload) => payload.data ?? []) as Statement[];
+      const kapItems = (kapPayload.data ?? []) as KapItem[];
+      const statementItems = (statementPayload.data ?? []) as Statement[];
       setKap(Array.from(new Map(kapItems.map((item) => [item.id, item])).values()).sort((a, b) => b.publish_date.localeCompare(a.publish_date)).slice(0, 6));
       setStatements(statementItems.sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 6));
     });

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Clock, ExternalLink } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { newsData, type NewsCategory, type NewsItem } from "@/data/newsData";
-import { fetchNews } from "@/lib/supabase/data";
+import { type NewsCategory } from "@/data/newsData";
+import { useLiveNews } from "@/hooks/useLiveNews";
 
 const categories: Array<"Tümü" | NewsCategory> = ["Tümü", "Ekonomi", "BIST", "Döviz", "Emtia"];
 
@@ -19,43 +19,7 @@ const catColor: Record<NewsCategory, string> = {
 export function NewsSection() {
   const [category, setCategory] = useState<"Tümü" | NewsCategory>("Tümü");
   const [sortDesc, setSortDesc] = useState(true);
-  
-  // İlk açılışta boş array yerine mevcut demo/yerel verileri göstererek hız kazandırıyoruz
-  const [news, setNews] = useState<NewsItem[]>(newsData);
-  const [source, setSource] = useState<"loading" | "google" | "supabase" | "demo">("demo");
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const response = await fetch("/api/cron/fetch-news", { cache: "no-store" });
-        const payload = (await response.json()) as { items?: NewsItem[] };
-        if (response.ok && payload.items && payload.items.length > 0) {
-          if (cancelled) return;
-          setNews(payload.items);
-          setSource("google");
-          return;
-        }
-      } catch {
-        // Fallback to Supabase if API fails
-      }
-
-      const remote = await fetchNews();
-      if (cancelled) return;
-      if (remote && remote.length > 0) {
-        setNews(remote);
-        setSource("supabase");
-      }
-    };
-
-    void load();
-    // Canlı akış döngüsü (30 saniye)
-    const timer = setInterval(() => void load(), 30000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, []);
+  const { items: news, source } = useLiveNews();
 
   const items = useMemo(() => {
     const filtered = category === "Tümü" ? news : news.filter((n) => n.category === category);
@@ -74,9 +38,9 @@ export function NewsSection() {
 
       <div className="mb-3 flex items-center justify-between">
         {source === "google" ? (
-          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Google News) · Anlık</span>
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Google News · Yaklaşık 5 dakikada güncellenir</span>
         ) : source === "supabase" ? (
-          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Canlı veri (Supabase) · Anlık</span>
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Haber arşivi · Yaklaşık 5 dakikada kontrol edilir</span>
         ) : (
           <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Hızlı yükleme modu aktif</span>
         )}

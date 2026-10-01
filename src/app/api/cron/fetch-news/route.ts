@@ -37,7 +37,7 @@ function categoryFor(title: string) {
 export async function GET() {
   try {
     const response = await fetch(RSS_URL, {
-      cache: 'no-store',
+      next: { revalidate: 300 },
       headers: {
         Accept: 'application/rss+xml, application/xml, text/xml',
         'User-Agent': 'VeriAkisNewsBot/1.0 (+https://veriakis.com)',
@@ -50,7 +50,6 @@ export async function GET() {
 
     const feed = await new Parser().parseString(await response.text());
     const supabase = supabaseUrl && supabaseKey ? getSupabase() : null;
-    let addedCount = 0;
     const items = [];
 
     for (const item of feed.items.slice(0, 10)) {
@@ -70,29 +69,35 @@ export async function GET() {
       };
       items.push(newsItem);
 
-      if (!supabase) continue;
+    }
 
-      const { data: existing } = await supabase
+    let addedCount = 0;
+    if (supabase && items.length) {
+      const urls = items.map((item) => item.url);
+      const { data: existingRows, error: existingError } = await supabase
         .from('news')
-        .select('id')
-        .eq('url', item.link)
-        .maybeSingle();
+        .select('url')
+        .in('url', urls);
+      if (existingError) throw existingError;
 
-      if (!existing) {
-        const { error } = await supabase.from('news').insert([
-          {
-            slug: newsItem.slug,
-            title: newsItem.title,
-            summary: newsItem.summary,
-            category: newsItem.category,
-            source: newsItem.source,
-            news_date: new Date(newsItem.date).toISOString().slice(0, 10),
-            url: newsItem.url,
-            related_symbols: [],
-          },
-        ]);
+      const existingUrls = new Set((existingRows ?? []).map((row) => row.url));
+      const rowsToInsert = items
+        .filter((item) => !existingUrls.has(item.url))
+        .map((item) => ({
+          slug: item.slug,
+          title: item.title,
+          summary: item.summary,
+          category: item.category,
+          source: item.source,
+          news_date: new Date(item.date).toISOString().slice(0, 10),
+          url: item.url,
+          related_symbols: [],
+        }));
 
-        if (!error) addedCount++;
+      if (rowsToInsert.length) {
+        const { error: insertError } = await supabase.from('news').insert(rowsToInsert);
+        if (insertError) throw insertError;
+        addedCount = rowsToInsert.length;
       }
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import { marketSymbols } from "@/data/marketSymbols";
 
 export type LiveQuote = {
@@ -16,54 +17,40 @@ export type LiveQuote = {
 const chunk = <T,>(arr: T[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
 
+const quoteGroups = chunk(marketSymbols.map((symbol) => symbol.code), 40);
+const quoteCacheKey = `live-quotes:${quoteGroups.map((group) => group.join(",")).join("|")}`;
+const previousQuotePrices = new Map<string, number>();
+const emptyQuotes: LiveQuote[] = [];
+
+async function fetchMarketQuotes(): Promise<LiveQuote[]> {
+  const batches = await Promise.all(quoteGroups.map(async (group) => {
+    try {
+      const response = await fetch(`/api/quotes?symbols=${group.join(",")}`);
+      if (!response.ok) return [];
+      const payload = (await response.json()) as { data?: LiveQuote[] };
+      return payload.data ?? [];
+    } catch {
+      return [];
+    }
+  }));
+  return batches.flat().map((quote) => {
+    const previousPrice = previousQuotePrices.get(quote.code);
+    const direction: LiveQuote["direction"] = previousPrice === undefined || previousPrice === quote.price
+      ? undefined
+      : quote.price > previousPrice ? "up" : "down";
+    previousQuotePrices.set(quote.code, quote.price);
+    return { ...quote, direction };
+  });
+}
+
 export function useLiveQuotes() {
-  const [quotes, setQuotes] = useState<LiveQuote[]>([]);
-  const cacheRef = useRef<Map<string, LiveQuote>>(new Map());
-
-  const applyUpdate = useCallback((incoming: LiveQuote[]) => {
-    setQuotes((prev) => {
-      const prevMap = new Map(prev.map((q) => [q.code, q]));
-      const nextMap = new Map(prevMap);
-      incoming.forEach((q) => {
-        const prevItem = prevMap.get(q.code);
-        const direction: LiveQuote["direction"] = !prevItem || q.price === prevItem.price ? undefined : q.price > prevItem.price ? "up" : "down";
-        nextMap.set(q.code, { ...q, direction });
-      });
-      nextMap.forEach((item) => cacheRef.current.set(item.code, item));
-      return marketSymbols.map((symbol) => nextMap.get(symbol.code)).filter(Boolean) as LiveQuote[];
-    });
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    let timer: NodeJS.Timeout | null = null;
-
-    const fetchCycle = async () => {
-      const codes = marketSymbols.map((s) => s.code);
-      const groups = chunk(codes, 40);
-      const fetchGroup = async (group: string[]) => {
-        try {
-          const response = await fetch(`/api/quotes?symbols=${group.join(",")}`);
-          const json = await response.json();
-          if (isMounted && json?.data?.length) applyUpdate(json.data as LiveQuote[]);
-        } catch {
-          // noop
-        }
-      };
-
-      await Promise.all(groups.map(fetchGroup));
-      if (!isMounted) return;
-
-      timer = setTimeout(fetchCycle, 30000);
-    };
-
-    fetchCycle();
-    return () => {
-      isMounted = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [applyUpdate]);
-
+  const { data, isLoading } = useSWR(quoteCacheKey, fetchMarketQuotes, {
+    refreshInterval: 30_000,
+    dedupingInterval: 25_000,
+    focusThrottleInterval: 30_000,
+    revalidateOnReconnect: true,
+  });
+  const quotes = data ?? emptyQuotes;
   const tickerTape = useMemo(() => quotes.slice(0, 15), [quotes]);
 
   return {
@@ -71,33 +58,11 @@ export function useLiveQuotes() {
     tickerTape,
     liveAvailable: quotes.length > 0,
     updatedAt: quotes[0]?.timestamp,
+    isLoading,
   };
 }
 
 export function useLiveQuote(code: string) {
-  const [quote, setQuote] = useState<LiveQuote | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const load = async () => {
-      try {
-        const response = await fetch(`/api/quotes?symbols=${encodeURIComponent(code)}`, { cache: "no-store" });
-        const payload = (await response.json()) as { data?: LiveQuote[] };
-        if (mounted && payload.data?.[0]) setQuote(payload.data[0]);
-      } catch {
-        // Keep the last quote visible during a temporary network failure.
-      }
-      if (mounted) timer = setTimeout(load, 30000);
-    };
-
-    void load();
-    return () => {
-      mounted = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [code]);
-
-  return quote;
+  const { quotes } = useLiveQuotes();
+  return quotes.find((quote) => quote.code === code) ?? null;
 }

@@ -6,7 +6,6 @@ import { ArrowLeft, BarChart3, FileText, MessageCircle, TrendingUp } from "lucid
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Sparkline } from "@/components/ui/Sparkline";
-import { PriceChart } from "@/components/PriceChart";
 import { WatchStar } from "@/components/WatchStar";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
@@ -21,6 +20,7 @@ import { getMarketPriceMeta, type StockEntry, type MarketSymbol } from "@/data/m
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
+const PriceChart = dynamic(() => import("@/components/PriceChart").then((m) => m.PriceChart), { ssr: false, loading: () => <p className="app-muted py-16 text-center text-sm">Grafik hazırlanıyor...</p> });
 
 const detailTabs: Array<["financials" | "news" | "sector" | "community", string, LucideIcon]> = [
   ["financials", "Bilanço ve metrikler", BarChart3],
@@ -92,8 +92,8 @@ export function AssetDetailClient({
     if (!isStock) return;
     let cancelled = false;
     void Promise.all([
-      fetch(`/api/financial-statements?symbol=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.json()),
-      fetch(`/api/kap?symbol=${encodeURIComponent(ticker)}`, { cache: "no-store" }).then((response) => response.json()),
+      fetch(`/api/financial-statements?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()),
+      fetch(`/api/kap?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()),
     ]).then(([financialPayload, kapPayload]) => {
       if (cancelled) return;
       setStatements(financialPayload.data ?? []);
