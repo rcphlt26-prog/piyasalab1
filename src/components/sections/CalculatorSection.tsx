@@ -9,6 +9,7 @@ import { LiveCurrencyConverter } from "@/components/LiveCurrencyConverter";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { assetList, calculateReturn, toAssetLabel, type CurrencyCode } from "@/lib/finance";
 import { bigMacSeries, dailyBasketSeries, gramGoldSeries, minimumWageSeries, quarterGoldSeries, breadSeries, milkSeries } from "@/data/historicalData";
+import { CalculatorGuideText } from "@/components/FinancialGuideText";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
 const SimpleBarChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.SimpleBarChart), { ssr: false });
@@ -281,6 +282,7 @@ export function CalculatorSection() {
         </div>
         <SimpleBarChart data={[{ etiket: `${powerYear} alım gücü`, deger: powerAmount }, { etiket: "Bugünkü karşılık", deger: nowPower }]} xKey="etiket" yKey="deger" />
       </div>
+      <CalculatorGuideText />
     </section>
   );
 }

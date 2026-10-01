@@ -10,6 +10,7 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { getMarketPriceMeta, marketSymbolByCode, type MarketCategory } from "@/data/marketSymbols";
 import { MarketNewsStrip } from "@/components/MarketNewsStrip";
+import { MarketGuideText } from "@/components/FinancialGuideText";
 
 type TabKey = "borsa" | "doviz" | "emtia" | "kripto";
 
@@ -224,6 +225,7 @@ export function MarketSection() {
       <p className="app-muted mt-3 text-xs">
         Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. Son güncelleme: {updatedAt ? new Date(updatedAt).toLocaleString("tr-TR") : "-"} · {liveAvailable ? "Canlı kaynak" : "Canlı veri bekleniyor"}
       </p>
+      <MarketGuideText />
     </section>
   );
 }

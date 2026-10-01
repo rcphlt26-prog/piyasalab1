@@ -54,11 +54,11 @@ export function Footer() {
 
         <div className="app-border mt-6 flex flex-col items-center justify-between gap-2 border-t pt-4 text-xs sm:flex-row">
           <p className="app-muted">© 2024-{new Date().getFullYear()} VeriAkış. Tüm hakları saklıdır.</p>
-          <nav className="flex flex-wrap justify-center gap-3">
-            <Link href="/gizlilik" className="app-muted hover:text-primary">Gizlilik</Link>
-            <Link href="/cerezler" className="app-muted hover:text-primary">Çerezler</Link>
-            <Link href="/kullanim-sartlari" className="app-muted hover:text-primary">Kullanım şartları</Link>
-            <Link href="/yasal-uyari" className="app-muted hover:text-primary">Yasal uyarı</Link>
+          <nav aria-label="Yasal bağlantılar" className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link href="/gizlilik-politikasi" className="app-muted hover:text-primary">Gizlilik politikası</Link>
+            <Link href="/kullanim-kosullari" className="app-muted hover:text-primary">Kullanım koşulları</Link>
+            <Link href="/sorumluluk-reddi" className="app-muted hover:text-primary">Sorumluluk reddi</Link>
+            <Link href="/rehber" className="app-muted hover:text-primary">Finans rehberleri</Link>
             <Link href="/iletisim" className="app-muted hover:text-primary">İletişim</Link>
           </nav>
         </div>

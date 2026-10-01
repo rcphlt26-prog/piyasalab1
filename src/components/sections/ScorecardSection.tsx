@@ -7,6 +7,7 @@ import { ShareCard } from "@/components/ShareCard";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { popularStocks, scorecardData } from "@/data/scorecardData";
 import { insiderTransactions } from "@/data/insiderData";
+import { ScorecardGuideText } from "@/components/FinancialGuideText";
 
 const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
 const InsiderFlowChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.InsiderFlowChart), { ssr: false });
@@ -189,6 +190,7 @@ export function ScorecardSection() {
           <p className="app-muted mt-2 text-xs">Not: Bu bölümdeki kayıtlar eğitim simülasyonudur; gerçek KAP/insider verisi değildir. Gerçek işlemler için KAP kayıtlarını kontrol edin.</p>
         </div>
       </div>
+      <ScorecardGuideText />
     </section>
   );
 }

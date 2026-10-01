@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { marketSymbols, stockDirectory } from "@/data/marketSymbols";
+import { guideArticles } from "@/data/guideArticles";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = "https://veriakis.com";
-  const lastModified = new Date("2026-09-19T00:00:00.000Z");
+  const lastModified = new Date();
   const calculatorPaths = [
     "hesaplayicilar/bilesik-getiri",
     "hesaplayicilar/temettu-getirisi",
@@ -23,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 1,
     },
-    ...["hesaplayicilar", "iletisim", "gizlilik", "cerezler", "kullanim-sartlari", "yasal-uyari"].map((path) => ({
+    ...["hesaplayicilar", "iletisim", "gizlilik", "gizlilik-politikasi", "cerezler", "kullanim-sartlari", "sorumluluk-reddi", "yasal-uyari", "rehber"].map((path) => ({
       url: `${siteUrl}/${path}`,
       lastModified,
       changeFrequency: "yearly" as const,
@@ -31,6 +32,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     ...calculatorPaths.map((path) => ({
       url: `${siteUrl}/${path}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
+    ...guideArticles.map((article) => ({
+      url: `${siteUrl}/rehber/${article.slug}`,
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.8,

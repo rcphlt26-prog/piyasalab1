@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Mail, MessageSquare, ShieldCheck } from "lucide-react";
 import { LegalPage } from "@/components/LegalPage";
+import { ContactForm } from "@/components/ContactForm";
 
 export const metadata: Metadata = {
   title: "İletişim | VeriAkış",
@@ -26,6 +27,11 @@ export default function ContactPage() {
         <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-primary" />
         <p>Başvurunuzda ilgili sayfanın bağlantısını, talebinizin nedenini ve size ulaşabileceğimiz bilgiyi paylaşın. Hassas kişisel veya finansal bilgileri e-posta ile göndermeyin.</p>
       </div>
+      <section aria-labelledby="contact-form-title">
+        <h2 id="contact-form-title" className="app-text mb-3 text-xl font-semibold">Mesaj gönderin</h2>
+        <ContactForm />
+        <p className="app-muted mt-2 text-xs">Form, cihazınızdaki varsayılan e-posta uygulamasını açar; e-posta gönderilmeden önce içeriği gözden geçirebilirsiniz.</p>
+      </section>
     </LegalPage>
   );
 }
