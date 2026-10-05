@@ -186,8 +186,8 @@ export default function HomePage() {
         {activeTab === "piyasa" ? (
           <div className="space-y-10">
             <HomeHero />
-            <ParamNeOlurdu />
             <HomeMarketSummary />
+            <ParamNeOlurdu />
             <HomeStockCards />
             <HomeNewsList onNavigate={handleNavigate} />
             <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
