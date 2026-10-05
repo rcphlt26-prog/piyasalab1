@@ -990,76 +990,132 @@ export function VirtualPortfolioRace() {
               </h3>
 
               {live.rows.length ? (
-                <div className="w-full overflow-x-auto">
-                  <table className="w-full min-w-[420px] table-fixed text-left text-xs">
-                    <thead className="app-muted border-b">
-                      <tr>
-                        <th className="w-[34%] px-2 py-1.5 sm:w-[30%]">
-                          Varlık
-                        </th>
+  <>
+    {/* Mobil görünüm */}
+    <div className="space-y-2 sm:hidden">
+      {live.rows.map((row) => (
+        <div
+          key={row.symbol}
+          className="app-surface app-border rounded-lg border p-3"
+        >
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="app-text truncate text-sm font-semibold">
+                {labelOf(row.symbol)}
+              </p>
 
-                        <th className="w-[17%] px-2 py-1.5 sm:w-[18%]">
-                          Adet
-                        </th>
+              <p className="app-muted truncate text-[10px]">
+                {row.symbol}
+              </p>
+            </div>
 
-                        <th className="w-[23%] px-2 py-1.5 sm:w-[22%]">
-                          Değer
-                        </th>
+            <button
+              type="button"
+              onClick={() => pickAdjust(row.symbol)}
+              aria-label={`${labelOf(row.symbol)} varlığını düzenle`}
+              className="app-border text-primary inline-flex shrink-0 items-center justify-center rounded-md border px-2.5 py-1.5 text-[11px] font-semibold leading-none"
+            >
+              Düzenle
+            </button>
+          </div>
 
-                        <th className="w-[26%] px-1.5 py-1.5 text-right sm:w-[30%]">
-                          <span className="sr-only">Düzenle</span>
-                        </th>
-                      </tr>
-                    </thead>
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-[var(--border)] pt-2">
+            <div>
+              <p className="app-muted text-[10px]">
+                Adet
+              </p>
 
-                    <tbody>
-                      {live.rows.map((row) => (
-                        <tr
-                          key={row.symbol}
-                          className="app-border border-b last:border-b-0"
-                        >
-                          <td className="px-2 py-2">
-                            <div className="min-w-0">
-                              <p className="app-text truncate font-semibold">
-                                {labelOf(row.symbol)}
-                              </p>
+              <p className="app-text whitespace-nowrap text-xs font-semibold">
+                {formatMarketPrice(row.quantity)}
+              </p>
+            </div>
 
-                              <p className="app-muted truncate text-[10px]">
-                                {row.symbol}
-                              </p>
-                            </div>
-                          </td>
+            <div className="text-right">
+              <p className="app-muted text-[10px]">
+                Değer
+              </p>
 
-                          <td className="app-text whitespace-nowrap px-2 py-2">
-                            {formatMarketPrice(row.quantity)}
-                          </td>
+              <p className="app-text whitespace-nowrap text-xs font-semibold">
+                {money(row.value)}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
 
-                          <td className="app-text whitespace-nowrap px-2 py-2">
-                            {money(row.value)}
-                          </td>
+    {/* Tablet / masaüstü görünüm */}
+    <div className="hidden w-full sm:block">
+      <table className="w-full text-left text-xs">
+        <thead className="app-muted border-b">
+          <tr>
+            <th className="px-2 py-1.5">
+              Varlık
+            </th>
 
-                          <td className="px-1.5 py-2 text-right">
-                            <button
-                              type="button"
-                              onClick={() => pickAdjust(row.symbol)}
-                              aria-label={`${labelOf(
-                                row.symbol,
-                              )} varlığını düzenle`}
-                              className="app-border text-primary inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors hover:bg-[var(--color-primary)]/10 active:scale-[0.98] sm:px-2.5 sm:text-xs"
-                            >
-                              Düzenle
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <th className="px-2 py-1.5">
+              Adet
+            </th>
+
+            <th className="px-2 py-1.5">
+              Değer
+            </th>
+
+            <th className="px-2 py-1.5 text-right">
+              <span className="sr-only">
+                Düzenle
+              </span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {live.rows.map((row) => (
+            <tr
+              key={row.symbol}
+              className="app-border border-b last:border-b-0"
+            >
+              <td className="min-w-0 px-2 py-2">
+                <div className="min-w-0">
+                  <p className="app-text truncate font-semibold">
+                    {labelOf(row.symbol)}
+                  </p>
+
+                  <p className="app-muted truncate text-[10px]">
+                    {row.symbol}
+                  </p>
                 </div>
-              ) : (
-                <p className="app-muted py-4 text-center text-sm">
-                  Portföyünde varlık yok; sağdan ekleyebilirsin.
-                </p>
-              )}
+              </td>
+
+              <td className="app-text whitespace-nowrap px-2 py-2">
+                {formatMarketPrice(row.quantity)}
+              </td>
+
+              <td className="app-text whitespace-nowrap px-2 py-2">
+                {money(row.value)}
+              </td>
+
+              <td className="px-2 py-2 text-right">
+                <button
+                  type="button"
+                  onClick={() => pickAdjust(row.symbol)}
+                  aria-label={`${labelOf(row.symbol)} varlığını düzenle`}
+                  className="app-border text-primary inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-semibold leading-none transition-colors hover:bg-[var(--color-primary)]/10 active:scale-[0.98]"
+                >
+                  Düzenle
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </>
+) : (
+  <p className="app-muted py-4 text-center text-sm">
+    Portföyünde varlık yok; sağdan ekleyebilirsin.
+  </p>
+)}
             </div>
 
             <div className="app-surface-2 app-border rounded-xl border p-4">
