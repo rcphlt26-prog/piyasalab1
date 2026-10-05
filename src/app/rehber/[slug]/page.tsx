@@ -12,9 +12,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const article = guideArticles.find((item) => item.slug === slug);
-  if (!article) return { title: "Rehber bulunamadı | VeriAkış" };
+  if (!article) return { title: "Rehber bulunamadı" };
   return {
-    title: `${article.title} | VeriAkış Rehber`,
+    title: `${article.title} | Rehber`,
     description: article.description,
     alternates: { canonical: `https://veriakis.com/rehber/${article.slug}` },
     openGraph: { type: "article", title: article.title, description: article.description, url: `https://veriakis.com/rehber/${article.slug}`, siteName: "VeriAkış" },

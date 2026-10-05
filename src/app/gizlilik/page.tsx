@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Gizlilik Politikası | VeriAkış", description: "VeriAkış gizlilik politikası ve veri işleme bilgilendirmesi." };
+export const metadata: Metadata = { title: "Gizlilik Politikası", description: "VeriAkış gizlilik politikası ve veri işleme bilgilendirmesi." };
 
 export default function PrivacyPage() {
   return (

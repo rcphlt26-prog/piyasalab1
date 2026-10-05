@@ -29,7 +29,11 @@ async function getNews(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const news = await getNews(slug);
-  return { title: news ? `${news.title} | VeriAkış` : "Haber | VeriAkış", description: news?.summary ?? "Piyasa haberi ve ilgili şirketler." };
+  return {
+    title: news?.title ?? "Haber",
+    description: news?.summary ?? "Piyasa haberi ve ilgili şirketler.",
+    alternates: { canonical: `https://veriakis.com/haber/${encodeURIComponent(slug)}` },
+  };
 }
 
 export default async function NewsDetailPage({ params }: { params: Promise<{ slug: string }> }) {

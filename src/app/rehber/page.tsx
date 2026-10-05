@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { guideArticles } from "@/data/guideArticles";
 
 export const metadata: Metadata = {
-  title: "Finans Rehberleri | VeriAkış",
+  title: "Finans Rehberleri",
   description: "Temettü birikimi, reel getiri, enflasyon ve hisse değerleme oranları hakkında kapsamlı finansal okuryazarlık rehberleri.",
   alternates: { canonical: "https://veriakis.com/rehber" },
 };

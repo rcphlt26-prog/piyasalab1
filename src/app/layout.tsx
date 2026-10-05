@@ -4,6 +4,7 @@ import { Space_Grotesk, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AdSenseConsent } from "@/components/AdSenseConsent";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketSidebar } from "@/components/MarketSidebar";
 import "./globals.css";
 
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   authors: [{ name: "VeriAkış" }],
   creator: "VeriAkış",
   publisher: "VeriAkış",
-  alternates: { canonical: "https://veriakis.com" },
+  alternates: { canonical: "./" },
   icons: {
     icon: "/gemini-svg.svg",
     shortcut: "/gemini-svg.svg",
@@ -49,36 +50,19 @@ export const metadata: Metadata = {
     locale: "tr_TR",
     url: "https://veriakis.com",
     siteName: "VeriAkış",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "VeriAkış | Canlı Finans Merkezi" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "VeriAkış",
     description: "Canlı BIST100, portföy takibi, KAP haberleri ve finans araçları.",
-    images: ["/gemini-svg.svg"],
+    images: ["/api/og"],
   },
   robots: {
     index: true,
     follow: true,
   },
 };
-
-const faqData = [
-  {
-    question: "BIST getiri hesaplama nasıl yapılır?",
-    answer:
-      "Başlangıç tutarı ve yıl seçilir, ardından BIST 100 seçeneğiyle dönem sonu değer, bileşik getiri ve enflasyondan arındırılmış sonuçlar hesaplanır.",
-  },
-  {
-    question: "DRIP açıkken ne değişir?",
-    answer:
-      "DRIP açıldığında temettüler pozisyona tekrar eklenir ve bileşik etki güçlenir. Kapalıyken temettü nakit olarak ayrı izlenir.",
-  },
-  {
-    question: "Dolar bazlı reel getiri neyi gösterir?",
-    answer:
-      "Nominal USD getirisinden ABD TÜFE etkisi düşülerek uluslararası alım gücü açısından daha gerçekçi bir performans sunulur.",
-  },
-];
 
 const webAppJsonLd = {
   "@context": "https://schema.org",
@@ -90,29 +74,6 @@ const webAppJsonLd = {
   description:
     "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
   inLanguage: "tr-TR",
-};
-
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqData.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
-    },
-  })),
-};
-
-const articleJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: "Borsa İstanbul Getiri Hesaplama, Enflasyon ve Dolar Bazlı Reel Kazançlar",
-  author: { "@type": "Organization", name: "VeriAkış" },
-  publisher: { "@type": "Organization", name: "VeriAkış" },
-  inLanguage: "tr-TR",
-  mainEntityOfPage: "https://veriakis.com",
 };
 
 const organizationJsonLd = {
@@ -130,11 +91,6 @@ const websiteJsonLd = {
   name: "Veri Akış",
   alternateName: ["VeriAkis", "veriakis.com", "Veri Akışı"],
   url: "https://veriakis.com",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: "https://veriakis.com/?q={search_term_string}",
-    "query-input": "required name=search_term_string",
-  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -146,6 +102,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ThemeProvider>{children}</ThemeProvider>
         <MarketSidebar />
         <Analytics />
+        <SpeedInsights />
         <Script
           id="adsense-loader"
           async
@@ -153,11 +110,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           crossOrigin="anonymous"
         />
         <AdSenseConsent client={adsenseClient} />
-        <Script id="jsonld-webapp" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
-        <Script id="jsonld-faq" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-        <Script id="jsonld-article" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
-        <Script id="jsonld-organization" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
-        <Script id="jsonld-website" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       </body>
     </html>
   );

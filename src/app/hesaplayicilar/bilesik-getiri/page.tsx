@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SeoCalculator } from "@/components/calculators/SeoCalculator";
 
 export const metadata: Metadata = {
-  title: "Bileşik Getiri Hesaplama | VeriAkış",
+  title: "Bileşik Getiri Hesaplama",
   description: "Başlangıç paranızın BIST 100 ve farklı dönemlerde bileşik getiriyle bugün ne kadar olacağını hesaplayın.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar/bilesik-getiri" },
 };

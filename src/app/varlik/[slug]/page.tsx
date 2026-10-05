@@ -1,23 +1,33 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import { AssetDetailClient } from "@/components/AssetDetailClient";
 import { SpkBanner } from "@/components/SpkBanner";
 import { Footer } from "@/components/Footer";
-import { stockByTicker, marketSymbolByCode } from "@/data/marketSymbols";
+import { stockByTicker, marketSymbolByCode, getMarketPriceMeta } from "@/data/marketSymbols";
+
+const isStockAsset = (ticker: string) => {
+  const market = marketSymbolByCode.get(ticker);
+  return market ? market.category === "hisse" : stockByTicker.has(ticker);
+};
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const ticker = decodeURIComponent(slug).toUpperCase();
-  const entry = stockByTicker.get(ticker);
-  const market = marketSymbolByCode.get(ticker);
-  const name = market?.label ?? entry?.name ?? ticker;
+  const name = stockByTicker.get(ticker)?.name ?? marketSymbolByCode.get(ticker)?.label ?? ticker;
+  const stock = isStockAsset(ticker);
+  // Hisseler /hisse/ adresinde kanonikleşir; diğer varlıklar kendi /varlik/ adresinde kalır.
+  const canonical = `https://veriakis.com/${stock ? "hisse" : "varlik"}/${encodeURIComponent(ticker)}`;
+  const title = stock ? `${ticker} Hisse Fiyatı, Grafik ve Finansal Tablolar` : `${name} Canlı Fiyatı ve Grafik`;
+  const socialTitle = `${title} | VeriAkış`;
+  const description = stock
+    ? `${name} (${ticker}) hisse fiyatı, tarihsel fiyat grafiği, finansal tablo verileri ve KAP bildirimleri VeriAkış'ta. Yatırım yapmadan önce araştır.`
+    : `${name} (${ticker}) güncel fiyatı ve tarihsel fiyat grafiği VeriAkış'ta. Yatırım yapmadan önce araştır.`;
   return {
-    title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`,
-    description: `${ticker} hisse senedi güncel fiyatı, F/K, PD/DD rasyoları, son çeyrek bilanço analizi ve güncel KAP bildirimleri.`,
-    alternates: { canonical: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}` },
-    openGraph: { title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} (${name}) için canlı fiyat, bilanço ve KAP analizleri.`, type: "article", url: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}`, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
-    twitter: { card: "summary_large_image", title: `${ticker} Canlı Fiyatı, Bilanço & KAP Haberleri`, description: `${ticker} için canlı piyasa ve finansal analiz.`, images: [`/api/og?ticker=${encodeURIComponent(ticker)}`] },
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title: socialTitle, description, type: "article", url: canonical, images: [{ url: `/api/og?ticker=${encodeURIComponent(ticker)}`, width: 1200, height: 630, alt: `${ticker} VeriAkış piyasa kartı` }] },
+    twitter: { card: "summary_large_image", title: socialTitle, description, images: [`/api/og?ticker=${encodeURIComponent(ticker)}`] },
   };
 }
 
@@ -29,11 +39,13 @@ export default async function AssetPage({ params }: { params: Promise<{ slug: st
 
   if (!entry && !market) notFound();
 
-  const jsonLd = { "@context": "https://schema.org", "@type": "FinancialProduct", name: market?.label ?? entry?.name ?? ticker, tickerSymbol: ticker, category: "Borsa İstanbul", url: `https://veriakis.com/hisse/${encodeURIComponent(ticker)}` };
+  const stock = isStockAsset(ticker);
+  const category = stock && getMarketPriceMeta(market).currency === "TRY" ? "Borsa İstanbul" : stock ? "Hisse Senedi" : "Piyasa Varlığı";
+  const jsonLd = { "@context": "https://schema.org", "@type": "FinancialProduct", name: market?.label ?? entry?.name ?? ticker, tickerSymbol: ticker, category, url: `https://veriakis.com/${stock ? "hisse" : "varlik"}/${encodeURIComponent(ticker)}` };
 
   return (
     <main className="app-bg min-h-screen">
-      <Script id={`financial-product-${ticker}`} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SpkBanner />
       <AssetDetailClient ticker={ticker} entry={entry} market={market} />
       <Footer />

@@ -134,14 +134,16 @@ export function PriceChart({ data = [], candles, height = 380 }: PriceChartProps
 
   return (
     <div className="w-full flex flex-col p-2">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="app-muted text-xs font-medium">Grafik Zaman Dilimi</span>
-        <div className="flex items-center gap-1 rounded-lg border border-black bg-white p-1">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+        <span className="app-muted hidden text-xs font-medium sm:inline">Grafik Zaman Dilimi</span>
+        <div role="group" aria-label="Grafik zaman dilimi" className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-black bg-white p-1">
           {(["1A", "3A", "6A", "1Y", "5Y", "MAX"] as TimeFrame[]).map((tf) => (
             <button
               key={tf}
+              type="button"
               onClick={() => setTimeFrame(tf)}
-              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+              aria-pressed={timeFrame === tf}
+              className={`min-h-10 min-w-10 rounded-md px-3 text-xs font-semibold transition-all ${
                 timeFrame === tf
                   ? "bg-black text-white"
                   : "text-black hover:bg-black/10"

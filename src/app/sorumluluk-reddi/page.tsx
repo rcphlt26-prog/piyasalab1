@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Sorumluluk Reddi ve Yatırım Uyarısı | VeriAkış",
+  title: "Sorumluluk Reddi ve Yatırım Uyarısı",
   description: "VeriAkış içerik, piyasa verisi ve hesaplama sonuçlarının yatırım tavsiyesi olmadığını açıklayan sorumluluk reddi.",
 };
 

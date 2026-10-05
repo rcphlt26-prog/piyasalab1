@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SeoCalculator } from "@/components/calculators/SeoCalculator";
 
 export const metadata: Metadata = {
-  title: "Hisse vs Altın Hesaplama: 100.000 TL 5 Yıl Önce Ne Oldu? | VeriAkış",
+  title: "Hisse vs Altın Hesaplama: 100.000 TL 5 Yıl Önce Ne Oldu?",
   description: "100.000 TL'nin BIST 100 veya Gram Altın yatırımında yaklaşık bugün ne kadar olacağını karşılaştırın.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar/hisse-vs-altin" },
 };

@@ -1,7 +1,8 @@
 "use client";
 
-import { ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 type FinancialStatement = {
   year: number;
@@ -14,48 +15,67 @@ type FinancialStatement = {
   pb_ratio: number | null;
 };
 
+const UNAVAILABLE = "Veri mevcut değil";
+
 function TrendIcon({ positive }: { positive: boolean }) {
-  return positive ? <TrendingUp className="h-4 w-4 text-bull" /> : <TrendingDown className="h-4 w-4 text-bear" />;
+  return positive ? <TrendingUp className="h-4 w-4 text-bull" aria-hidden="true" /> : <TrendingDown className="h-4 w-4 text-bear" aria-hidden="true" />;
 }
 
-export function StockInsightCard({ ticker, statements, changePct }: { ticker: string; statements: FinancialStatement[]; changePct?: number }) {
-  if (statements.length === 0) return null;
+const amount = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 0));
+const ratio = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 2));
+
+export function StockInsightCard({ statements, loading }: { ticker: string; statements: FinancialStatement[]; loading: boolean }) {
   const latest = statements[statements.length - 1];
   const first = statements[0];
-  const profitGrowing = latest.net_profit >= first.net_profit;
-  const debtSafe = latest.total_debt === null || !first.total_debt || latest.total_debt <= first.total_debt;
-  const growthPositive = latest.revenue >= first.revenue;
 
-  const metrics = [
-    ["Piyasa Değeri", "Veri yok"],
-    ["F/K", latest.pe_ratio === null ? "Veri yok" : formatNumber(latest.pe_ratio)],
-    ["PD/DD", latest.pb_ratio === null ? "Veri yok" : formatNumber(latest.pb_ratio)],
-    ["FD/FAVÖK", latest.ebitda === null ? "Veri yok" : formatNumber(latest.revenue / Math.max(latest.ebitda, 1))],
-    ["Borç", latest.total_debt === null ? "Veri yok" : formatNumber(latest.total_debt)],
-    ["Net Kâr", formatNumber(latest.net_profit)],
-    ["Ciro", formatNumber(latest.revenue)],
-    ["Temettü", "Veri yok"],
+  // Şema piyasa değeri, özsermaye ve temettü verimi içermez; bu alanlar tahmin edilmez.
+  const metrics: Array<[string, string | null]> = [
+    ["F/K", ratio(latest?.pe_ratio)],
+    ["PD/DD", ratio(latest?.pb_ratio)],
+    ["Piyasa değeri", null],
+    ["FAVÖK", amount(latest?.ebitda)],
+    ["Net kâr", amount(latest?.net_profit)],
+    ["Ciro", amount(latest?.revenue)],
+    ["Borç", amount(latest?.total_debt)],
+    ["Özsermaye", null],
+    ["Temettü verimi", null],
   ];
 
+  const trends = statements.length > 1 && latest && first ? [
+    { label: "Net kâr", positive: latest.net_profit >= first.net_profit, text: latest.net_profit >= first.net_profit ? "İlk kayıtlı döneme göre yüksek." : "İlk kayıtlı döneme göre düşük." },
+    { label: "Ciro", positive: latest.revenue >= first.revenue, text: latest.revenue >= first.revenue ? "İlk kayıtlı döneme göre yüksek." : "İlk kayıtlı döneme göre düşük." },
+    ...(latest.total_debt != null && first.total_debt ? [{ label: "Borç", positive: latest.total_debt <= first.total_debt, text: latest.total_debt <= first.total_debt ? "İlk kayıtlı döneme göre düşük veya eşit." : "İlk kayıtlı döneme göre yüksek." }] : []),
+  ] : [];
+
   return (
-    <section className="section-card mb-4 border-[var(--color-primary)]/30 bg-gradient-to-br from-[var(--color-primary)]/10 via-[var(--surface)] to-[var(--color-bull)]/10">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <p className="app-muted text-xs font-semibold uppercase tracking-wide">Otomatik veri özeti</p>
-          <h2 className="app-text mt-1 text-xl font-bold">{ticker} için hızlı görünüm</h2>
-          <p className="app-muted mt-1 text-xs">Temsili karne verilerinden türetilmiştir; yatırım tavsiyesi değildir.</p>
+    <section className="section-card" aria-labelledby="financials-title">
+      <div className="mb-4">
+        <h2 id="financials-title" className="app-text text-lg font-bold">Temel finansal bilgiler</h2>
+        <p className="app-muted mt-1 text-xs">
+          {loading ? "Finansal tablo verisi yükleniyor." : latest ? `Son kayıtlı dönem: ${latest.year} / ${latest.quarter}. ay. Tutarlar kayıttaki birimle gösterilir.` : "Bu hisse için finansal tablo kaydı bulunmuyor."}
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-16 w-full" />)}</div>
+      ) : (
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {metrics.map(([label, value]) => (
+            <div key={label} className="app-surface-2 min-w-0 rounded-lg p-3">
+              <dt className="app-muted text-xs">{label}</dt>
+              <dd className={value ? "app-text mt-1 truncate text-base font-semibold tabular-nums" : "app-muted mt-1 text-xs"}>{value ?? UNAVAILABLE}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {trends.length ? (
+        <div className="app-border mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
+          {trends.map((item) => (
+            <div key={item.label} className="flex items-start gap-2"><TrendIcon positive={item.positive} /><div><p className="app-text text-sm font-semibold">{item.label}</p><p className="app-muted text-xs">{item.text}</p></div></div>
+          ))}
         </div>
-        <ShieldCheck className="h-5 w-5 text-bull" aria-label="Bilgilendirme özeti" />
-      </div>
-      <div className="mb-4 grid gap-2 sm:grid-cols-3">
-        <div className="app-surface-2 app-border rounded-xl border p-3"><div className="flex items-center gap-2"><TrendIcon positive={profitGrowing} /><p className="app-text text-sm font-semibold">Kârlılık</p></div><p className="app-muted mt-1 text-xs">Son 5 yıllık seride {profitGrowing ? "artış eğiliminde" : "dalgalı"}.</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><div className="flex items-center gap-2"><TrendIcon positive={debtSafe} /><p className="app-text text-sm font-semibold">Borçluluk</p></div><p className="app-muted mt-1 text-xs">Borç/özsermaye {debtSafe ? "görece güvenli" : "yakından izlenmeli"}.</p></div>
-        <div className="app-surface-2 app-border rounded-xl border p-3"><div className="flex items-center gap-2"><TrendIcon positive={growthPositive} /><p className="app-text text-sm font-semibold">Büyüme</p></div><p className="app-muted mt-1 text-xs">Son dönem ciro trendi {growthPositive ? "pozitif" : "geriliyor"}.</p></div>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-        {metrics.map(([label, value]) => <div key={label} className="app-surface-2 app-border rounded-lg border p-2"><p className="app-muted text-[10px]">{label}</p><p className="app-text mt-1 text-sm font-bold">{value}</p></div>)}
-      </div>
-      {changePct !== undefined ? <p className="app-muted mt-3 text-[11px]">Günlük fiyat değişimi: <span className={changePct >= 0 ? "text-bull" : "text-bear"}>{changePct >= 0 ? "+" : ""}{formatNumber(changePct)}%</span></p> : null}
+      ) : null}
     </section>
   );
 }

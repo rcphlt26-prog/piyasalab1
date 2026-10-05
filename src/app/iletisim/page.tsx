@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/LegalPage";
 import { ContactForm } from "@/components/ContactForm";
 
 export const metadata: Metadata = {
-  title: "İletişim | VeriAkış",
+  title: "İletişim",
   description: "VeriAkış iletişim, gizlilik, telif ve içerik kaldırma başvuruları.",
 };
 

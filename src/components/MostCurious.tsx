@@ -25,7 +25,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
     return {
       code,
       title: quote?.label ?? code,
-      value: quote ? formatMarketPrice(quote.price) : "--",
+      value: quote ? `${formatMarketPrice(quote.price)} ${getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel}` : "Veri mevcut değil",
       currencyLabel: getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel,
       change: quote ? `${isPositive ? "+" : ""}${quote.changePct.toFixed(2)}%` : "Veri bekleniyor",
       isPositive,
@@ -59,7 +59,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
               <span className="app-muted text-[11px]">{item.currencyLabel}</span>
             </div>
             <div className={compact ? "min-w-0 text-right" : "mt-2"}>
-              <span className="app-text block truncate text-base font-bold">{item.value} {item.currencyLabel}</span>
+              <span className="app-text block truncate text-base font-bold">{item.value}</span>
               <span className={`flex items-center justify-end gap-1 text-xs font-semibold ${item.isPositive ? "text-bull" : "text-bear"}`}>
                 {item.isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
                 {item.change}

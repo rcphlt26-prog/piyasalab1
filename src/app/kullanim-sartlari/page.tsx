@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Kullanım Şartları | VeriAkış", description: "VeriAkış kullanım şartları." };
+export const metadata: Metadata = { title: "Kullanım Şartları", description: "VeriAkış kullanım şartları." };
 
 export default function TermsPage() {
   return (

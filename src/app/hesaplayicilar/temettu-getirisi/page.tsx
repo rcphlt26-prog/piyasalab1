@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SeoCalculator } from "@/components/calculators/SeoCalculator";
 
 export const metadata: Metadata = {
-  title: "Temettü Getirisi Hesaplama | VeriAkış",
+  title: "Temettü Getirisi Hesaplama",
   description: "Temettü verimi ve yeniden yatırım etkisini kullanarak yatırımınızın yaklaşık değerini hesaplayın.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar/temettu-getirisi" },
 };

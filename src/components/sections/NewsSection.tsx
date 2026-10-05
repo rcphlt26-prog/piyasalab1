@@ -6,6 +6,8 @@ import { Clock, ExternalLink } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { type NewsCategory } from "@/data/newsData";
 import { useLiveNews } from "@/hooks/useLiveNews";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const categories: Array<"Tümü" | NewsCategory> = ["Tümü", "Ekonomi", "BIST", "Döviz", "Emtia"];
 
@@ -19,7 +21,9 @@ const catColor: Record<NewsCategory, string> = {
 export function NewsSection() {
   const [category, setCategory] = useState<"Tümü" | NewsCategory>("Tümü");
   const [sortDesc, setSortDesc] = useState(true);
-  const { items: news, source } = useLiveNews();
+  const { items: news, source, isLoading } = useLiveNews();
+  // "demo" kaynağı yalnızca eğitim amaçlı yerel içeriktir; gerçek haber gibi gösterilmez.
+  const live = source !== "demo";
 
   const items = useMemo(() => {
     const filtered = category === "Tümü" ? news : news.filter((n) => n.category === category);
@@ -41,8 +45,10 @@ export function NewsSection() {
           <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Google News · Yaklaşık 5 dakikada güncellenir</span>
         ) : source === "supabase" ? (
           <span className="rounded-full bg-[var(--color-bull)]/15 px-2 py-0.5 text-[11px] font-semibold text-bull">Haber arşivi · Yaklaşık 5 dakikada kontrol edilir</span>
+        ) : isLoading ? (
+          <span className="app-muted text-[11px]">Haberler yükleniyor</span>
         ) : (
-          <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Hızlı yükleme modu aktif</span>
+          <span className="rounded-full bg-[var(--color-gold)]/15 px-2 py-0.5 text-[11px] font-semibold text-gold">Canlı haber kaynağına ulaşılamıyor</span>
         )}
       </div>
 
@@ -68,10 +74,10 @@ export function NewsSection() {
         </button>
       </div>
 
-      {items.length === 0 ? (
-        <div className="app-surface-2 app-border rounded-2xl border p-8 text-center">
-          <p className="app-text-secondary text-sm">Henüz haber bulunmuyor. Yeni haberler eklendiğinde burada otomatik görünecek.</p>
-        </div>
+      {!live || items.length === 0 ? (
+        isLoading && !live ? (
+          <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-24 w-full" />)}</div>
+        ) : <EmptyState title={live ? "Bu kategoride haber bulunmuyor." : "Haber akışı şu anda kullanılamıyor."} description="Güncel haberler alınamadı. Birkaç dakika sonra tekrar deneyin." />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {items.map((n) => {

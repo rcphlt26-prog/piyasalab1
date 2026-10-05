@@ -136,8 +136,9 @@ export function MarketSection() {
           <button
             key={tab.key}
             type="button"
+            aria-pressed={activeTab === tab.key}
             onClick={() => handleTabChange(tab.key)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+            className={`min-h-10 rounded-lg border px-3 text-xs font-semibold transition ${
               activeTab === tab.key
                 ? "border-transparent bg-[var(--color-primary)] text-white"
                 : "app-surface app-border app-text card-hover"
@@ -201,7 +202,7 @@ export function MarketSection() {
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage === 1}
-            className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
+            className="flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
           >
             <ChevronLeft className="h-4 w-4" /> Önceki
           </button>
@@ -213,7 +214,7 @@ export function MarketSection() {
           <button
             onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
             disabled={currentPage === totalPages}
-            className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
+            className="flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs font-medium disabled:opacity-40 app-surface app-border app-text"
           >
             Sonraki <ChevronRight className="h-4 w-4" />
           </button>
@@ -223,7 +224,7 @@ export function MarketSection() {
       <MarketNewsStrip tab={activeTab} />
 
       <p className="app-muted mt-3 text-xs">
-        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. Son güncelleme: {updatedAt ? new Date(updatedAt).toLocaleString("tr-TR") : "-"} · {liveAvailable ? "Canlı kaynak" : "Canlı veri bekleniyor"}
+        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. {liveAvailable && updatedAt ? `Son güncelleme: ${new Date(updatedAt).toLocaleString("tr-TR")} · Canlı kaynak` : "Canlı veri şu anda kullanılamıyor."}
       </p>
       <MarketGuideText />
     </section>

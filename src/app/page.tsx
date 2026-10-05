@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
-import { HomeTickerRail } from "@/components/HomeTickerRail";
+import { HomeStockCards, HomeNewsList } from "@/components/HomeTickerRail";
 
 // Dynamic Import (Lazy Loading) - CPU Optimizasyonu İçin
 const LoadingBox = () => (
@@ -28,7 +28,6 @@ const LoadingBox = () => (
 
 const MarketSection = dynamic(() => import("@/components/sections/MarketSection").then(m => m.MarketSection), { loading: LoadingBox });
 const CalculatorSection = dynamic(() => import("@/components/sections/CalculatorSection").then(m => m.CalculatorSection), { loading: LoadingBox });
-const ScorecardSection = dynamic(() => import("@/components/sections/ScorecardSection").then(m => m.ScorecardSection), { loading: LoadingBox });
 const ForumSection = dynamic(() => import("@/components/sections/ForumSection").then(m => m.ForumSection), { loading: LoadingBox });
 const GamesSection = dynamic(() => import("@/components/sections/GamesSection").then(m => m.GamesSection), { loading: LoadingBox });
 const NewsSection = dynamic(() => import("@/components/sections/NewsSection").then(m => m.NewsSection), { loading: LoadingBox });
@@ -36,11 +35,11 @@ const AboutSection = dynamic(() => import("@/components/sections/AboutSection").
 const PortfolioSection = dynamic(() => import("@/components/sections/PortfolioSection").then(m => m.PortfolioSection), { loading: LoadingBox });
 const WatchlistSection = dynamic(() => import("@/components/sections/WatchlistSection").then(m => m.WatchlistSection), { loading: LoadingBox });
 
-type TabId = "piyasa" | "hesaplayici" | "karne" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
+type TabId = "piyasa" | "hesaplayici" | "hisseler" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof LineChart }> = [
   { id: "piyasa", label: "Piyasa", icon: LineChart },
-  { id: "karne", label: "Hisseler", icon: ClipboardList },
+  { id: "hisseler", label: "Hisseler", icon: ClipboardList },
   { id: "hesaplayici", label: "Hesapla", icon: Calculator },
   { id: "portfoy", label: "Portföy", icon: BriefcaseBusiness },
   { id: "haberler", label: "Haberler", icon: Newspaper },
@@ -60,6 +59,14 @@ export default function HomePage() {
   const supabase = getSupabaseBrowserClient();
 
   function handleNavigate(tab: string) {
+    // Hisseler, ana sayfadaki hisse kartlarına kaydırır ("karne" eski adıdır).
+    if (tab === "hisseler" || tab === "karne") {
+      setActiveTab("piyasa");
+      setMobileOpen(false);
+      setExploreOpen(false);
+      window.setTimeout(() => document.getElementById("hisseler")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      return;
+    }
     const match = tabs.find((t) => t.id === tab);
     if (match) {
       setActiveTab(match.id);
@@ -81,7 +88,7 @@ export default function HomePage() {
             className="flex shrink-0 items-center gap-2"
             aria-label="VeriAkış ana sayfa"
           >
-            <Image src="/gemini-svg.svg" alt="VeriAkış" width={32} height={32} className="rounded-lg" priority />
+            <Image src="/gemini-svg.svg" alt="" width={32} height={32} className="rounded-lg" priority />
             <span className="app-text text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
               VeriAkış
             </span>
@@ -132,7 +139,7 @@ export default function HomePage() {
           <div className="ml-auto flex items-center gap-2 md:ml-0">
             <div className="hidden xl:block"><OnlineUsers supabase={supabase} /></div>
             <AuthPanel />
-            <ThemeToggle />
+            <div className="max-[400px]:hidden"><ThemeToggle /></div>
             <button
               onClick={() => setMobileOpen((v) => !v)}
               className="app-border app-text inline-flex h-10 w-10 items-center justify-center rounded-lg border lg:hidden"
@@ -146,6 +153,10 @@ export default function HomePage() {
 
         {mobileOpen ? (
           <nav className="app-surface app-border max-h-[calc(100vh-3.5rem)] overflow-y-auto border-t px-4 py-3 lg:hidden" aria-label="Mobil menü">
+            <div className="mb-3 flex items-center justify-between min-[400px]:hidden">
+              <span className="app-muted text-xs">Tema</span>
+              <ThemeToggle />
+            </div>
             <div className="mb-3 md:hidden">
               <SearchBar onNavigateTab={handleNavigate} />
             </div>
@@ -173,12 +184,13 @@ export default function HomePage() {
 
       <div className="mx-auto max-w-7xl px-4 py-6">
         {activeTab === "piyasa" ? (
-          <div className="space-y-6">
+          <div className="space-y-10">
             <HomeHero />
             <ParamNeOlurdu />
             <HomeMarketSummary />
-            <div id="hisseler" className="scroll-mt-24"><MarketSection /></div>
-            <HomeTickerRail />
+            <HomeStockCards />
+            <HomeNewsList onNavigate={handleNavigate} />
+            <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
             <HomePersonalPanel />
             <HomeDailyFlow />
             <HomeTools onNavigate={handleNavigate} />
@@ -195,7 +207,6 @@ export default function HomePage() {
 
         <div className="space-y-6">
           {activeTab === "hesaplayici" ? <CalculatorSection /> : null}
-          {activeTab === "karne" ? <ScorecardSection /> : null}
           {activeTab === "portfoy" ? <PortfolioSection /> : null}
           {activeTab === "izleme" ? <WatchlistSection /> : null}
           {activeTab === "forum" ? <ForumSection /> : null}

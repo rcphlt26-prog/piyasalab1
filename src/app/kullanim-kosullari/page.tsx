@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Kullanım Koşulları | VeriAkış",
+  title: "Kullanım Koşulları",
   description: "VeriAkış platformunun kullanım kuralları, içerik ve fikri mülkiyet şartları ile finansal veri sınırlamaları.",
 };
 

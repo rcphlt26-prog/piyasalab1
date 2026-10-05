@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SeoCalculator } from "@/components/calculators/SeoCalculator";
 
 export const metadata: Metadata = {
-  title: "Maliyet Ortalaması Hesaplama | VeriAkış",
+  title: "Maliyet Ortalaması Hesaplama",
   description: "Düzenli alımlarda toplam yatırımınızı ve yaklaşık ortalama maliyetinizi hesaplayın.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar/maliyet-ortalamasi" },
 };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Çerez Politikası | VeriAkış", description: "VeriAkış çerez ve benzeri teknolojiler hakkında bilgilendirme." };
+export const metadata: Metadata = { title: "Çerez Politikası", description: "VeriAkış çerez ve benzeri teknolojiler hakkında bilgilendirme." };
 
 export default function CookiesPage() {
   return (

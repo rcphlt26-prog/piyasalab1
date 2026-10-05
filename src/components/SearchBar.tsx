@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, TrendingUp, Wrench, Newspaper } from "lucide-react";
 import { marketSymbols } from "@/data/marketSymbols";
-import { newsData } from "@/data/newsData";
 
 type ToolEntry = { id: string; label: string };
 
@@ -74,11 +73,7 @@ export function SearchBar({ onNavigateTab }: { onNavigateTab?: (tab: string) => 
       .filter((t) => t.label.toLowerCase().includes(q))
       .slice(0, 4)
       .map((t) => ({ type: "tool", id: t.id, label: t.label }));
-    const newsHits: Result[] = newsData
-      .filter((n) => n.title.toLowerCase().includes(q))
-      .slice(0, 3)
-      .map((n) => ({ type: "news", slug: n.slug, title: n.title }));
-    return [...assets, ...toolHits, ...newsHits];
+    return [...assets, ...toolHits];
   }, [debounced]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect

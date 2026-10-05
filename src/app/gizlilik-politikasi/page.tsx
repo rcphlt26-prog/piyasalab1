@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Gizlilik Politikası ve Çerezler | VeriAkış",
+  title: "Gizlilik Politikası ve Çerezler",
   description: "VeriAkış'ın kişisel veri, çerez, Google AdSense reklamları ve KVKK kapsamındaki kullanıcı hakları politikası.",
 };
 

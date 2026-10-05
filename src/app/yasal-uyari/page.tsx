@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 
-export const metadata: Metadata = { title: "Yasal Uyarı | VeriAkış", description: "VeriAkış finansal içerik ve veri kullanım uyarısı." };
+export const metadata: Metadata = { title: "Yasal Uyarı", description: "VeriAkış finansal içerik ve veri kullanım uyarısı." };
 
 export default function LegalNoticePage() {
   return (

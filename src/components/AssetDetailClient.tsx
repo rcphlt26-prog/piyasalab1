@@ -2,32 +2,21 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ArrowLeft, BarChart3, FileText, MessageCircle, TrendingUp } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Sparkline } from "@/components/ui/Sparkline";
-import { WatchStar } from "@/components/WatchStar";
+import { ArrowRight, ChevronRight, ExternalLink, History, MessageCircle, Star } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { scorecardData } from "@/data/scorecardData";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { StockInsightCard } from "@/components/StockInsightCard";
 import { StockCommunityWidget } from "@/components/StockCommunityWidget";
 import { ShareButtons } from "@/components/ShareButtons";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { getMarketPriceMeta, type StockEntry, type MarketSymbol } from "@/data/marketSymbols";
 
-const ScoreRadar = dynamic(() => import("@/components/ClientCharts").then((m) => m.ScoreRadar), { ssr: false });
-const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
-const PriceChart = dynamic(() => import("@/components/PriceChart").then((m) => m.PriceChart), { ssr: false, loading: () => <p className="app-muted py-16 text-center text-sm">Grafik hazırlanıyor...</p> });
-
-const detailTabs: Array<["financials" | "news" | "sector" | "community", string, LucideIcon]> = [
-  ["financials", "Bilanço ve metrikler", BarChart3],
-  ["news", "KAP / şirket haberleri", FileText],
-  ["sector", "Sektör karşılaştırması", TrendingUp],
-  ["community", "Forum tartışmaları", MessageCircle],
-];
+const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> });
+const PriceChart = dynamic(() => import("@/components/PriceChart").then((m) => m.PriceChart), { ssr: false, loading: () => <Skeleton className="h-[360px] w-full" /> });
 
 type FinancialStatement = {
   id: string;
@@ -59,6 +48,15 @@ const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   kripto: "Kripto Para",
 };
 
+const UNAVAILABLE = "Veri mevcut değil";
+
+function formatUpdated(timestamp: string | undefined) {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+
 export function AssetDetailClient({
   ticker,
   entry,
@@ -68,25 +66,26 @@ export function AssetDetailClient({
   entry: StockEntry | null;
   market: MarketSymbol | null;
 }) {
-  const [detailTab, setDetailTab] = useState<"financials" | "news" | "sector" | "community">("financials");
   const [quantity, setQuantity] = useState("1");
   const [statements, setStatements] = useState<FinancialStatement[]>([]);
   const [kapNotifications, setKapNotifications] = useState<KapNotification[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [showCommunity, setShowCommunity] = useState(false);
   const { isWatched, toggle } = useWatchlist();
-  const name = market?.label ?? entry?.name ?? ticker;
+  const name = entry?.name ?? market?.label ?? ticker;
   const liveQuote = useLiveQuote(ticker);
   const { data: historicalPrices, loading: historyLoading, source: historySource, meta: historyMeta } = useHistoricalPrices(ticker);
-  const sector = entry?.sector ?? (market ? CATEGORY_LABEL[market.category] : "Bilinmiyor");
-  const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "-";
-  const isStock = market ? market.category === "hisse" : Boolean(entry);
   const priceMeta = getMarketPriceMeta(market);
-  const spark = historicalPrices.slice(-24).map((point) => point.value);
-  const trend: "up" | "down" = spark.length < 2 || spark[spark.length - 1] >= spark[0] ? "up" : "down";
+  const isStock = market ? market.category === "hisse" : Boolean(entry);
+  const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "Piyasa";
+  const venue = isStock && priceMeta.currency === "TRY" ? "Borsa İstanbul" : categoryLabel;
   const changePct = liveQuote?.changePct;
   const currentPrice = liveQuote?.price;
+  const updated = formatUpdated(liveQuote?.timestamp);
+  const watched = isWatched(ticker);
   const quantityValue = Math.max(0, Number(quantity) || 0);
   const positionValue = currentPrice === undefined ? undefined : currentPrice * quantityValue;
-  const score = isStock ? scorecardData[ticker] : undefined;
+  const watchedLabel = watched ? "İzleme listesinde" : "İzleme Listesine Ekle";
 
   useEffect(() => {
     if (!isStock) return;
@@ -103,6 +102,8 @@ export function AssetDetailClient({
         setStatements([]);
         setKapNotifications([]);
       }
+    }).finally(() => {
+      if (!cancelled) setDataLoading(false);
     });
     return () => {
       cancelled = true;
@@ -110,188 +111,150 @@ export function AssetDetailClient({
   }, [isStock, ticker]);
 
   const financialChartData = statements.map((statement) => ({
-    year: `${statement.year}Q${statement.quarter / 3}`,
+    year: `${statement.year}/${statement.quarter}`,
     "Ciro": statement.revenue,
     "Net Kâr": statement.net_profit,
     "Borç": statement.total_debt ?? 0,
   }));
-  const latestStatement = statements.at(-1);
-  const sectorPeers = useMemo(() => {
-    if (!entry?.sector) return [];
-    return Object.entries(scorecardData)
-      .filter(([peerTicker]) => peerTicker !== ticker)
-      .map(([peerTicker, peerScore]) => ({ ticker: peerTicker, score: peerScore }))
-      .filter(({ ticker: peerTicker }) => peerTicker.slice(0, 1) === ticker.slice(0, 1))
-      .slice(0, 5);
-  }, [entry?.sector, ticker]);
 
-  const fundamentals: Array<[string, string]> = isStock
-    ? [
-        ["Sektör", sector],
-        ["Kategori", categoryLabel],
-        ["F/K", score ? String(score.fk) : "-"],
-        ["PD/DD", score ? String(score.pddd) : "-"],
-        ["Piyasa Değeri", score?.marketCap ?? "-"],
-        ["Temettü Verimi", score ? `%${formatNumber(score.dividendYield, 1)}` : "-"],
-        ["52H En Yüksek", historyMeta?.weekHigh52 == null ? "-" : formatNumber(historyMeta.weekHigh52)],
-        ["52H En Düşük", historyMeta?.weekLow52 == null ? "-" : formatNumber(historyMeta.weekLow52)],
-      ]
-    : [
-        ["Tür", categoryLabel],
-        ["Kaynak Sembol", market?.yahooSymbol ?? "-"],
-        ["Günlük Değişim", changePct === undefined ? "-" : `%${formatNumber(changePct, 2)}`],
-        ["52H En Yüksek", historyMeta?.weekHigh52 == null ? "-" : formatNumber(historyMeta.weekHigh52)],
-        ["52H En Düşük", historyMeta?.weekLow52 == null ? "-" : formatNumber(historyMeta.weekLow52)],
-      ];
+  const priceSummary: Array<[string, string]> = [
+    ["Piyasa", venue],
+    ["Sektör", entry?.sector ?? UNAVAILABLE],
+    ["52 hafta en yüksek", historyMeta?.weekHigh52 == null ? UNAVAILABLE : formatMarketPrice(historyMeta.weekHigh52)],
+    ["52 hafta en düşük", historyMeta?.weekLow52 == null ? UNAVAILABLE : formatMarketPrice(historyMeta.weekLow52)],
+  ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      {/* Breadcrumb */}
-      <div className="app-muted mb-4 flex items-center gap-2 text-sm">
-        <Link href="/" className="hover:text-primary">
-          Ana Sayfa
-        </Link>
-        <span>/</span>
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+      <nav aria-label="Sayfa yolu" className="app-muted flex items-center gap-1 text-sm">
+        <Link href="/" className="hover:text-primary">Ana Sayfa</Link>
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
         <span className="app-text">{ticker}</span>
-      </div>
+      </nav>
 
-      <Link href="/" className="app-text-secondary mb-4 inline-flex items-center gap-2 text-sm hover:text-primary">
-        <ArrowLeft className="h-4 w-4" /> Geri dön
-      </Link>
-
-      <div className="mb-4"><ShareButtons title={`${ticker} Canlı Fiyatı, Bilanço ve KAP Haberleri`} /></div>
-
-      {/* Başlık kartı */}
-      <div className="section-card mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white">
-              <TrendingUp className="h-6 w-6" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="app-text text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                  {ticker}
-                </h1>
-                <WatchStar watched={isWatched(ticker)} onToggle={() => toggle(ticker)} size={20} />
+      {/* Üst bölüm */}
+      <header className="section-card">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="app-muted text-xs font-semibold uppercase tracking-wide">{venue}{entry?.sector ? ` · ${entry.sector}` : ""}</p>
+            <h1 className="app-text mt-1 break-words text-2xl font-bold sm:text-3xl" style={{ fontFamily: "var(--font-display)" }}>{ticker} <span className="app-text-secondary text-lg font-medium sm:text-xl">— {name}</span></h1>
+            {currentPrice === undefined ? (
+              <div className="mt-4 space-y-2" aria-busy="true"><Skeleton className="h-10 w-48" /><Skeleton className="h-5 w-24" /></div>
+            ) : (
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <p className="app-text text-4xl font-bold tabular-nums">{formatMarketPrice(currentPrice)} <span className="app-muted text-base font-medium">{priceMeta.currencyLabel}</span></p>
+                {changePct === undefined ? null : <p className={`text-lg font-semibold tabular-nums ${changePct >= 0 ? "text-bull" : "text-bear"}`}>{changePct >= 0 ? "+" : ""}{formatNumber(changePct)}%</p>}
               </div>
-              <p className="app-text-secondary text-sm">{name}</p>
-            </div>
+            )}
+            <p className="app-muted mt-2 text-xs">{currentPrice === undefined ? "Canlı fiyat şu anda kullanılamıyor." : `${priceMeta.unitLabel} fiyatı${updated ? ` · Son güncelleme: ${updated}` : ""}`}</p>
           </div>
-          <div className="flex items-center gap-4">
-            {spark.length > 1 ? <Sparkline data={spark} width={120} height={44} trend={trend} /> : null}
-            <div className="text-right">
-              <p className="app-text text-xl font-bold">{currentPrice === undefined ? "-" : `${formatMarketPrice(currentPrice)} ${priceMeta.currencyLabel}`}</p>
-              {changePct === undefined ? <p className="app-muted text-sm">-</p> : <p className={`text-sm font-bold ${changePct >= 0 ? "text-bull" : "text-bear"}`}>
-                {changePct >= 0 ? "+" : ""}{formatNumber(changePct)}%
-              </p>}
-              <p className="app-muted text-xs">{liveQuote ? `${priceMeta.unitLabel} fiyatı · Canlı · 30 sn` : "Canlı veri bekleniyor"}</p>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => toggle(ticker)}
+            aria-pressed={watched}
+            className={`inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold sm:w-auto ${watched ? "app-surface-3 app-text" : "bg-[var(--color-primary-dark)] text-white hover:opacity-90"}`}
+          >
+            <Star className={`h-4 w-4 ${watched ? "fill-current text-gold" : ""}`} aria-hidden="true" /> {watched ? watchedLabel : `+ ${watchedLabel}`}
+          </button>
         </div>
-        <p className="app-muted mt-3 text-xs">
-          Bu sayfadaki fiyat dışı veriler temsili/eğitim amaçlıdır ve yatırım tavsiyesi değildir.
-        </p>
-      </div>
+      </header>
 
-      <section className="section-card mb-4">
+      {/* Grafik */}
+      <section className="section-card" aria-labelledby="chart-title">
+        <h2 id="chart-title" className="app-text mb-4 text-lg font-bold">{ticker} fiyat grafiği</h2>
+        {historyLoading ? <Skeleton className="h-[360px] w-full" /> : historicalPrices.length > 0 ? <PriceChart data={historicalPrices} height={360} /> : <EmptyState title="Bu sembol için grafik verisi şu anda kullanılamıyor." description="Tarihsel fiyat verisi alınamadı. Birkaç dakika sonra tekrar deneyin." />}
+        {historySource ? <p className="app-muted mt-2 text-right text-[11px]">Kaynak: {historySource}</p> : null}
+        <dl className="app-border mt-4 grid grid-cols-2 gap-3 border-t pt-4 sm:grid-cols-4">
+          {priceSummary.map(([label, value]) => (
+            <div key={label} className="min-w-0"><dt className="app-muted text-xs">{label}</dt><dd className={value === UNAVAILABLE ? "app-muted mt-0.5 text-xs" : "app-text mt-0.5 truncate text-sm font-semibold tabular-nums"}>{value}</dd></div>
+          ))}
+        </dl>
+      </section>
+
+      {isStock ? <StockInsightCard ticker={ticker} statements={statements} loading={dataLoading} /> : null}
+
+      {isStock && statements.length > 1 ? (
+        <section className="section-card" aria-labelledby="statement-history-title">
+          <h2 id="statement-history-title" className="app-text mb-3 text-lg font-bold">Finansal tablo geçmişi</h2>
+          <OverlayLineChart data={financialChartData} keys={["Ciro", "Net Kâr", "Borç"]} />
+        </section>
+      ) : null}
+
+      {/* Param Ne Olurdu? */}
+      {priceMeta.currency !== "USD" ? (
+        <section className="section-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="param-cta-title">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-dark)] text-white"><History className="h-5 w-5" aria-hidden="true" /></span>
+            <div>
+              <h2 id="param-cta-title" className="app-text text-base font-bold">Bu hisseye geçmişte yatırım yapsaydın ne olurdu?</h2>
+              <p className="app-muted mt-1 text-xs">Gerçek geçmiş kapanış fiyatlarıyla hesapla.</p>
+            </div>
+          </div>
+          <Link href="/#param-ne-olurdu" className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary-dark)] px-5 text-sm font-semibold text-white hover:opacity-90">Geçmiş yatırımını hesapla <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        </section>
+      ) : null}
+
+      {/* KAP bildirimleri */}
+      {isStock ? (
+        <section className="section-card" aria-labelledby="kap-title">
+          <h2 id="kap-title" className="app-text mb-3 text-lg font-bold">KAP bildirimleri</h2>
+          {dataLoading ? (
+            <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-14 w-full" />)}</div>
+          ) : kapNotifications.length === 0 ? (
+            <EmptyState compact title="Veri mevcut değil" description={`${ticker} için KAP bildirimi bulunmuyor.`} />
+          ) : (
+            <ul className="divide-y divide-[var(--border)]">
+              {kapNotifications.map((item) => (
+                <li key={item.id}>
+                  <a href={item.kap_url} target="_blank" rel="noopener noreferrer" className="block py-3 hover:text-primary">
+                    <div className="app-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+                      <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 font-semibold text-primary">{item.category ?? "KAP"}</span>
+                      <span>KAP</span>
+                      <span>{new Date(item.publish_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</span>
+                    </div>
+                    <p className="app-text mt-1.5 flex items-start gap-1.5 break-words text-sm font-semibold leading-snug">{item.title}<ExternalLink className="app-muted mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /></p>
+                    {item.summary ? <p className="app-muted mt-1 line-clamp-2 text-xs">{item.summary}</p> : null}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
+      <section className="section-card" aria-labelledby="value-title">
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
-            <h2 className="app-text text-base font-semibold">Hızlı değer hesapla</h2>
+            <h2 id="value-title" className="app-text text-base font-semibold">Hızlı değer hesapla</h2>
             <p className="app-muted mt-1 text-xs">Kaç {priceMeta.unitLabel.toLowerCase()} {name} tuttuğunuzu girin.</p>
           </div>
           <div className="grid grid-cols-[minmax(0,140px)_1fr] items-end gap-3 sm:min-w-[340px]">
             <label className="app-text-secondary min-w-0 text-xs">
               {priceMeta.unitLabel}
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-                className="app-surface-2 app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none"
-              />
+              <input type="number" min="0" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="app-surface-2 app-border app-text mt-1 min-h-11 w-full rounded-lg border px-3 text-sm outline-none" />
             </label>
-            <div className="app-surface-2 app-border min-w-0 rounded-lg border px-3 py-2">
+            <div className="app-surface-2 min-w-0 rounded-lg px-3 py-2">
               <p className="app-muted text-[11px]">Toplam değer</p>
-              <p className="app-text truncate text-base font-bold">{positionValue === undefined ? "Canlı fiyat bekleniyor" : `${formatMarketPrice(positionValue)} ${priceMeta.currencyLabel}`}</p>
+              <p className="app-text truncate text-base font-bold tabular-nums">{positionValue === undefined ? "Canlı fiyat kullanılamıyor" : `${formatMarketPrice(positionValue)} ${priceMeta.currencyLabel}`}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {statements.length > 0 ? <StockInsightCard ticker={ticker} statements={statements} changePct={changePct} /> : null}
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Grafik */}
-        <div className="section-card">
-          <SectionTitle eyebrow="Grafik" title={`${ticker} Fiyat Grafiği`} />
-          {historyLoading ? <p className="app-muted py-16 text-center text-sm">Tarihsel veri yükleniyor...</p> : historicalPrices.length > 0 ? <PriceChart data={historicalPrices} height={430} /> : <p className="app-muted py-16 text-center text-sm">Bu sembol için tarihsel veri alınamadı.</p>}
-          {historySource ? <p className="app-muted mt-2 text-right text-[11px]">Kaynak: {historySource}</p> : null}
-        </div>
-
-        {/* Temel bilgiler + karne */}
-        <div className="space-y-4">
-          <div className="section-card">
-            <h2 className="app-text mb-3 text-lg font-semibold">Temel Bilgiler</h2>
-            <div className="space-y-2 text-sm">
-              {fundamentals.map(([label, value]) => (
-                <div key={label} className="app-border flex justify-between border-b pb-1.5">
-                  <span className="app-muted">{label}</span>
-                  <span className="app-text font-semibold">{value}</span>
-                </div>
-              ))}
-            </div>
+      {isStock ? (
+        <section className="section-card" aria-labelledby="community-title">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="community-title" className="app-text inline-flex items-center gap-2 text-lg font-bold"><MessageCircle className="h-5 w-5 text-primary" aria-hidden="true" /> Forum tartışmaları</h2>
+            <button type="button" onClick={() => setShowCommunity((value) => !value)} aria-expanded={showCommunity} className="app-border app-text min-h-11 rounded-lg border px-4 text-sm font-semibold">{showCommunity ? "Gizle" : "Tartışmaları göster"}</button>
           </div>
-
-          {score ? (
-            <div className="section-card">
-              <h2 className="app-text mb-2 text-lg font-semibold">Hisse Karnesi</h2>
-              <ScoreRadar
-                data={[
-                  { metric: "Değerleme", score: score.valuation },
-                  { metric: "Finansal Sağlık", score: score.health },
-                  { metric: "Temettü", score: score.dividend },
-                  { metric: "Büyüme", score: score.growth },
-                  { metric: "Momentum", score: score.momentum },
-                ]}
-              />
-              <p className="app-text-secondary mt-2 text-xs">{score.note}</p>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {score ? (
-        <div className="section-card mt-4">
-          <div className="mb-4 flex flex-wrap gap-2 border-b border-[var(--border)] pb-3">
-            {detailTabs.map(([key, label, Icon]) => (
-              <button key={String(key)} type="button" onClick={() => setDetailTab(key as typeof detailTab)} className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold ${detailTab === key ? "bg-[var(--color-primary)] text-white" : "app-text-secondary hover:app-surface-2"}`}>
-                <Icon className="h-4 w-4" /> {label}
-              </button>
-            ))}
-          </div>
-
-          {detailTab === "financials" ? (
-            <div>
-              {statements.length === 0 ? <p className="app-muted rounded-xl border border-dashed p-8 text-center text-sm">Bu hisse için henüz gerçek finansal tablo kaydı bulunmuyor.</p> : <><div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">F/K</p><p className="app-text text-lg font-bold">{latestStatement?.pe_ratio == null ? "Veri yok" : formatNumber(latestStatement.pe_ratio)}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">PD/DD</p><p className="app-text text-lg font-bold">{latestStatement?.pb_ratio == null ? "Veri yok" : formatNumber(latestStatement.pb_ratio)}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">Net Kâr</p><p className="app-text text-lg font-bold">{latestStatement ? formatNumber(latestStatement.net_profit) : "Veri yok"}</p></div><div className="app-surface-2 app-border rounded-lg border p-3"><p className="app-muted text-xs">Ciro</p><p className="app-text text-lg font-bold">{latestStatement ? formatNumber(latestStatement.revenue) : "Veri yok"}</p></div></div><h3 className="app-text mb-2 text-sm font-semibold">Gerçek finansal tablo geçmişi</h3><OverlayLineChart data={financialChartData} keys={["Ciro", "Net Kâr", "Borç"]} /></>}
-            </div>
-          ) : null}
-
-          {detailTab === "news" ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              {kapNotifications.length === 0 ? <p className="app-muted py-6 text-center text-sm">Bu sembol için gerçek KAP bildirimi bulunmuyor.</p> : kapNotifications.map((item) => <a key={item.id} href={item.kap_url} target="_blank" rel="noreferrer" className="app-surface-2 app-border card-hover rounded-xl border p-3"><div className="mb-1 flex items-center gap-2"><span className="rounded-full bg-[var(--color-primary)]/15 px-2 py-0.5 text-[10px] font-semibold text-primary">{item.category ?? "KAP"}</span><span className="app-muted text-[10px]">{new Date(item.publish_date).toLocaleDateString("tr-TR")}</span></div><h3 className="app-text text-sm font-semibold">{item.title}</h3><p className="app-text-secondary mt-1 text-xs">{item.summary ?? "KAP bildirimi"}</p></a>)}
-            </div>
-          ) : null}
-
-          {detailTab === "sector" ? (
-            <div><p className="app-muted mb-3 text-xs">Aynı sektör dizinindeki temsili metriklerle karşılaştırma.</p><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Hisse</th><th className="px-3 py-2">F/K</th><th className="px-3 py-2">PD/DD</th><th className="px-3 py-2">Temettü</th><th className="px-3 py-2">Sağlık</th></tr></thead><tbody><tr className="app-border border-b bg-[var(--color-primary)]/10"><td className="app-text px-3 py-2 font-bold">{ticker}</td><td className="app-text px-3 py-2">{formatNumber(score.fk)}</td><td className="app-text px-3 py-2">{formatNumber(score.pddd)}</td><td className="app-text px-3 py-2">%{formatNumber(score.dividendYield)}</td><td className="app-text px-3 py-2">{score.health}/10</td></tr>{sectorPeers.map(({ ticker: peerTicker, score: peer }) => <tr key={peerTicker} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{peerTicker}</td><td className="app-text px-3 py-2">{formatNumber(peer.fk)}</td><td className="app-text px-3 py-2">{formatNumber(peer.pddd)}</td><td className="app-text px-3 py-2">%{formatNumber(peer.dividendYield)}</td><td className="app-text px-3 py-2">{peer.health}/10</td></tr>)}</tbody></table></div></div>
-          ) : null}
-
-          {detailTab === "community" ? <StockCommunityWidget ticker={ticker} /> : null}
-        </div>
+          {showCommunity ? <div className="mt-4"><StockCommunityWidget ticker={ticker} /></div> : null}
+        </section>
       ) : null}
 
+      <div className="space-y-3">
+        <ShareButtons title={`${ticker} Hisse Fiyatı, Grafik ve Finansal Tablolar`} />
+        <p className="app-muted text-xs leading-5">Fiyat ve grafik verileri Yahoo Finance kaynaklıdır ve gecikmeli olabilir. Finansal tablo ve KAP verileri VeriAkış veri katmanından gelir; kayıt yoksa “{UNAVAILABLE}” gösterilir. Bu sayfa yatırım tavsiyesi değildir.</p>
+      </div>
     </div>
   );
 }

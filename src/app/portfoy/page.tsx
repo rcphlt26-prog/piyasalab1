@@ -3,7 +3,7 @@ import { PortfolioSection } from "@/components/sections/PortfolioSection";
 import { AuthSuccessToast } from "@/components/AuthSuccessToast";
 
 export const metadata: Metadata = {
-  title: "Portföyüm | VeriAkış",
+  title: "Portföyüm",
   description: "Kişisel portföyünüzü ve canlı performansınızı takip edin.",
 };
 

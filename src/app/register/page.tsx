@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AuthPanel } from "@/components/AuthPanel";
 
 export const metadata: Metadata = {
-  title: "Üye Ol | VeriAkış",
+  title: "Üye Ol",
   description: "VeriAkış kişisel finans merkezine ücretsiz üye olun.",
 };
 
