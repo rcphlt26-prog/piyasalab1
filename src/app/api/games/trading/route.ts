@@ -22,7 +22,8 @@ type Row = {
 };
 
 const ORDER_COLUMNS = "symbol, side, quantity, execution_price";
-const MIGRATION_HINT = "Oyun veritabanı güncellemesi gerekli: supabase/migrations/20261005_game_participant_status.sql dosyasını SQL Editor'de çalıştırın.";
+const MIGRATION_HINT = "Oyun veritabanı güncellemesi gerekli: supabase/migrations içindeki 20261005_game_participant_status.sql ve 20261006_game_daily_entries.sql dosyalarını SQL Editor'de çalıştırın.";
+const todayIstanbul = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
 const PERIOD_DAYS = { weekly: 7, monthly: 31 } as const;
 let lastPersistAt = 0;
 
@@ -57,7 +58,7 @@ async function persistValues(admin: SupabaseClient, rows: Array<{ id: string; va
 
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 
-const isMissingColumn = (error: { code?: string; message?: string } | null) => error?.code === "42703" || /status|removed_at/.test(error?.message ?? "");
+const isMissingColumn = (error: { code?: string; message?: string } | null) => error?.code === "42703" || /status|removed_at|entry_day|is_admin_entry/.test(error?.message ?? "");
 
 async function pricesForSymbols(orders: Order[]) {
   const symbols = Array.from(new Set(orders.map((order) => order.symbol)));
@@ -95,10 +96,13 @@ export async function GET(request: Request) {
   if (admin) await persistValues(admin, scored.filter(({ row }) => row.status === "ACTIVE").map(({ row, value, pct }) => ({ id: row.id, value, pct })));
 
   let portfolio = null;
+  let canJoin = false;
   if (userId) {
-    const own = await supabase.from("game_portfolios").select(`id, display_name, cash_balance, current_value, total_return_pct, started_at, status, game_orders(${ORDER_COLUMNS}, created_at)`).eq("user_id", userId).maybeSingle();
-    if (own.error && !isMissingColumn(own.error)) return fail("Portföy alınamadı.", 500);
-    const row = own.data as unknown as Row | null;
+    const own = await supabase.from("game_portfolios").select(`id, display_name, cash_balance, current_value, total_return_pct, started_at, status, entry_day, game_orders(${ORDER_COLUMNS}, created_at)`).eq("user_id", userId).order("started_at", { ascending: false }).limit(50);
+    if (own.error) return fail(isMissingColumn(own.error) ? MIGRATION_HINT : "Portföy alınamadı.", 500);
+    const mine = (own.data ?? []) as unknown as Array<Row & { entry_day: string }>;
+    const row = mine.find((entry) => entry.status === "ACTIVE") ?? mine[0] ?? null;
+    canJoin = isAdmin || (!mine.some((entry) => entry.status === "REMOVED") && !mine.some((entry) => entry.entry_day === todayIstanbul()));
     if (row) {
       const orders = row.game_orders ?? [];
       const ownPrices = await pricesForSymbols(orders);
@@ -119,7 +123,7 @@ export async function GET(request: Request) {
   const participants = isAdmin
     ? scored.map(({ row, value, pct }) => ({ id: row.id, display_name: row.display_name, username: row.app_users?.username ?? null, status: row.status, current_value: value, total_return_pct: pct, started_at: row.started_at }))
     : undefined;
-  return NextResponse.json({ period, leaderboard, portfolio, isAdmin, signedIn: Boolean(userId), participants, updatedAt: new Date().toISOString() });
+  return NextResponse.json({ period, leaderboard, portfolio, isAdmin, signedIn: Boolean(userId), canJoin, participants, updatedAt: new Date().toISOString() });
 }
 
 export async function DELETE(request: Request) {
@@ -146,16 +150,21 @@ const cleanAmount = (value: unknown) => {
   return Number.isFinite(amount) ? amount : NaN;
 };
 
-async function ownPortfolio(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase.from("game_portfolios").select("id, display_name, cash_balance, status").eq("user_id", userId).maybeSingle();
-  return { portfolio: data as { id: string; display_name: string; cash_balance: number | string; status: "ACTIVE" | "REMOVED" } | null, error };
+type OwnRow = { id: string; display_name: string; cash_balance: number | string; status: "ACTIVE" | "REMOVED"; entry_day: string };
+
+async function ownPortfolios(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase.from("game_portfolios").select("id, display_name, cash_balance, status, entry_day").eq("user_id", userId).order("started_at", { ascending: false }).limit(200);
+  const rows = (data ?? []) as OwnRow[];
+  return { rows, portfolio: rows.find((row) => row.status === "ACTIVE") ?? null, removed: rows.some((row) => row.status === "REMOVED"), error };
 }
 
-async function joinRace(supabase: SupabaseClient, userId: string, username: string | null, body: PostBody) {
-  const existing = await ownPortfolio(supabase, userId);
+async function joinRace(supabase: SupabaseClient, userId: string, username: string | null, isAdmin: boolean, body: PostBody) {
+  const existing = await ownPortfolios(supabase, userId);
   if (existing.error) return fail(isMissingColumn(existing.error) ? MIGRATION_HINT : "Katılım durumu kontrol edilemedi.", 500);
-  if (existing.portfolio?.status === "REMOVED") return fail("Yarışmadan çıkarıldınız; yeniden katılamazsınız.", 403);
-  if (existing.portfolio) return fail("Her yarışmacı yalnızca bir kez yarışa katılabilir; zaten yarıştasınız.", 409);
+  if (!isAdmin) {
+    if (existing.removed) return fail("Yarışmadan çıkarıldınız; yeniden katılamazsınız.", 403);
+    if (existing.rows.some((row) => row.entry_day === todayIstanbul())) return fail("Bugünkü katılım hakkınızı kullandınız; yarın yeni bir katılım yapabilirsiniz.", 409);
+  }
 
   const displayName = (typeof body.displayName === "string" ? body.displayName.trim() : "") || username || "";
   if (displayName.length < 2 || displayName.length > 30) return fail("Oyuncu adı 2-30 karakter olmalıdır.", 400);
@@ -187,10 +196,10 @@ async function joinRace(supabase: SupabaseClient, userId: string, username: stri
 
   const { data: created, error: createError } = await supabase
     .from("game_portfolios")
-    .insert({ user_id: userId, display_name: displayName, cash_balance: cash, current_value: GAME_START_CASH, total_return_pct: 0 })
+    .insert({ user_id: userId, display_name: displayName, cash_balance: cash, current_value: GAME_START_CASH, total_return_pct: 0, initial_cash: GAME_START_CASH, entry_day: todayIstanbul(), is_admin_entry: isAdmin })
     .select("id")
     .single();
-  if (createError || !created) return fail(createError?.code === "23505" ? "Her yarışmacı yalnızca bir kez yarışa katılabilir." : "Yarışa katılım kaydedilemedi.", createError?.code === "23505" ? 409 : 500);
+  if (createError || !created) return fail(createError?.code === "23505" ? "Bugünkü katılım hakkınızı kullandınız; yarın yeni bir katılım yapabilirsiniz." : "Yarışa katılım kaydedilemedi.", createError?.code === "23505" ? 409 : 500);
 
   const { error: orderError } = await supabase.from("game_orders").insert(orders.map((order) => ({ ...order, portfolio_id: created.id })));
   if (orderError) {
@@ -201,10 +210,9 @@ async function joinRace(supabase: SupabaseClient, userId: string, username: stri
 }
 
 async function adjustPosition(supabase: SupabaseClient, userId: string, body: PostBody) {
-  const { portfolio, error: portfolioError } = await ownPortfolio(supabase, userId);
+  const { portfolio, removed, error: portfolioError } = await ownPortfolios(supabase, userId);
   if (portfolioError) return fail(isMissingColumn(portfolioError) ? MIGRATION_HINT : "Portföy alınamadı.", 500);
-  if (!portfolio) return fail("Önce yarışa katılın.", 400);
-  if (portfolio.status !== "ACTIVE") return fail("Yarışmadan çıkarıldığınız için işlem yapamazsınız.", 403);
+  if (!portfolio) return fail(removed ? "Yarışmadan çıkarıldığınız için işlem yapamazsınız." : "Önce yarışa katılın.", removed ? 403 : 400);
 
   const symbol = cleanSymbol(body.symbol);
   const mode = body.mode === "REMOVE" ? "REMOVE" : body.mode === "ADD" ? "ADD" : null;
@@ -256,9 +264,12 @@ async function adjustPosition(supabase: SupabaseClient, userId: string, body: Po
 }
 
 export async function POST(request: Request) {
-  const { supabase, userId, username } = await context();
+  const { supabase, userId, username, isAdmin } = await context();
   if (!supabase) return fail("Supabase yapılandırılmamış.", 503);
   if (!userId) return fail("Yarışa katılmak için giriş yapın.", 401);
+  // Bakiye ve emirler yalnızca sunucuda yazılır; istemci doğrudan değiştiremez.
+  const database = getSupabaseAdminClient();
+  if (!database) return fail("Yarış şu anda kullanılamıyor (sunucu yapılandırması eksik).", 503);
 
   let body: PostBody;
   try {
@@ -266,7 +277,7 @@ export async function POST(request: Request) {
   } catch {
     return fail("Geçersiz istek.", 400);
   }
-  if (body.action === "join") return joinRace(supabase, userId, username, body);
-  if (body.action === "adjust") return adjustPosition(supabase, userId, body);
+  if (body.action === "join") return joinRace(database, userId, username, isAdmin, body);
+  if (body.action === "adjust") return adjustPosition(database, userId, body);
   return fail("Geçersiz işlem.", 400);
 }

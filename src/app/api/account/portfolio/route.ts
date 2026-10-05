@@ -84,3 +84,20 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: "İşlem kaydedilemedi." }, { status: 500 });
   return NextResponse.json({ ok: true }, { status: 201 });
 }
+
+export async function DELETE(request: Request) {
+  const { supabase, userId } = await getAppUserId();
+  if (!supabase) return NextResponse.json({ error: "Supabase yapılandırılmamış." }, { status: 503 });
+  if (!userId) return NextResponse.json({ error: "Oturum açmanız gerekiyor." }, { status: 401 });
+
+  const symbol = new URL(request.url).searchParams.get("symbol")?.trim().toUpperCase();
+  if (!symbol) return NextResponse.json({ error: "Silinecek varlık belirtilmedi." }, { status: 400 });
+
+  const { data: owned } = await supabase.from("portfolios").select("id").eq("user_id", userId);
+  const ids = (owned ?? []).map((portfolio) => portfolio.id as string);
+  if (!ids.length) return NextResponse.json({ ok: true });
+
+  const { error } = await supabase.from("portfolio_transactions").delete().in("portfolio_id", ids).eq("symbol", symbol);
+  if (error) return NextResponse.json({ error: "Varlık silinemedi." }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

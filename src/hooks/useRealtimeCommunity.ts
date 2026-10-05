@@ -72,6 +72,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
   const [onlineCount, setOnlineCount] = useState<number>(24);
   const [demoMode, setDemoMode] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) {
@@ -92,8 +93,11 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
 
         const { data: authUser } = await supabase.auth.getUser();
         if (authUser.user) {
-          const { data: appUser } = await supabase.from("app_users").select("role").eq("supabase_user_id", authUser.user.id).maybeSingle();
-          if (isMounted) setIsAdmin(appUser?.role === "ADMIN");
+          const { data: appUser } = await supabase.from("app_users").select("role, username").eq("supabase_user_id", authUser.user.id).maybeSingle();
+          if (isMounted) {
+            setIsAdmin(appUser?.role === "ADMIN");
+            setUsername((appUser?.username as string | undefined) ?? null);
+          }
         }
 
         if (!isMounted) return;
@@ -132,7 +136,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
       .channel("comments-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, (payload) => {
         if (payload.eventType === "INSERT" && payload.new) {
-          setComments((prev) => [payload.new as CommentItem, ...prev]);
+          setComments((prev) => (prev.some((comment) => comment.id === (payload.new as CommentItem).id) ? prev : [payload.new as CommentItem, ...prev]));
         }
         if (payload.eventType === "DELETE" && payload.old) {
           setComments((prev) => prev.filter((comment) => comment.id !== String(payload.old.id)));
@@ -241,8 +245,10 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
       .slice(0, 5);
   }, [comments, reactions]);
 
-  async function postComment(payload: { ticker: string; nickname: string; portfolioBand: string; body: string }) {
-    if (findBlockedWord(`${payload.nickname} ${payload.body}`)) {
+  async function postComment(payload: { ticker: string; portfolioBand: string; body: string }) {
+    // Yazı yalnızca giriş yapmış kullanıcılardan kabul edilir; yazar adı sunucuda hesap kullanıcı adıyla ayarlanır.
+    if (!supabase || !username) return;
+    if (findBlockedWord(payload.body)) {
       setDemoMode(true);
       return;
     }
@@ -250,7 +256,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
     const newItem: CommentItem = {
       id: crypto.randomUUID(),
       ticker: payload.ticker,
-      nickname: payload.nickname,
+      nickname: username,
       portfolio_band: payload.portfolioBand,
       body: payload.body,
       created_at: new Date().toISOString(),
@@ -258,21 +264,16 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
 
     setComments((prev) => [newItem, ...prev]);
 
-    if (!supabase) {
-      setDemoMode(true);
-      return;
-    }
-
     const { error } = await supabase.from("comments").insert({
       id: newItem.id,
       ticker: newItem.ticker,
-      nickname: newItem.nickname,
+      nickname: username,
       portfolio_band: newItem.portfolio_band,
       body: newItem.body,
     });
 
     if (error) {
-      setDemoMode(true);
+      setComments((prev) => prev.filter((comment) => comment.id !== newItem.id));
     }
   }
 
@@ -351,6 +352,7 @@ export function useRealtimeCommunity(supabase: SupabaseClient | null) {
     onlineCount,
     demoMode,
     isAdmin,
+    username,
     deleteComment,
   };
 }

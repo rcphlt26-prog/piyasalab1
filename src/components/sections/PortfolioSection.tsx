@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, Check, Plus, RefreshCw, Search, X } from "lucide-react";
+import { BriefcaseBusiness, Check, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { scorecardData } from "@/data/scorecardData";
 import { getMarketPriceMeta, marketSymbolByCode, marketSymbols } from "@/data/marketSymbols";
@@ -240,6 +240,18 @@ export function PortfolioSection() {
     await load();
   }
 
+  async function removeAsset(code: string) {
+    if (!window.confirm(`${code} portföyden tamamen silinsin mi? Bu varlığa ait tüm işlemler kaldırılır.`)) return;
+    setMessage(null);
+    const response = await fetch(`/api/account/portfolio?symbol=${encodeURIComponent(code)}`, { method: "DELETE" });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setMessage(payload.error ?? "Varlık silinemedi.");
+      return;
+    }
+    await load();
+  }
+
   function selectAsset(nextSymbol: string) {
     setSymbol(nextSymbol);
     const selected = marketSymbols.find((item) => item.code === nextSymbol);
@@ -337,7 +349,7 @@ export function PortfolioSection() {
 
       {!loading && !message && holdingRows.length > 0 ? <>
         <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_320px]"><div className="app-surface-2 app-border rounded-xl border p-4"><div className="mb-2 flex items-center justify-between"><h2 className="app-text text-sm font-semibold">Portföyüm vs piyasa</h2><span className="app-muted text-xs">Başlangıç = 100</span></div><PortfolioComparisonChart data={comparisonData} /></div><div className="app-surface-2 app-border rounded-xl border p-4"><h2 className="app-text text-sm font-semibold">Varlık dağılımı</h2><AllocationChart data={allocation} /></div></div>
-        <div className="app-surface-2 app-border overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Varlık</th><th className="px-3 py-2">Miktar</th><th className="px-3 py-2">Güncel fiyat ({currencySymbol})</th><th className="px-3 py-2">Değer ({currencySymbol})</th><th className="px-3 py-2">K/Z ({currencySymbol})</th></tr></thead><tbody>{holdingRows.map((row) => <tr key={row.symbol} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{row.symbol}<span className="app-muted ml-1 text-[10px]">{row.meta.currencyLabel}</span></td><td className="app-text px-3 py-2">{formatMoney(row.quantity)}</td><td className="app-text px-3 py-2">{formatMoney(toDisplayCurrency(row.currentPriceTry))} {currencySymbol}</td><td className="app-text px-3 py-2">{formatDisplayMoney(row.marketValue)}</td><td className={`px-3 py-2 font-semibold ${row.pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(row.pnl)}</td></tr>)}</tbody></table></div>
+        <div className="app-surface-2 app-border overflow-x-auto rounded-xl border"><table className="w-full text-left text-sm"><thead className="app-muted border-b text-xs"><tr><th className="px-3 py-2">Varlık</th><th className="px-3 py-2">Miktar</th><th className="px-3 py-2">Güncel fiyat ({currencySymbol})</th><th className="px-3 py-2">Değer ({currencySymbol})</th><th className="px-3 py-2">K/Z ({currencySymbol})</th><th className="px-3 py-2"><span className="sr-only">İşlemler</span></th></tr></thead><tbody>{holdingRows.map((row) => <tr key={row.symbol} className="app-border border-b"><td className="app-text px-3 py-2 font-semibold">{row.symbol}<span className="app-muted ml-1 text-[10px]">{row.meta.currencyLabel}</span></td><td className="app-text px-3 py-2">{formatMoney(row.quantity)}</td><td className="app-text px-3 py-2">{formatMoney(toDisplayCurrency(row.currentPriceTry))} {currencySymbol}</td><td className="app-text px-3 py-2">{formatDisplayMoney(row.marketValue)}</td><td className={`px-3 py-2 font-semibold ${row.pnl >= 0 ? "text-bull" : "text-bear"}`}>{formatDisplayMoney(row.pnl)}</td><td className="px-3 py-2 text-right"><button type="button" onClick={() => void removeAsset(row.symbol)} aria-label={`${row.symbol} varlığını sil`} title="Portföyden sil" className="app-border text-bear rounded-lg border p-1.5"><Trash2 className="h-4 w-4" /></button></td></tr>)}</tbody></table></div>
         <p className="app-muted mt-2 text-[11px]">USD bazlı geçmiş işlem maliyetleri, işlem tarihindeki USD/TRY verisiyle çevrilir. Geçmiş kur bulunamadığında güncel kur kullanılır; sonuç yaklaşık kâr/zarar göstergesidir.</p>
       </> : null}
     </section>

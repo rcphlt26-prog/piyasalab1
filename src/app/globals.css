@@ -18,9 +18,9 @@
 
 /* Açık tema (varsayılan) */
 :root {
-  --bg: #f1f5f9;
-  --bg-grad-1: #eef2ff;
-  --bg-grad-2: #f8fafc;
+  --bg: #f6f7f9;
+  --bg-grad-1: #f6f7f9;
+  --bg-grad-2: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #f8fafc;
   --surface-3: #f1f5f9;
@@ -55,7 +55,7 @@ body {
   padding: 0;
   min-height: 100%;
   overflow-x: hidden;
-  background: radial-gradient(circle at top, var(--bg-grad-1), var(--bg-grad-2) 55%);
+  background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-jakarta), Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   scroll-behavior: smooth;
@@ -82,9 +82,10 @@ a {
 .app-muted { color: var(--text-muted); }
 
 .section-card {
-  border-radius: 1rem;
+  border-radius: 0.875rem;
   border: 1px solid var(--border);
   background-color: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   padding: 1rem;
 }
 @media (min-width: 768px) {
@@ -99,11 +100,11 @@ a {
 }
 
 .card-hover {
-  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
-  box-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.35);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 14px -6px rgba(15, 23, 42, 0.18);
+  border-color: var(--border-strong);
 }
 
 .fade-in {

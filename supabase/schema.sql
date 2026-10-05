@@ -56,7 +56,31 @@ alter table public.sentiment_votes enable row level security;
 drop policy if exists comments_select_anon on public.comments;
 create policy comments_select_anon on public.comments for select to anon using (true);
 drop policy if exists comments_insert_anon on public.comments;
-create policy comments_insert_anon on public.comments for insert to anon with check (true);
+drop policy if exists comments_insert_authenticated on public.comments;
+create policy comments_insert_authenticated on public.comments for insert to authenticated with check (auth.uid() is not null);
+drop policy if exists comments_select_authenticated on public.comments;
+create policy comments_select_authenticated on public.comments for select to authenticated using (true);
+alter table public.comments add column if not exists user_id uuid;
+create or replace function public.set_comment_author()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  author record;
+begin
+  select id, username into author from public.app_users where supabase_user_id = auth.uid();
+  if author.id is null then
+    raise exception 'Yorum yazmak için giriş yapmalısınız.';
+  end if;
+  new.user_id := author.id;
+  new.nickname := author.username;
+  return new;
+end;
+$$;
+drop trigger if exists aa_set_comment_author on public.comments;
+create trigger aa_set_comment_author before insert on public.comments for each row execute function public.set_comment_author();
 drop policy if exists comments_delete_admin on public.comments;
 create policy comments_delete_admin on public.comments for delete to authenticated using (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN'));
 
@@ -471,7 +495,7 @@ create policy financial_statements_select_public on public.financial_statements 
 
 create table if not exists public.game_portfolios (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references public.app_users(id) on delete cascade,
+  user_id uuid not null references public.app_users(id) on delete cascade,
   display_name text not null default 'Anonim Oyuncu',
   initial_cash numeric not null default 100000,
   cash_balance numeric not null default 100000,
@@ -485,6 +509,12 @@ alter table public.game_portfolios add column if not exists status text not null
 alter table public.game_portfolios add column if not exists removed_at timestamptz;
 alter table public.game_portfolios drop constraint if exists game_portfolios_status_check;
 alter table public.game_portfolios add constraint game_portfolios_status_check check (status in ('ACTIVE', 'REMOVED'));
+alter table public.game_portfolios add column if not exists entry_day date not null default ((now() at time zone 'Europe/Istanbul')::date);
+alter table public.game_portfolios add column if not exists is_admin_entry boolean not null default false;
+create unique index if not exists game_portfolios_user_day_idx on public.game_portfolios(user_id, entry_day) where not is_admin_entry;
+create index if not exists game_portfolios_user_started_idx on public.game_portfolios(user_id, started_at desc);
+alter table public.game_portfolios drop constraint if exists game_portfolios_cash_check;
+alter table public.game_portfolios add constraint game_portfolios_cash_check check (cash_balance >= 0 and cash_balance <= 100000 * 100);
 
 create table if not exists public.game_orders (
   id uuid primary key default gen_random_uuid(),
@@ -500,7 +530,6 @@ create index if not exists game_orders_portfolio_created_idx on public.game_orde
 alter table public.game_portfolios enable row level security;
 alter table public.game_orders enable row level security;
 drop policy if exists game_portfolios_owner on public.game_portfolios;
-create policy game_portfolios_owner on public.game_portfolios for all to authenticated using (user_id = public.current_app_user_id() and status = 'ACTIVE') with check (user_id = public.current_app_user_id() and status = 'ACTIVE');
 drop policy if exists game_portfolios_owner_select on public.game_portfolios;
 create policy game_portfolios_owner_select on public.game_portfolios for select to authenticated using (user_id = public.current_app_user_id());
 drop policy if exists game_portfolios_leaderboard on public.game_portfolios;
@@ -508,7 +537,8 @@ create policy game_portfolios_leaderboard on public.game_portfolios for select t
 drop policy if exists game_portfolios_admin on public.game_portfolios;
 create policy game_portfolios_admin on public.game_portfolios for all to authenticated using (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN')) with check (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN'));
 drop policy if exists game_orders_owner on public.game_orders;
-create policy game_orders_owner on public.game_orders for all to authenticated using (exists (select 1 from public.game_portfolios p where p.id = portfolio_id and p.user_id = public.current_app_user_id())) with check (exists (select 1 from public.game_portfolios p where p.id = portfolio_id and p.user_id = public.current_app_user_id()));
+drop policy if exists game_orders_owner_select on public.game_orders;
+create policy game_orders_owner_select on public.game_orders for select to authenticated using (exists (select 1 from public.game_portfolios p where p.id = portfolio_id and p.user_id = public.current_app_user_id()));
 
 do $$
 begin

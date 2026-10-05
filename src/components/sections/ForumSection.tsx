@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Search, Trash2 } from "lucide-react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -82,11 +83,11 @@ export function ForumSection() {
     onlineCount,
     demoMode,
     isAdmin,
+    username,
     deleteComment,
   } = community;
 
   const [activeCategory, setActiveCategory] = useState<ForumCategory>(forumCategories[0]);
-  const [nickname, setNickname] = useState("");
   const [band, setBand] = useState<string>(portfolioBands[0]);
   const [body, setBody] = useState("");
 
@@ -131,6 +132,10 @@ export function ForumSection() {
 
   function handlePost() {
     setErrorMsg(null);
+    if (!username) {
+      setErrorMsg("Yazmak için giriş yapmalısınız.");
+      return;
+    }
     if (cooldownTime > 0) {
       setErrorMsg(`Çok hızlı mesaj gönderiyorsunuz. Lütfen ${cooldownTime} saniye bekleyin.`);
       return;
@@ -139,7 +144,7 @@ export function ForumSection() {
     const text = body.trim();
     if (!text) return;
 
-    const blockedWord = findBlockedWord(nickname.trim()) ?? findBlockedWord(text);
+    const blockedWord = findBlockedWord(text);
     if (blockedWord) {
       setErrorMsg("Mesajınız topluluk kurallarına aykırı argo içeriyor ve gönderilmedi.");
       return;
@@ -147,7 +152,6 @@ export function ForumSection() {
 
     postComment({
       ticker: activeTicker,
-      nickname: nickname.trim() || "Anonim Yatırımcı",
       portfolioBand: band,
       body: text,
     });
@@ -273,12 +277,11 @@ export function ForumSection() {
 
             <div className="app-surface app-border rounded-xl border p-3">
               <div className="mb-2 flex flex-wrap gap-2">
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Takma ad"
-                  className="app-surface-2 app-border app-text flex-1 rounded-lg border px-3 py-2 text-sm"
-                />
+                {username ? (
+                  <span className="app-surface-2 app-border app-text flex-1 rounded-lg border px-3 py-2 text-sm">Yazan: <strong>{username}</strong></span>
+                ) : (
+                  <span className="app-surface-2 app-border app-text-secondary flex-1 rounded-lg border px-3 py-2 text-sm">Yazmak için <Link href="/login" className="font-semibold text-primary underline">giriş yapın</Link> veya <Link href="/register" className="font-semibold text-primary underline">üye olun</Link>.</span>
+                )}
                 <select
                   value={band}
                   onChange={(e) => setBand(e.target.value)}
@@ -312,7 +315,7 @@ export function ForumSection() {
                 </span>
                 <button
                   onClick={handlePost}
-                  disabled={cooldownTime > 0}
+                  disabled={cooldownTime > 0 || !username}
                   className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
                     cooldownTime > 0 
                       ? "bg-gray-400 cursor-not-allowed opacity-60" 

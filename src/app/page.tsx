@@ -2,46 +2,61 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, Menu, X, BriefcaseBusiness, Star } from "lucide-react";
+import dynamic from "next/dynamic";
+import { LineChart, Calculator, ClipboardList, MessagesSquare, Gamepad2, Newspaper, Info, Menu, X, BriefcaseBusiness, Star, ChevronDown } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SpkBanner } from "@/components/SpkBanner";
 import { Footer } from "@/components/Footer";
-import { MarketSection } from "@/components/sections/MarketSection";
-import { CalculatorSection } from "@/components/sections/CalculatorSection";
-import { ScorecardSection } from "@/components/sections/ScorecardSection";
-import { ForumSection } from "@/components/sections/ForumSection";
-import { GamesSection } from "@/components/sections/GamesSection";
-import { NewsSection } from "@/components/sections/NewsSection";
-import { AboutSection } from "@/components/sections/AboutSection";
-import { PortfolioSection } from "@/components/sections/PortfolioSection";
-import { WatchlistSection } from "@/components/sections/WatchlistSection";
 import { OnlineUsers } from "@/components/OnlineUsers";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AuthPanel } from "@/components/AuthPanel";
-import { HomeHero } from "@/components/HomeHero";
+import { HomeHero, HomeMarketSummary } from "@/components/HomeHero";
+import { ParamNeOlurdu } from "@/components/ParamNeOlurdu";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
 import { HomeTickerRail } from "@/components/HomeTickerRail";
 
+// Dynamic Import (Lazy Loading) - CPU Optimizasyonu İçin
+const LoadingBox = () => (
+  <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
+    <Skeleton className="h-6 w-1/3" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-40 w-full" />
+  </div>
+);
+
+const MarketSection = dynamic(() => import("@/components/sections/MarketSection").then(m => m.MarketSection), { loading: LoadingBox });
+const CalculatorSection = dynamic(() => import("@/components/sections/CalculatorSection").then(m => m.CalculatorSection), { loading: LoadingBox });
+const ScorecardSection = dynamic(() => import("@/components/sections/ScorecardSection").then(m => m.ScorecardSection), { loading: LoadingBox });
+const ForumSection = dynamic(() => import("@/components/sections/ForumSection").then(m => m.ForumSection), { loading: LoadingBox });
+const GamesSection = dynamic(() => import("@/components/sections/GamesSection").then(m => m.GamesSection), { loading: LoadingBox });
+const NewsSection = dynamic(() => import("@/components/sections/NewsSection").then(m => m.NewsSection), { loading: LoadingBox });
+const AboutSection = dynamic(() => import("@/components/sections/AboutSection").then(m => m.AboutSection), { loading: LoadingBox });
+const PortfolioSection = dynamic(() => import("@/components/sections/PortfolioSection").then(m => m.PortfolioSection), { loading: LoadingBox });
+const WatchlistSection = dynamic(() => import("@/components/sections/WatchlistSection").then(m => m.WatchlistSection), { loading: LoadingBox });
+
 type TabId = "piyasa" | "hesaplayici" | "karne" | "portfoy" | "izleme" | "forum" | "oyunlar" | "haberler" | "hakkinda";
 
 const tabs: Array<{ id: TabId; label: string; icon: typeof LineChart }> = [
   { id: "piyasa", label: "Piyasa", icon: LineChart },
+  { id: "karne", label: "Hisseler", icon: ClipboardList },
+  { id: "hesaplayici", label: "Hesapla", icon: Calculator },
+  { id: "portfoy", label: "Portföy", icon: BriefcaseBusiness },
   { id: "haberler", label: "Haberler", icon: Newspaper },
-  { id: "hesaplayici", label: "Hesaplayıcı", icon: Calculator },
-  { id: "karne", label: "Hisse Karnesi", icon: ClipboardList },
-  { id: "portfoy", label: "Portföyüm", icon: BriefcaseBusiness },
   { id: "izleme", label: "İzleme Listem", icon: Star },
   { id: "forum", label: "Forum", icon: MessagesSquare },
   { id: "oyunlar", label: "Oyunlar", icon: Gamepad2 },
   { id: "hakkinda", label: "Hakkında", icon: Info },
 ];
 
+const primaryTabs = tabs.slice(0, 4);
+const exploreTabs = tabs.slice(4);
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabId>("piyasa");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [exploreOpen, setExploreOpen] = useState(false);
   const supabase = getSupabaseBrowserClient();
 
   function handleNavigate(tab: string) {
@@ -49,6 +64,7 @@ export default function HomePage() {
     if (match) {
       setActiveTab(match.id);
       setMobileOpen(false);
+      setExploreOpen(false);
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
@@ -58,67 +74,82 @@ export default function HomePage() {
       <SpkBanner />
 
       {/* Header */}
-      <header className="app-surface app-border sticky top-0 z-40 border-b backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex h-16 items-center gap-3">
-            <button
-              onClick={() => handleNavigate("piyasa")}
-              className="flex shrink-0 items-center gap-2"
-              aria-label="VeriAkış ana sayfa"
-            >
-              <Image src="/gemini-svg.svg" alt="VeriAkış Gemini sembolü" width={36} height={36} className="rounded-xl" priority />
-              <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-                VeriAkış
-              </span>
-            </button>
+      <header className="app-surface app-border sticky top-0 z-40 border-b">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
+          <button
+            onClick={() => handleNavigate("piyasa")}
+            className="flex shrink-0 items-center gap-2"
+            aria-label="VeriAkış ana sayfa"
+          >
+            <Image src="/gemini-svg.svg" alt="VeriAkış" width={32} height={32} className="rounded-lg" priority />
+            <span className="app-text text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
+              VeriAkış
+            </span>
+          </button>
 
-            <div className="mx-auto hidden max-w-md flex-1 md:block">
-              <SearchBar onNavigateTab={handleNavigate} />
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <OnlineUsers supabase={supabase} />
-              <AuthPanel />
-              <ThemeToggle />
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Ana menü">
+            {primaryTabs.map((tab) => (
               <button
-                onClick={() => setMobileOpen((v) => !v)}
-                className="app-border app-text rounded-lg border p-2 md:hidden"
-                aria-label="Menüyü aç/kapat"
+                key={tab.id}
+                onClick={() => handleNavigate(tab.id)}
+                aria-current={tab.id === activeTab ? "page" : undefined}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition ${tab.id === activeTab ? "bg-[var(--color-primary-dark)] text-white" : "app-text-secondary hover:app-surface-3"}`}
               >
-                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {tab.label}
               </button>
+            ))}
+            <div className="relative">
+              <button
+                onClick={() => setExploreOpen((value) => !value)}
+                aria-expanded={exploreOpen}
+                aria-haspopup="menu"
+                className={`inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition ${exploreTabs.some((tab) => tab.id === activeTab) ? "bg-[var(--color-primary-dark)] text-white" : "app-text-secondary hover:app-surface-3"}`}
+              >
+                Keşfet <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {exploreOpen ? (
+                <>
+                  <button type="button" aria-label="Menüyü kapat" className="fixed inset-0 z-40 cursor-default" onClick={() => setExploreOpen(false)} />
+                  <div role="menu" className="app-surface app-border absolute left-0 top-full z-50 mt-1 w-52 rounded-xl border p-1.5 shadow-lg">
+                    {exploreTabs.map((tab) => {
+                      const Icon = tab.icon;
+                      return (
+                        <button key={tab.id} role="menuitem" onClick={() => handleNavigate(tab.id)} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${tab.id === activeTab ? "app-surface-3 app-text font-semibold" : "app-text-secondary hover:app-surface-3"}`}>
+                          <Icon className="h-4 w-4" aria-hidden="true" /> {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
             </div>
-          </div>
+          </nav>
 
-          {/* Mobil arama */}
-          <div className="pb-3 md:hidden">
+          <div className="ml-auto hidden w-64 md:block xl:w-80">
             <SearchBar onNavigateTab={handleNavigate} />
           </div>
 
-          {/* Sekmeler - masaüstü */}
-          <nav className="no-scrollbar hidden gap-1 overflow-x-auto pb-2 md:flex">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.id === activeTab;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleNavigate(tab.id)}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                    active ? "bg-[var(--color-primary)] text-white" : "app-text-secondary hover:app-surface-2"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" /> {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+          <div className="ml-auto flex items-center gap-2 md:ml-0">
+            <div className="hidden xl:block"><OnlineUsers supabase={supabase} /></div>
+            <AuthPanel />
+            <ThemeToggle />
+            <button
+              onClick={() => setMobileOpen((v) => !v)}
+              className="app-border app-text inline-flex h-10 w-10 items-center justify-center rounded-lg border lg:hidden"
+              aria-label="Menüyü aç/kapat"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
 
-        {/* Sekmeler - mobil açılır */}
         {mobileOpen ? (
-          <nav className="app-surface app-border border-t px-4 py-2 md:hidden">
-            <div className="grid grid-cols-2 gap-1">
+          <nav className="app-surface app-border max-h-[calc(100vh-3.5rem)] overflow-y-auto border-t px-4 py-3 lg:hidden" aria-label="Mobil menü">
+            <div className="mb-3 md:hidden">
+              <SearchBar onNavigateTab={handleNavigate} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = tab.id === activeTab;
@@ -126,11 +157,12 @@ export default function HomePage() {
                   <button
                     key={tab.id}
                     onClick={() => handleNavigate(tab.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      active ? "bg-[var(--color-primary)] text-white" : "app-text-secondary hover:app-surface-2"
+                    aria-current={active ? "page" : undefined}
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium transition ${
+                      active ? "bg-[var(--color-primary-dark)] text-white" : "app-surface-2 app-text-secondary"
                     }`}
                   >
-                    <Icon className="h-4 w-4" /> {tab.label}
+                    <Icon className="h-4 w-4" aria-hidden="true" /> {tab.label}
                   </button>
                 );
               })}
@@ -140,14 +172,26 @@ export default function HomePage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        {activeTab === "piyasa" ? <div className="space-y-6">
-          <HomeHero />
-          <MarketSection />
-          <HomeTickerRail />
-          <HomePersonalPanel />
-          <HomeDailyFlow />
-          <HomeTools onNavigate={handleNavigate} />
-        </div> : null}
+        {activeTab === "piyasa" ? (
+          <div className="space-y-6">
+            <HomeHero />
+            <ParamNeOlurdu />
+            <HomeMarketSummary />
+            <div id="hisseler" className="scroll-mt-24"><MarketSection /></div>
+            <HomeTickerRail />
+            <HomePersonalPanel />
+            <HomeDailyFlow />
+            <HomeTools onNavigate={handleNavigate} />
+            <section className="rounded-2xl bg-[var(--color-primary-dark)] px-5 py-8 text-center text-white sm:py-10">
+              <h2 className="text-2xl font-bold">Yatırım yapmadan önce araştır.</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">Geçmiş yatırımını hesapla, hisseleri karşılaştır ve portföyünü tek yerden takip et.</p>
+              <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+                <a href="#param-ne-olurdu" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-[var(--color-primary-dark)]">Geçmiş yatırımını hesapla</a>
+                <button type="button" onClick={() => handleNavigate("portfoy")} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/40 px-5 text-sm font-semibold text-white">Portföyünü oluştur</button>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         <div className="space-y-6">
           {activeTab === "hesaplayici" ? <CalculatorSection /> : null}

@@ -12,7 +12,7 @@ type Holding = { symbol: string; quantity: number; price: number | null };
 type Portfolio = { id: string; display_name: string; status: "ACTIVE" | "REMOVED"; cash_balance: number; current_value: number; total_return_pct: number; started_at: string; holdings: Holding[] };
 type LeaderboardRow = { display_name: string; current_value: number; total_return_pct: number; started_at: string };
 type Participant = { id: string; display_name: string; username: string | null; status: "ACTIVE" | "REMOVED"; current_value: number; total_return_pct: number; started_at: string };
-type RaceData = { period: string; leaderboard: LeaderboardRow[]; portfolio: Portfolio | null; isAdmin: boolean; signedIn: boolean; participants?: Participant[]; updatedAt: string };
+type RaceData = { period: string; leaderboard: LeaderboardRow[]; portfolio: Portfolio | null; isAdmin: boolean; signedIn: boolean; canJoin?: boolean; participants?: Participant[]; updatedAt: string };
 type DraftItem = { symbol: string; amount: string };
 type Period = "weekly" | "monthly" | "all";
 type CategoryFilter = "all" | Exclude<MarketCategory, "endeks">;
@@ -126,6 +126,7 @@ export function VirtualPortfolioRace() {
   const [displayName, setDisplayName] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [joiningNew, setJoiningNew] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [mode, setMode] = useState<"ADD" | "REMOVE">("ADD");
   const [adjSymbol, setAdjSymbol] = useState<string | null>(null);
@@ -183,6 +184,7 @@ export function VirtualPortfolioRace() {
     if (result.ok) {
       updateDraft([]);
       setConsent(false);
+      setJoiningNew(false);
       setNotice({ kind: "ok", text: "Yarışa katıldınız. Başarılar!" });
       await mutate();
     } else setNotice({ kind: "error", text: result.error ?? "Yarışa katılınamadı." });
@@ -238,7 +240,7 @@ export function VirtualPortfolioRace() {
       <div className="mb-4 flex items-start gap-3">
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white"><BarChart3 className="h-5 w-5" /></span>
         <div>
-          <p className="app-muted text-xs font-semibold uppercase tracking-wide">Canlı fiyatlı yarış · her yarışmacı bir kez katılır</p>
+          <p className="app-muted text-xs font-semibold uppercase tracking-wide">Canlı fiyatlı yarış · günde bir katılım hakkı</p>
           <h2 id="race-title" className="app-text text-2xl font-bold">100.000 TL Sanal Portföy Yarışı</h2>
           <p className="app-text-secondary mt-1 text-sm">Almak istediklerini seç, tutarlarını düzenle ve yarışa başla. Sıralama canlı fiyatlarla sürekli güncellenir.</p>
         </div>
@@ -248,10 +250,10 @@ export function VirtualPortfolioRace() {
       {noticeBox}
 
       {removed ? (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border border-[var(--color-bear)]/40 bg-[var(--color-bear)]/10 p-4 text-sm text-bear"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" /><p>Yarıştan çıkarıldınız. Her yarışmacının yalnızca bir katılım hakkı olduğundan yeniden katılamazsınız.</p></div>
+        <div className="mb-4 flex items-start gap-3 rounded-xl border border-[var(--color-bear)]/40 bg-[var(--color-bear)]/10 p-4 text-sm text-bear"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" /><p>Yarıştan çıkarıldınız; yeniden katılamazsınız.</p></div>
       ) : null}
 
-      {!portfolio ? (
+      {!portfolio || joiningNew ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="app-surface-2 app-border rounded-xl border p-4">
             <AssetPicker title="1. Varlık seç" priceOf={priceOf} chosen={draftSymbols} onPick={addToDraft} />
@@ -276,7 +278,7 @@ export function VirtualPortfolioRace() {
             ) : <p className="app-muted rounded-lg border border-dashed py-8 text-center text-sm">Henüz varlık seçmedin. Soldaki listeden ekle.</p>}
             <div className="mt-4 space-y-2 border-t border-[var(--border)] pt-3">
               <label className="app-text-secondary block text-xs">Oyuncu adı<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={30} placeholder="Takma adın (boşsa kullanıcı adın)" className="app-surface app-border app-text mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none" /></label>
-              <label className="app-text-secondary flex items-start gap-2 text-xs"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" /><span>Her yarışmacının yalnızca bir kez katılabildiğini ve seçimlerimin güncel fiyatlarla alınacağını anlıyorum.</span></label>
+              <label className="app-text-secondary flex items-start gap-2 text-xs"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5" /><span>Her gün en fazla bir kez katılabildiğimi (yöneticiler hariç) ve seçimlerimin güncel fiyatlarla alınacağını anlıyorum.</span></label>
               {data && !data.signedIn ? <p className="text-xs text-gold">Yarışa katılmak için üye girişi yapmalısın. Seçimlerin bu cihazda saklanır.</p> : null}
               <button type="button" disabled={busy || draftInvalid || !consent || removed || Boolean(data && !data.signedIn)} onClick={() => void joinRace()} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--color-primary)] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"><Play className="h-4 w-4" /> Yarışa Başla</button>
             </div>
@@ -286,6 +288,7 @@ export function VirtualPortfolioRace() {
 
       {active ? (
         <>
+          {data?.canJoin ? <div className="mb-4"><button type="button" onClick={() => setJoiningNew((value) => !value)} className="app-border app-text rounded-lg border px-3 py-2 text-xs font-semibold">{joiningNew ? "Yeni katılımı kapat" : data.isAdmin ? "Yeni katılım ekle (yönetici, sınırsız)" : "Bugün için yeni katılım yap"}</button></div> : null}
           <div className="mb-4 grid gap-3 sm:grid-cols-3">
             <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Canlı portföy · {portfolio?.display_name}</p><p className="app-text text-xl font-bold">{money(live.value)}</p></div>
             <div className="app-surface-2 app-border rounded-xl border p-3"><p className="app-muted text-xs">Getiri</p><p className={`text-xl font-bold ${live.pct >= 0 ? "text-bull" : "text-bear"}`}>{signedPct(live.pct)}</p></div>
