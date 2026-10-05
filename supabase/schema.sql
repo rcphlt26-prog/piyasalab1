@@ -481,6 +481,11 @@ create table if not exists public.game_portfolios (
   updated_at timestamptz not null default now()
 );
 
+alter table public.game_portfolios add column if not exists status text not null default 'ACTIVE';
+alter table public.game_portfolios add column if not exists removed_at timestamptz;
+alter table public.game_portfolios drop constraint if exists game_portfolios_status_check;
+alter table public.game_portfolios add constraint game_portfolios_status_check check (status in ('ACTIVE', 'REMOVED'));
+
 create table if not exists public.game_orders (
   id uuid primary key default gen_random_uuid(),
   portfolio_id uuid not null references public.game_portfolios(id) on delete cascade,
@@ -495,9 +500,13 @@ create index if not exists game_orders_portfolio_created_idx on public.game_orde
 alter table public.game_portfolios enable row level security;
 alter table public.game_orders enable row level security;
 drop policy if exists game_portfolios_owner on public.game_portfolios;
-create policy game_portfolios_owner on public.game_portfolios for all to authenticated using (user_id = public.current_app_user_id()) with check (user_id = public.current_app_user_id());
+create policy game_portfolios_owner on public.game_portfolios for all to authenticated using (user_id = public.current_app_user_id() and status = 'ACTIVE') with check (user_id = public.current_app_user_id() and status = 'ACTIVE');
+drop policy if exists game_portfolios_owner_select on public.game_portfolios;
+create policy game_portfolios_owner_select on public.game_portfolios for select to authenticated using (user_id = public.current_app_user_id());
 drop policy if exists game_portfolios_leaderboard on public.game_portfolios;
-create policy game_portfolios_leaderboard on public.game_portfolios for select to anon, authenticated using (true);
+create policy game_portfolios_leaderboard on public.game_portfolios for select to anon, authenticated using (status = 'ACTIVE');
+drop policy if exists game_portfolios_admin on public.game_portfolios;
+create policy game_portfolios_admin on public.game_portfolios for all to authenticated using (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN')) with check (exists (select 1 from public.app_users where supabase_user_id = auth.uid() and role = 'ADMIN'));
 drop policy if exists game_orders_owner on public.game_orders;
 create policy game_orders_owner on public.game_orders for all to authenticated using (exists (select 1 from public.game_portfolios p where p.id = portfolio_id and p.user_id = public.current_app_user_id())) with check (exists (select 1 from public.game_portfolios p where p.id = portfolio_id and p.user_id = public.current_app_user_id()));
 

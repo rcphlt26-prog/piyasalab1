@@ -11,7 +11,7 @@ import { calculateReturn } from "@/lib/finance";
 import { duelPeriods, regretScenarios, dailyTips } from "@/data/gamesData";
 import { popularStocks } from "@/data/scorecardData";
 import { bist100Series, gramGoldSeries, usdTrySeries } from "@/data/historicalData";
-import { VirtualPortfolioGame } from "@/components/VirtualPortfolioGame";
+import { VirtualPortfolioRace } from "@/components/VirtualPortfolioRace";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false });
 const AllocationChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.AllocationChart), { ssr: false });
@@ -203,7 +203,7 @@ export function GamesSection() {
         description="Tamamı tarayıcı içinde çalışan, paylaşılabilir eğlenceli finans deneyimleri. Sonuçlar temsilidir, yatırım tavsiyesi değildir."
       />
 
-      <VirtualPortfolioGame />
+      <VirtualPortfolioRace />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Bugünün Piyasa Özeti */}

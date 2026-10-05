@@ -1,104 +1,272 @@
 import { NextResponse } from "next/server";
-import YahooFinance from "yahoo-finance2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { marketSymbolByCode } from "@/data/marketSymbols";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getTryPrices } from "@/lib/gamePricing";
+import { GAME_MAX_ASSETS, GAME_START_CASH, floorQuantity, holdingsFromOrders, isGameAsset } from "@/lib/gameMath";
+import { containsProfanity } from "@/lib/contentModeration";
 
-const INITIAL_CASH = 100000;
-const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+export const runtime = "nodejs";
+export const maxDuration = 30;
 
-type Order = { symbol: string; side: "BUY" | "SELL"; quantity: number; execution_price: number };
+type Order = { symbol: string; side: "BUY" | "SELL"; quantity: number | string; execution_price: number | string; created_at?: string };
+type Row = {
+  id: string;
+  display_name: string;
+  cash_balance: number | string;
+  current_value: number | string;
+  total_return_pct: number | string;
+  started_at: string;
+  status: "ACTIVE" | "REMOVED";
+  game_orders?: Order[] | null;
+};
+
+const ORDER_COLUMNS = "symbol, side, quantity, execution_price";
+const MIGRATION_HINT = "Oyun veritabanı güncellemesi gerekli: supabase/migrations/20261005_game_participant_status.sql dosyasını SQL Editor'de çalıştırın.";
+const PERIOD_DAYS = { weekly: 7, monthly: 31 } as const;
+let lastPersistAt = 0;
 
 async function context() {
   const supabase = await getSupabaseServerClient();
-  if (!supabase) return { supabase: null, userId: null };
+  if (!supabase) return { supabase: null, userId: null, username: null, isAdmin: false };
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { supabase, userId: null };
-  const { data: appUser } = await supabase.from("app_users").select("id").eq("supabase_user_id", auth.user.id).single();
-  return { supabase, userId: appUser?.id ?? null };
+  if (!auth.user) return { supabase, userId: null, username: null, isAdmin: false };
+  const { data: appUser } = await supabase.from("app_users").select("id, role, username").eq("supabase_user_id", auth.user.id).maybeSingle();
+  return { supabase, userId: appUser?.id ?? null, username: (appUser?.username as string | null) ?? null, isAdmin: appUser?.role === "ADMIN" };
 }
 
-async function prices(symbols: string[]) {
-  const yahooSymbols = symbols.map((symbol) => marketSymbolByCode.get(symbol)?.yahooSymbol).filter(Boolean) as string[];
-  if (!yahooSymbols.length) return new Map<string, number>();
-  const result = await yahoo.quote([...new Set(yahooSymbols)]);
-  const rows = Array.isArray(result) ? result : [result];
-  const byYahoo = new Map(rows.map((row) => [row.symbol, Number(row.regularMarketPrice ?? 0)]));
-  return new Map(symbols.map((symbol) => [symbol, byYahoo.get(marketSymbolByCode.get(symbol)?.yahooSymbol ?? "") ?? 0]));
+/** Eksik fiyat durumunda varlık, son işlem fiyatıyla değerlenir; böylece geçici veri kesintisi puanı sıfırlamaz. */
+function valuePortfolio(cash: number, orders: Order[], prices: Map<string, number>) {
+  const holdings = holdingsFromOrders(orders);
+  const lastPrice = new Map<string, number>();
+  for (const order of orders) lastPrice.set(order.symbol, Number(order.execution_price));
+  let value = cash;
+  for (const [symbol, quantity] of holdings) value += quantity * (prices.get(symbol) ?? lastPrice.get(symbol) ?? 0);
+  return { holdings, value, returnPct: (value / GAME_START_CASH - 1) * 100 };
 }
 
-function holdings(orders: Order[]) {
-  const map = new Map<string, number>();
-  for (const order of orders) {
-    const next = (map.get(order.symbol) ?? 0) + (order.side === "BUY" ? order.quantity : -order.quantity);
-    map.set(order.symbol, next);
+async function persistValues(admin: SupabaseClient, rows: Array<{ id: string; value: number; pct: number }>) {
+  const now = Date.now();
+  if (!rows.length || now - lastPersistAt < 300_000) return;
+  lastPersistAt = now;
+  for (let index = 0; index < rows.length; index += 25) {
+    await Promise.all(rows.slice(index, index + 25).map((row) =>
+      admin.from("game_portfolios").update({ current_value: row.value, total_return_pct: row.pct, updated_at: new Date().toISOString() }).eq("id", row.id)));
   }
-  return map;
 }
 
-async function refreshValue(supabase: NonNullable<Awaited<ReturnType<typeof getSupabaseServerClient>>>, portfolioId: string, cashBalance: number, orders: Order[]) {
-  const positions = holdings(orders);
-  const priceMap = await prices(Array.from(positions.keys()));
-  const currentValue = cashBalance + Array.from(positions.entries()).reduce((sum, [symbol, quantity]) => sum + Math.max(0, quantity) * (priceMap.get(symbol) ?? 0), 0);
-  const totalReturnPct = ((currentValue / INITIAL_CASH) - 1) * 100;
-  await supabase.from("game_portfolios").update({ current_value: currentValue, total_return_pct: totalReturnPct, updated_at: new Date().toISOString() }).eq("id", portfolioId);
-  return { currentValue, totalReturnPct, positions, priceMap };
+const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
+
+const isMissingColumn = (error: { code?: string; message?: string } | null) => error?.code === "42703" || /status|removed_at/.test(error?.message ?? "");
+
+async function pricesForSymbols(orders: Order[]) {
+  const symbols = Array.from(new Set(orders.map((order) => order.symbol)));
+  if (!symbols.length) return new Map<string, number>();
+  return getTryPrices(symbols).catch(() => new Map<string, number>());
 }
 
 export async function GET(request: Request) {
-  const period = new URL(request.url).searchParams.get("period") === "monthly" ? "monthly" : "weekly";
-  const { supabase, userId } = await context();
-  if (!supabase) return NextResponse.json({ error: "Supabase yapılandırılmamış." }, { status: 503 });
+  const requested = new URL(request.url).searchParams.get("period");
+  const period = requested === "monthly" ? "monthly" : requested === "all" ? "all" : "weekly";
+  const { supabase, userId, isAdmin } = await context();
+  if (!supabase) return fail("Supabase yapılandırılmamış.", 503);
 
-  const since = new Date();
-  since.setDate(since.getDate() - (period === "monthly" ? 31 : 7));
-  const { data: leaderboard, error } = await supabase.from("game_portfolios").select("display_name, current_value, total_return_pct, updated_at").gte("updated_at", since.toISOString()).order("total_return_pct", { ascending: false }).limit(20);
-  if (error) return NextResponse.json({ error: "Leaderboard alınamadı." }, { status: 500 });
+  // Servis anahtarı varsa tüm emirlerle canlı değerleme yapılır; yoksa kayıtlı değerler kullanılır.
+  const admin = getSupabaseAdminClient();
+  const reader = admin ?? supabase;
+  const select = `id, display_name, cash_balance, current_value, total_return_pct, started_at, status${admin ? `, game_orders(${ORDER_COLUMNS})` : ""}${isAdmin ? ", app_users(username)" : ""}`;
+  const { data, error } = await reader.from("game_portfolios").select(select).order("started_at", { ascending: false }).limit(200);
+  if (error) return fail(isMissingColumn(error) ? MIGRATION_HINT : "Yarışma verisi alınamadı.", 500);
+  const rows = (data ?? []) as unknown as Array<Row & { app_users?: { username?: string | null } | null }>;
+
+  const prices = admin ? await pricesForSymbols(rows.flatMap((row) => row.game_orders ?? [])) : new Map<string, number>();
+  const scored = rows.map((row) => {
+    if (!admin) return { row, value: Number(row.current_value), pct: Number(row.total_return_pct) };
+    const valued = valuePortfolio(Number(row.cash_balance), row.game_orders ?? [], prices);
+    return { row, value: valued.value, pct: valued.returnPct };
+  });
+
+  const since = period === "all" ? null : new Date(Date.now() - PERIOD_DAYS[period] * 86_400_000);
+  const leaderboard = scored
+    .filter(({ row }) => row.status === "ACTIVE" && (!since || new Date(row.started_at) >= since))
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 20)
+    .map(({ row, value, pct }) => ({ display_name: row.display_name, current_value: value, total_return_pct: pct, started_at: row.started_at }));
+  if (admin) await persistValues(admin, scored.filter(({ row }) => row.status === "ACTIVE").map(({ row, value, pct }) => ({ id: row.id, value, pct })));
 
   let portfolio = null;
   if (userId) {
-    const { data } = await supabase.from("game_portfolios").select("id, display_name, initial_cash, cash_balance, current_value, total_return_pct, started_at, updated_at, game_orders(symbol, side, quantity, execution_price, created_at)").eq("user_id", userId).maybeSingle();
-    portfolio = data;
+    const own = await supabase.from("game_portfolios").select(`id, display_name, cash_balance, current_value, total_return_pct, started_at, status, game_orders(${ORDER_COLUMNS}, created_at)`).eq("user_id", userId).maybeSingle();
+    if (own.error && !isMissingColumn(own.error)) return fail("Portföy alınamadı.", 500);
+    const row = own.data as unknown as Row | null;
+    if (row) {
+      const orders = row.game_orders ?? [];
+      const ownPrices = await pricesForSymbols(orders);
+      const valued = valuePortfolio(Number(row.cash_balance), orders, ownPrices);
+      portfolio = {
+        id: row.id,
+        display_name: row.display_name,
+        status: row.status,
+        cash_balance: Number(row.cash_balance),
+        current_value: valued.value,
+        total_return_pct: valued.returnPct,
+        started_at: row.started_at,
+        holdings: Array.from(valued.holdings, ([symbol, quantity]) => ({ symbol, quantity, price: ownPrices.get(symbol) ?? null })),
+      };
+    }
   }
-  return NextResponse.json({ period, leaderboard: leaderboard ?? [], portfolio });
+
+  const participants = isAdmin
+    ? scored.map(({ row, value, pct }) => ({ id: row.id, display_name: row.display_name, username: row.app_users?.username ?? null, status: row.status, current_value: value, total_return_pct: pct, started_at: row.started_at }))
+    : undefined;
+  return NextResponse.json({ period, leaderboard, portfolio, isAdmin, signedIn: Boolean(userId), participants, updatedAt: new Date().toISOString() });
+}
+
+export async function DELETE(request: Request) {
+  const { supabase, isAdmin } = await context();
+  if (!supabase) return fail("Supabase yapılandırılmamış.", 503);
+  if (!isAdmin) return fail("Bu işlem için yönetici yetkisi gerekir.", 403);
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Geçerli yarışmacı kimliği gerekli.", 400);
+
+  // Satır silinmez, REMOVED işaretlenir: böylece çıkarılan kişi yeniden katılamaz.
+  const database = getSupabaseAdminClient() ?? supabase;
+  const { data, error } = await database.from("game_portfolios").update({ status: "REMOVED", removed_at: new Date().toISOString() }).eq("id", id).select("id").maybeSingle();
+  if (error) return fail(isMissingColumn(error) ? MIGRATION_HINT : "Yarışmacı çıkarılamadı.", 500);
+  if (!data) return fail("Yarışmacı bulunamadı.", 404);
+  return NextResponse.json({ ok: true });
+}
+
+type JoinItem = { symbol?: unknown; amountTry?: unknown };
+type PostBody = { action?: string; displayName?: unknown; items?: unknown; symbol?: unknown; mode?: unknown; amountTry?: unknown; all?: unknown };
+
+const cleanSymbol = (value: unknown) => (typeof value === "string" ? value.trim().toUpperCase() : "");
+const cleanAmount = (value: unknown) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : NaN;
+};
+
+async function ownPortfolio(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase.from("game_portfolios").select("id, display_name, cash_balance, status").eq("user_id", userId).maybeSingle();
+  return { portfolio: data as { id: string; display_name: string; cash_balance: number | string; status: "ACTIVE" | "REMOVED" } | null, error };
+}
+
+async function joinRace(supabase: SupabaseClient, userId: string, username: string | null, body: PostBody) {
+  const existing = await ownPortfolio(supabase, userId);
+  if (existing.error) return fail(isMissingColumn(existing.error) ? MIGRATION_HINT : "Katılım durumu kontrol edilemedi.", 500);
+  if (existing.portfolio?.status === "REMOVED") return fail("Yarışmadan çıkarıldınız; yeniden katılamazsınız.", 403);
+  if (existing.portfolio) return fail("Her yarışmacı yalnızca bir kez yarışa katılabilir; zaten yarıştasınız.", 409);
+
+  const displayName = (typeof body.displayName === "string" ? body.displayName.trim() : "") || username || "";
+  if (displayName.length < 2 || displayName.length > 30) return fail("Oyuncu adı 2-30 karakter olmalıdır.", 400);
+  if (containsProfanity(displayName)) return fail("Oyuncu adı uygun değil.", 400);
+
+  if (!Array.isArray(body.items) || body.items.length === 0) return fail("Yarışa başlamak için en az bir varlık seçin.", 400);
+  const wanted = new Map<string, number>();
+  for (const item of body.items as JoinItem[]) {
+    const symbol = cleanSymbol(item.symbol);
+    const amount = cleanAmount(item.amountTry);
+    if (!isGameAsset(symbol) || !(amount >= 100)) return fail("Seçimlerde geçersiz varlık veya tutar var (en az 100 TL).", 400);
+    wanted.set(symbol, (wanted.get(symbol) ?? 0) + amount);
+  }
+  if (wanted.size > GAME_MAX_ASSETS) return fail(`En fazla ${GAME_MAX_ASSETS} farklı varlık seçebilirsiniz.`, 400);
+  const total = Array.from(wanted.values()).reduce((sum, amount) => sum + amount, 0);
+  if (total > GAME_START_CASH + 1e-6) return fail("Seçimler 100.000 TL sanal bütçeyi aşıyor.", 400);
+
+  const prices = await getTryPrices(Array.from(wanted.keys())).catch(() => new Map<string, number>());
+  const orders: Array<{ symbol: string; side: "BUY"; quantity: number; execution_price: number }> = [];
+  for (const [symbol, amount] of wanted) {
+    const price = prices.get(symbol);
+    if (!price) return fail(`${symbol} için canlı fiyat alınamadı; seçimi kaldırıp tekrar deneyin.`, 503);
+    const quantity = floorQuantity(amount / price);
+    if (quantity <= 0) return fail(`${symbol} için tutar çok düşük.`, 400);
+    orders.push({ symbol, side: "BUY", quantity, execution_price: price });
+  }
+  const spent = orders.reduce((sum, order) => sum + order.quantity * order.execution_price, 0);
+  const cash = Math.max(0, GAME_START_CASH - spent);
+
+  const { data: created, error: createError } = await supabase
+    .from("game_portfolios")
+    .insert({ user_id: userId, display_name: displayName, cash_balance: cash, current_value: GAME_START_CASH, total_return_pct: 0 })
+    .select("id")
+    .single();
+  if (createError || !created) return fail(createError?.code === "23505" ? "Her yarışmacı yalnızca bir kez yarışa katılabilir." : "Yarışa katılım kaydedilemedi.", createError?.code === "23505" ? 409 : 500);
+
+  const { error: orderError } = await supabase.from("game_orders").insert(orders.map((order) => ({ ...order, portfolio_id: created.id })));
+  if (orderError) {
+    await supabase.from("game_portfolios").delete().eq("id", created.id);
+    return fail("Seçimler kaydedilemedi; katılım geri alındı, tekrar deneyin.", 500);
+  }
+  return NextResponse.json({ ok: true, cashBalance: cash }, { status: 201 });
+}
+
+async function adjustPosition(supabase: SupabaseClient, userId: string, body: PostBody) {
+  const { portfolio, error: portfolioError } = await ownPortfolio(supabase, userId);
+  if (portfolioError) return fail(isMissingColumn(portfolioError) ? MIGRATION_HINT : "Portföy alınamadı.", 500);
+  if (!portfolio) return fail("Önce yarışa katılın.", 400);
+  if (portfolio.status !== "ACTIVE") return fail("Yarışmadan çıkarıldığınız için işlem yapamazsınız.", 403);
+
+  const symbol = cleanSymbol(body.symbol);
+  const mode = body.mode === "REMOVE" ? "REMOVE" : body.mode === "ADD" ? "ADD" : null;
+  const amount = cleanAmount(body.amountTry);
+  const removeAll = body.all === true;
+  if (!isGameAsset(symbol) || !mode) return fail("Geçerli varlık ve işlem seçin.", 400);
+  if (!removeAll && !(amount > 0)) return fail("Geçerli bir tutar girin.", 400);
+
+  const price = (await getTryPrices([symbol]).catch(() => new Map<string, number>())).get(symbol);
+  if (!price) return fail("Bu varlık için canlı fiyat alınamadı.", 503);
+
+  const { data: orderRows, error: ordersError } = await supabase.from("game_orders").select(ORDER_COLUMNS).eq("portfolio_id", portfolio.id);
+  if (ordersError) return fail("Portföy emirleri alınamadı.", 500);
+  const orders = (orderRows ?? []) as Order[];
+  const holdings = holdingsFromOrders(orders);
+  const held = holdings.get(symbol) ?? 0;
+  const cash = Number(portfolio.cash_balance);
+
+  let quantity: number;
+  if (mode === "ADD") {
+    if (amount > cash + 1e-6) return fail(`Yeterli nakit yok (kalan ${cash.toFixed(2)} TL).`, 400);
+    if (!held && holdings.size >= GAME_MAX_ASSETS) return fail(`En fazla ${GAME_MAX_ASSETS} farklı varlık tutabilirsiniz.`, 400);
+    quantity = floorQuantity(Math.min(amount, cash) / price);
+  } else {
+    if (!held) return fail("Bu varlık portföyünüzde yok.", 400);
+    quantity = removeAll || amount >= held * price * 0.999 ? held : Math.min(held, floorQuantity(amount / price));
+  }
+  if (!(quantity > 0)) return fail("Tutar çok düşük.", 400);
+
+  const value = quantity * price;
+  const nextCash = mode === "ADD" ? Math.max(0, cash - value) : cash + value;
+
+  // Nakit bakiyesi eski değerle eşleşirse güncellenir; eş zamanlı iki işlemin aynı bakiyeyi harcamasını engeller.
+  const { data: locked, error: lockError } = await supabase.from("game_portfolios").update({ cash_balance: nextCash }).eq("id", portfolio.id).eq("cash_balance", portfolio.cash_balance).select("id").maybeSingle();
+  if (lockError) return fail("İşlem kaydedilemedi.", 500);
+  if (!locked) return fail("Aynı anda başka bir işlem yapıldı; lütfen tekrar deneyin.", 409);
+
+  const order = { portfolio_id: portfolio.id, symbol, side: mode === "ADD" ? "BUY" : "SELL", quantity, execution_price: price };
+  const { error: orderError } = await supabase.from("game_orders").insert(order);
+  if (orderError) {
+    await supabase.from("game_portfolios").update({ cash_balance: cash }).eq("id", portfolio.id).eq("cash_balance", nextCash);
+    return fail("İşlem kaydedilemedi.", 500);
+  }
+
+  const allOrders: Order[] = [...orders, { symbol, side: order.side as "BUY" | "SELL", quantity, execution_price: price }];
+  const valued = valuePortfolio(nextCash, allOrders, await pricesForSymbols(allOrders));
+  await supabase.from("game_portfolios").update({ current_value: valued.value, total_return_pct: valued.returnPct, updated_at: new Date().toISOString() }).eq("id", portfolio.id);
+  return NextResponse.json({ ok: true, executionPrice: price, quantity, cashBalance: nextCash, currentValue: valued.value, totalReturnPct: valued.returnPct });
 }
 
 export async function POST(request: Request) {
-  const { supabase, userId } = await context();
-  if (!supabase) return NextResponse.json({ error: "Supabase yapılandırılmamış." }, { status: 503 });
-  if (!userId) return NextResponse.json({ error: "Oyuna katılmak için giriş yapın." }, { status: 401 });
-  const body = (await request.json()) as { action?: "start" | "trade"; displayName?: string; symbol?: string; side?: "BUY" | "SELL"; quantity?: number };
+  const { supabase, userId, username } = await context();
+  if (!supabase) return fail("Supabase yapılandırılmamış.", 503);
+  if (!userId) return fail("Yarışa katılmak için giriş yapın.", 401);
 
-  let { data: portfolio } = await supabase.from("game_portfolios").select("id, display_name, initial_cash, cash_balance, current_value, total_return_pct, started_at, updated_at").eq("user_id", userId).maybeSingle();
-  if (body.action === "start") {
-    if (!portfolio) {
-      const { data, error } = await supabase.from("game_portfolios").insert({ user_id: userId, display_name: body.displayName?.trim().slice(0, 30) || "Anonim Oyuncu" }).select("id, display_name, initial_cash, cash_balance, current_value, total_return_pct, started_at, updated_at").single();
-      if (error) return NextResponse.json({ error: "Sanal portföy oluşturulamadı." }, { status: 500 });
-      portfolio = data;
-    }
-    return NextResponse.json({ portfolio }, { status: 201 });
+  let body: PostBody;
+  try {
+    body = (await request.json()) as PostBody;
+  } catch {
+    return fail("Geçersiz istek.", 400);
   }
-  if (!portfolio || body.action !== "trade") return NextResponse.json({ error: "Önce sanal portföyü başlatın." }, { status: 400 });
-
-  const symbol = body.symbol?.trim().toUpperCase();
-  const side = body.side === "SELL" ? "SELL" : "BUY";
-  const quantity = Number(body.quantity);
-  const market = symbol ? marketSymbolByCode.get(symbol) : undefined;
-  if (!symbol || !market || !Number.isFinite(quantity) || quantity <= 0) return NextResponse.json({ error: "Geçerli sembol ve miktar girin." }, { status: 400 });
-  const priceMap = await prices([symbol]);
-  const executionPrice = priceMap.get(symbol) ?? 0;
-  if (!executionPrice) return NextResponse.json({ error: "Bu sembol için canlı fiyat alınamadı." }, { status: 503 });
-  const { data: existingOrders } = await supabase.from("game_orders").select("symbol, side, quantity, execution_price").eq("portfolio_id", portfolio.id);
-  const currentOrders = (existingOrders ?? []) as Order[];
-  const currentHolding = holdings(currentOrders).get(symbol) ?? 0;
-  if (side === "SELL" && quantity > currentHolding) return NextResponse.json({ error: "Bu miktarda pozisyonunuz yok." }, { status: 400 });
-  const total = executionPrice * quantity;
-  const nextCash = Number(portfolio.cash_balance) + (side === "BUY" ? -total : total);
-  if (nextCash < 0) return NextResponse.json({ error: "Yeterli sanal nakit yok." }, { status: 400 });
-
-  const { error: orderError } = await supabase.from("game_orders").insert({ portfolio_id: portfolio.id, symbol, side, quantity, execution_price: executionPrice });
-  if (orderError) return NextResponse.json({ error: "İşlem kaydedilemedi." }, { status: 500 });
-  const allOrders: Order[] = [...currentOrders, { symbol, side, quantity, execution_price: executionPrice }];
-  const refreshed = await refreshValue(supabase, portfolio.id, nextCash, allOrders);
-  await supabase.from("game_portfolios").update({ cash_balance: nextCash }).eq("id", portfolio.id);
-  return NextResponse.json({ ok: true, executionPrice, cashBalance: nextCash, currentValue: refreshed.currentValue, totalReturnPct: refreshed.totalReturnPct });
+  if (body.action === "join") return joinRace(supabase, userId, username, body);
+  if (body.action === "adjust") return adjustPosition(supabase, userId, body);
+  return fail("Geçersiz işlem.", 400);
 }
