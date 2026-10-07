@@ -110,11 +110,13 @@ export default function HomePage() {
   }
 
   return (
-    <main className="app-bg min-h-screen tabular-nums">
-      <SpkBanner />
+    <main className="app-bg min-h-screen tabular-nums relative">
+      <div className="relative z-10">
+        <SpkBanner />
+      </div>
 
-      {/* Header - Sabitlenme (sticky) kaldırıldı, artık sayfa ile kayacak */}
-      <header className="app-surface app-border border-b">
+      {/* Header - Sayfa akışına bağlandı, aşağı kaydırınca yukarı kayacak */}
+      <header className="app-surface app-border border-b relative z-10">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
           
           {/* Logo */}
