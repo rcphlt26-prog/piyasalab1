@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { guideArticles } from "@/data/guideArticles";
-import {
-  marketSymbols,
-  stockByTicker,
-} from "@/data/marketSymbols";
+import { marketSymbols, stockByTicker } from "@/data/marketSymbols";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
@@ -27,77 +24,23 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-function entry({
-  url,
-  lastModified,
-  changeFrequency = "weekly",
-  priority = 0.7,
-}: SitemapEntry) {
-  return `
-    <url>
-      <loc>${escapeXml(`${BASE_URL}${url}`)}</loc>
-      ${lastModified ? `<lastmod>${escapeXml(lastModified)}</lastmod>` : ""}
-      <changefreq>${changeFrequency}</changefreq>
-      <priority>${priority.toFixed(1)}</priority>
-    </url>`;
-}
-
 export async function GET() {
   const urls: SitemapEntry[] = [
-    {
-      url: "/",
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
-    {
-      url: "/rehber",
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: "/hesaplayicilar/bilesik-getiri",
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: "/hesaplayicilar/hisse-vs-altin",
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: "/hesaplayicilar/maliyet-ortalamasi",
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: "/hesaplayicilar/temettu-getirisi",
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: "/gizlilik-politikasi",
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: "/kullanim-kosullari",
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: "/sorumluluk-reddi",
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: "/iletisim",
-      changeFrequency: "yearly",
-      priority: 0.4,
-    },
+    { url: "", changeFrequency: "daily", priority: 1.0 },
+    { url: "/rehber", changeFrequency: "weekly", priority: 0.8 },
+    { url: "/hesaplayicilar/bilesik-getiri", changeFrequency: "monthly", priority: 0.7 },
+    { url: "/hesaplayicilar/hisse-vs-altin", changeFrequency: "monthly", priority: 0.7 },
+    { url: "/hesaplayicilar/maliyet-ortalamasi", changeFrequency: "monthly", priority: 0.7 },
+    { url: "/hesaplayicilar/temettu-getirisi", changeFrequency: "monthly", priority: 0.7 },
+    { url: "/gizlilik-politikasi", changeFrequency: "yearly", priority: 0.3 },
+    { url: "/kullanim-kosullari", changeFrequency: "yearly", priority: 0.3 },
+    { url: "/sorumluluk-reddi", changeFrequency: "yearly", priority: 0.3 },
+    { url: "/iletisim", changeFrequency: "yearly", priority: 0.4 },
   ];
 
-  // Rehber yazıları
+  // 1. Rehber yazıları
   for (const article of guideArticles) {
+    if (!article.slug) continue;
     urls.push({
       url: `/rehber/${encodeURIComponent(article.slug)}`,
       changeFrequency: "monthly",
@@ -105,14 +48,12 @@ export async function GET() {
     });
   }
 
-  // Hisse ve diğer finansal varlık sayfaları
+  // 2. Hisse ve varlık sayfaları
   for (const asset of marketSymbols) {
     const code = asset.code?.trim();
-
-    if (!code) continue;
+    if (!code || code.includes(" ")) continue;
 
     const isStock = stockByTicker.has(code);
-
     urls.push({
       url: `/${isStock ? "hisse" : "varlik"}/${encodeURIComponent(code)}`,
       changeFrequency: "daily",
@@ -120,58 +61,55 @@ export async function GET() {
     });
   }
 
-  // Haber sayfaları
+  // 3. Haber sayfaları (Güvenli limit)
   try {
     const supabase = await getSupabaseServerClient();
-
     if (supabase) {
       const { data } = await supabase
         .from("news")
         .select("slug, news_date")
         .not("slug", "is", null)
         .order("news_date", { ascending: false })
-        .limit(5000);
+        .limit(1000);
 
       for (const news of data ?? []) {
         if (!news.slug) continue;
-
         urls.push({
           url: `/haber/${encodeURIComponent(news.slug)}`,
-          lastModified: news.news_date
-            ? new Date(news.news_date).toISOString()
-            : undefined,
+          lastModified: news.news_date ? new Date(news.news_date).toISOString() : undefined,
           changeFrequency: "weekly",
-          priority: 0.6,
+          priority: 0.5,
         });
       }
     }
   } catch {
-    // Haber verisi alınamazsa sitemap'in geri kalanı yine oluşturulur.
+    // Hata durumunda sitemap'in çökmesini engelle
   }
 
-  // Aynı URL'nin birden fazla kez eklenmesini önle
+  // Aynı URL'lerin mükerrer eklenmesini önle
   const uniqueUrls = Array.from(
-    new Map(urls.map((item) => [item.url, item])).values(),
+    new Map(urls.map((item) => [item.url, item])).values()
   );
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${uniqueUrls.map((entry) => `
-  <url>
-    <loc>${entry.url}</loc>
-    ${entry.lastModified ? `<lastmod>${entry.lastModified}</lastmod>` : ""}
-    <changefreq>${entry.changeFrequency}</changefreq>
-    <priority>${entry.priority}</priority>
-  </url>
-`).join("")}
+${uniqueUrls
+  .map(
+    (item) => `  <url>
+    <loc>${escapeXml(`${BASE_URL}${item.url}`)}</loc>
+    ${item.lastModified ? `<lastmod>${item.lastModified}</lastmod>` : ""}
+    <changefreq>${item.changeFrequency}</changefreq>
+    <priority>${item.priority?.toFixed(1) ?? "0.7"}</priority>
+  </url>`
+  )
+  .join("")}
 </urlset>`;
 
   return new NextResponse(xml.trim(), {
     status: 200,
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control":
-        "public, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
     },
   });
 }
