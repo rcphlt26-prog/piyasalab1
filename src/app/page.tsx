@@ -113,8 +113,8 @@ export default function HomePage() {
     <main className="app-bg min-h-screen tabular-nums">
       <SpkBanner />
 
-      {/* Header */}
-      <header className="app-surface app-border sticky top-0 z-40 border-b backdrop-blur-md bg-opacity-90">
+      {/* Header - Sabitlenme (sticky) kaldırıldı, artık sayfa ile kayacak */}
+      <header className="app-surface app-border border-b">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
           
           {/* Logo */}
