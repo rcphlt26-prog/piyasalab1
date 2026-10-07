@@ -34,7 +34,7 @@ import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
 import { HomeStockCards, HomeNewsList } from "@/components/HomeTickerRail";
 
-// Dynamic Import (Lazy Loading) - CPU Optimizasyonu İçin
+// Dynamic Import (Lazy Loading)
 const LoadingBox = () => (
   <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
     <Skeleton className="h-6 w-1/3" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-40 w-full" />
@@ -110,13 +110,11 @@ export default function HomePage() {
   }
 
   return (
-    <main className="app-bg min-h-screen tabular-nums relative">
-      <div className="relative z-10">
-        <SpkBanner />
-      </div>
+    <div className="app-bg min-h-screen tabular-nums block overflow-x-hidden">
+      <SpkBanner />
 
-      {/* Header - Sayfa akışına bağlandı, aşağı kaydırınca yukarı kayacak */}
-      <header className="app-surface app-border border-b relative z-10">
+      {/* Header - Akışkan ve normal akışta (Asla sabit/sticky değil) */}
+      <header className="app-surface app-border border-b block">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
           
           {/* Logo */}
@@ -328,7 +326,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content Sections */}
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-6">
         {activeTab === "piyasa" ? (
           <div className="space-y-10">
             <HomeHero />
@@ -360,9 +358,9 @@ export default function HomePage() {
           {activeTab === "haberler" ? <NewsSection /> : null}
           {activeTab === "hakkinda" ? <AboutSection /> : null}
         </div>
-      </div>
+      </main>
 
       <Footer />
-    </main>
+    </div>
   );
 }
