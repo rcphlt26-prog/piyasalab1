@@ -97,8 +97,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-7925528729215112";
 
   return (
-    <html lang="tr" className={`h-full antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
-      <body className="app-text min-h-full">
+    <html lang="tr" className={`antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
+      <body className="app-text min-h-screen">
         <ThemeProvider>{children}</ThemeProvider>
         <MarketSidebar />
         <Analytics />
