@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowRight, Clock, FileText, Newspaper } from "lucide-react";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { getMarketPriceMeta, marketSymbolByCode, stockDirectory } from "@/data/marketSymbols";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
+import { guideArticles } from "@/data/guideArticles";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
-import { EmptyState } from "@/components/ui/EmptyState";
 
 type NavigateProps = { onNavigate: (tab: string) => void };
 
@@ -17,6 +17,29 @@ const KARNE_CODES = ["THYAO", "ASELS", "GARAN", "AKBNK", "EREGL", "TUPRS"];
 const NEWS_LIMIT = 6;
 const stockNames = new Map(stockDirectory.map((stock) => [stock.ticker, stock.name]));
 const signedPct = (value: number) => `${value >= 0 ? "+" : ""}${formatNumber(value, 2)}%`;
+
+const fallbackGuideCards = [
+  "fk-ve-pddd-orani-nedir-ve-nasil-yorumlanir",
+  "enflasyon-karsisinda-reel-getiri-nasil-hesaplanir",
+  "portfoy-cesitlendirme-stratejileri-ve-risk-yonetimi",
+]
+  .map((slug) => guideArticles.find((item) => item.slug === slug))
+  .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+const marketInsightNotes = [
+  {
+    title: "BIST genişlik notu",
+    summary: "Endeks hareketini yorumlarken sadece BIST 100 puanına değil, yükselen/düşen hisse dağılımına da bakın. Dar katılımlı yükselişlerde oynaklık artabilir.",
+  },
+  {
+    title: "Kur ve emtia etkisi",
+    summary: "Gram altın ve emtia tarafında ons + USD/TRY ikilisi birlikte takip edilmelidir. Tek değişkene bakmak kısa vadeli yorum hatasına neden olabilir.",
+  },
+  {
+    title: "Risk yönetimi",
+    summary: "Kısa vadede belirsizlik arttığında pozisyon boyutunu küçültmek ve işlem sayısını sınırlamak, toplam portföy dalgalanmasını kontrol etmeye yardımcı olur.",
+  },
+];
 
 function SectionHeader({ id, title, description, action }: { id: string; title: string; description: string; action: React.ReactNode }) {
   return (
@@ -93,9 +116,45 @@ export function HomeStockCards() {
   );
 }
 
+function NewsFallbackCards() {
+  return (
+    <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr]">
+      <div className="section-card">
+        <div className="mb-3 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          <h3 className="app-text text-sm font-semibold">Öne çıkan finans rehberleri</h3>
+        </div>
+        <div className="space-y-3">
+          {fallbackGuideCards.slice(0, 3).map((guide) => (
+            <Link key={guide.slug} href={`/rehber/${guide.slug}`} className="app-border block rounded-lg border p-3 hover:border-[var(--color-primary)]">
+              <p className="text-[11px] font-semibold text-primary">{guide.category}</p>
+              <p className="app-text mt-1 text-sm font-semibold leading-6">{guide.title}</p>
+              <p className="app-muted mt-1 line-clamp-2 text-xs">{guide.description}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="section-card">
+        <div className="mb-3 flex items-center gap-2">
+          <Newspaper className="h-4 w-4 text-primary" />
+          <h3 className="app-text text-sm font-semibold">Günün piyasa analiz notları</h3>
+        </div>
+        <div className="space-y-2">
+          {marketInsightNotes.map((note) => (
+            <article key={note.title} className="app-surface-2 app-border rounded-lg border p-3">
+              <p className="app-text text-xs font-semibold">{note.title}</p>
+              <p className="app-muted mt-1 text-xs leading-5">{note.summary}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HomeNewsList({ onNavigate }: NavigateProps) {
   const { items, source, isLoading } = useLiveNews();
-  // "demo" kaynağı yalnızca eğitim amaçlı yerel içeriktir; gerçek haber gibi gösterilmez.
   const live = source !== "demo";
   const latest = live ? [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, NEWS_LIMIT) : [];
 
@@ -132,7 +191,7 @@ export function HomeNewsList({ onNavigate }: NavigateProps) {
             );
           })}
         </ul>
-      ) : <EmptyState title="Haber akışı şu anda kullanılamıyor." description="Güncel haberler alınamadı. Birkaç dakika sonra tekrar deneyin." />}
+      ) : <NewsFallbackCards />}
     </section>
   );
 }

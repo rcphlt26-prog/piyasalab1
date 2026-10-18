@@ -7,6 +7,7 @@ import { getMarketPriceMeta, marketSymbolByCode, marketSymbols, type MarketCateg
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { siteFaqItems } from "@/data/faqs";
 
 const DAY_MS = 86_400_000;
 // Tarihsel veri servisi en fazla 3650 gün geriye gider; sınırın biraz içinde kalınır.
@@ -132,6 +133,35 @@ const stepLabel = "app-text-secondary mb-1.5 flex items-center gap-2 text-xs fon
 const stepBadge = "inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary-dark)] text-[11px] font-bold text-white";
 const fieldClass = "app-surface app-border app-text min-h-12 w-full rounded-lg border px-3 text-base outline-none focus:border-[var(--color-primary)]";
 
+function FaqAccordion() {
+  const [openIndex, setOpenIndex] = useState<number>(0);
+  return (
+    <section className="app-surface-2 app-border mt-6 rounded-xl border p-4 sm:p-6" aria-labelledby="sss-title">
+      <h3 id="sss-title" className="app-text text-lg font-semibold">Sıkça Sorulan Sorular (SSS)</h3>
+      <p className="app-muted mt-1 text-xs">Araçla ilgili en çok sorulan sorular ve kısa yanıtlar.</p>
+      <div className="mt-4 space-y-2">
+        {siteFaqItems.map((faq, index) => {
+          const open = openIndex === index;
+          return (
+            <div key={faq.question} className="app-surface app-border rounded-lg border">
+              <button
+                type="button"
+                onClick={() => setOpenIndex((current) => current === index ? -1 : index)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left"
+              >
+                <span className="app-text text-sm font-semibold">{faq.question}</span>
+                <span className="app-muted text-xs">{open ? "Kapat" : "Aç"}</span>
+              </button>
+              {open ? <p className="app-text-secondary border-t border-[var(--border)] px-3 py-3 text-sm leading-6">{faq.answer}</p> : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function ParamNeOlurdu() {
   const [code, setCode] = useState("THYAO");
   const [amountText, setAmountText] = useState("10000");
@@ -187,6 +217,8 @@ export function ParamNeOlurdu() {
       </div>
 
       <p className="app-muted mt-4 text-[11px] leading-5">Sonuç, seçilen başlangıç gününün kapanış fiyatı ile son kapanış fiyatı arasındaki değişime göre hesaplanır. Komisyon, vergi, temettü, bölünme ve enflasyon etkisi dahil değildir. Veri kaynağı: Yahoo Finance. Bu hesaplama bilgilendirme amaçlıdır; yatırım tavsiyesi değildir ve geçmiş performans gelecekteki getiriyi garanti etmez.</p>
+
+      <FaqAccordion />
     </section>
   );
 }
