@@ -10,6 +10,7 @@ import { getMarketPriceMeta, marketSymbolByCode } from "@/data/marketSymbols";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
+import { FallbackBadge } from "@/components/ui/FallbackBadge";
 
 const Sparkline = dynamic(() => import("@/components/ui/Sparkline").then((module) => module.Sparkline), {
   ssr: false,
@@ -47,7 +48,7 @@ function SummaryCard({ code, quote, loading }: { code: string; quote: LiveQuote 
     return (
       <Link href={`/varlik/${code}`} className="app-surface-2 block min-w-[11rem] shrink-0 snap-start rounded-xl p-4 md:min-w-0">
         <p className="app-text-secondary text-sm font-medium">{label}</p>
-        {loading ? <div className="mt-3 space-y-2"><Skeleton className="h-7 w-28" /><Skeleton className="h-4 w-20" /></div> : <p className="app-muted mt-3 text-xs leading-5">Bu veri şu anda kullanılamıyor.</p>}
+        {loading ? <div className="mt-3 space-y-2"><Skeleton className="h-7 w-28" /><Skeleton className="h-4 w-20" /></div> : <p className="app-muted mt-3 text-xl font-bold" aria-hidden="true">—</p>}
       </Link>
     );
   }
@@ -57,7 +58,7 @@ function SummaryCard({ code, quote, loading }: { code: string; quote: LiveQuote 
   const absChange = quote.changePct > -100 ? quote.price - quote.price / (1 + quote.changePct / 100) : null;
   return (
     <Link href={`/varlik/${code}`} className="app-surface-2 card-hover block min-w-[11rem] shrink-0 snap-start rounded-xl p-4 md:min-w-0">
-      <p className="app-text-secondary truncate text-sm font-medium">{label}</p>
+      <div className="flex items-center justify-between gap-2"><p className="app-text-secondary truncate text-sm font-medium">{label}</p>{quote.isFallback ? <FallbackBadge /> : null}</div>
       <p className="app-text mt-2 truncate text-xl font-bold tabular-nums sm:text-2xl">{formatMarketPrice(quote.price)} <span className="app-muted text-xs font-medium">{meta.currencyLabel}</span></p>
       <p className={`mt-1 text-xs font-semibold tabular-nums ${tone}`}>
         {absChange !== null ? `${positive ? "+" : "-"}${formatMarketPrice(Math.abs(absChange))} · ` : ""}{positive ? "+" : ""}{formatNumber(quote.changePct, 2)}%

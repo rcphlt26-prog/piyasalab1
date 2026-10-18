@@ -13,6 +13,7 @@ type OnlineUsersProps = {
 export function OnlineUsers({ supabase }: OnlineUsersProps) {
   const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const [connected, setConnected] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -50,6 +51,24 @@ export function OnlineUsers({ supabase }: OnlineUsersProps) {
       void supabase.removeChannel(channel);
     };
   }, [supabase]);
+
+  const isLoading = !supabase || !connected || onlineCount === null;
+
+  // Yükleme 2 sn'yi aşarsa "yükleniyor" metni yerine nötr rozet göster
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => setShowFallback(true), 2000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  if (isLoading && showFallback) {
+    return (
+      <span className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400" aria-live="polite">
+        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        Piyasalar Takip Ediliyor
+      </span>
+    );
+  }
 
   const label = !supabase || !connected || onlineCount === null
     ? "Çevrimiçi kullanıcılar yükleniyor"

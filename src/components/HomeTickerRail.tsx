@@ -10,6 +10,7 @@ import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FallbackBadge } from "@/components/ui/FallbackBadge";
 
 type NavigateProps = { onNavigate: (tab: string) => void };
 
@@ -35,8 +36,8 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
   const currency = getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel;
   const name = stockNames.get(code) ?? marketSymbolByCode.get(code)?.label ?? code;
 
-  const high = meta?.weekHigh52;
-  const low = meta?.weekLow52;
+  const high = meta?.weekHigh52 ?? quote?.high52;
+  const low = meta?.weekLow52 ?? quote?.low52;
   const hasRange = typeof high === "number" && typeof low === "number";
   const first = data[0]?.value;
   const last = data[data.length - 1]?.value;
@@ -49,13 +50,14 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
         <div className="min-w-0">
           <p className="app-text text-base font-bold">{code}</p>
           <p className="app-muted truncate text-xs">{name}</p>
+          {quote?.isFallback ? <span className="mt-1 block"><FallbackBadge /></span> : null}
         </div>
         {quote ? <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${quote.changePct >= 0 ? "bg-[var(--color-bull)]/10 text-bull" : "bg-[var(--color-bear)]/10 text-bear"}`}>{signedPct(quote.changePct)}</span> : null}
       </div>
 
       {quote ? (
         <p className="app-text mt-3 text-2xl font-bold tabular-nums">{formatMarketPrice(quote.price)} <span className="app-muted text-xs font-medium">{currency}</span></p>
-      ) : loading ? <Skeleton className="mt-3 h-8 w-32" /> : <p className="app-muted mt-3 text-xs">Fiyat verisi şu anda mevcut değil.</p>}
+      ) : loading ? <Skeleton className="mt-3 h-8 w-32" /> : <p className="app-muted mt-3 text-2xl font-bold" aria-hidden="true">—</p>}
 
       <div className="app-border mt-3 border-t pt-3">
         {historyLoading ? (
@@ -65,7 +67,7 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
             <div className="min-w-0"><dt className="app-muted">52 hafta aralığı</dt><dd className="app-text mt-0.5 truncate font-semibold tabular-nums">{hasRange ? `${formatMarketPrice(low)} – ${formatMarketPrice(high)}` : "Mevcut değil"}</dd></div>
             <div className="min-w-0"><dt className="app-muted">1 yıllık değişim</dt><dd className={`mt-0.5 font-semibold tabular-nums ${yearChange === null ? "app-text" : yearChange >= 0 ? "text-bull" : "text-bear"}`}>{yearChange === null ? "Mevcut değil" : signedPct(yearChange)}</dd></div>
           </dl>
-        ) : <p className="app-muted text-xs leading-5">Finansal veri şu anda mevcut değil.</p>}
+        ) : <p className="app-muted text-xs leading-5">52 haftalık aralık güncelleniyor.</p>}
       </div>
     </Link>
   );
