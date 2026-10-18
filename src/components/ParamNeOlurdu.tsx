@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, History, TrendingDown, TrendingUp } from "lucide-react";
+import { History, TrendingDown, TrendingUp } from "lucide-react";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { getMarketPriceMeta, marketSymbolByCode, marketSymbols, type MarketCategory } from "@/data/marketSymbols";
 import { formatCurrency, formatNumber } from "@/lib/utils";
@@ -9,13 +9,30 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const DAY_MS = 86_400_000;
-// Tarihsel veri servisi en fazla 3650 gün geriye gider; sınırın biraz içinde kalınır.
 const MIN_DATE = new Date(Date.now() - 3640 * DAY_MS).toISOString().slice(0, 10);
 const MAX_DATE = new Date().toISOString().slice(0, 10);
-// Seçilen tarihten sonraki ilk işlem günü bu kadar günden uzaksa varlık o tarihte işlem görmüyor kabul edilir.
 const MAX_GAP_DAYS = 10;
 const AMOUNT_PRESETS = [10_000, 50_000, 100_000];
-const BENCHMARKS = ["XU100", "GRAMALTIN", "USDTRY"];
+const BENCHMARK_CODES = ["GRAMALTIN", "USDTRY"] as const;
+
+const QUICK_CODES = [
+  "XU100",
+  "GRAMALTIN",
+  "USDTRY",
+  "BTCUSD",
+  "THYAO",
+  "ASELS",
+  "TUPRS",
+  "FROTO",
+  "GARAN",
+  "EREGL",
+  "KCHOL",
+  "SISE",
+  "BIMAS",
+  "SASA",
+  "AKBNK",
+] as const;
+
 const UNAVAILABLE_TITLE = "Bu tarih için geçmiş fiyat verisi şu anda kullanılamıyor.";
 const GROUPS: Array<{ category: MarketCategory; label: string }> = [
   { category: "endeks", label: "Endeksler" },
@@ -24,11 +41,17 @@ const GROUPS: Array<{ category: MarketCategory; label: string }> = [
   { category: "emtia", label: "Altın ve emtia" },
 ];
 
-// Tutar TL kabul edildiği için yalnızca TL bazlı varlıklar listelenir.
-const assetGroups = GROUPS.map((group) => ({
-  ...group,
-  items: marketSymbols.filter((symbol) => symbol.category === group.category && getMarketPriceMeta(symbol).currency !== "USD"),
-})).filter((group) => group.items.length > 0);
+const allAssets = GROUPS.flatMap((group) =>
+  marketSymbols
+    .filter((symbol) => symbol.category === group.category && getMarketPriceMeta(symbol).currency !== "USD")
+    .map((symbol) => ({ ...symbol, groupLabel: group.label })),
+);
+
+type AssetOption = (typeof allAssets)[number];
+
+const quickAssets: AssetOption[] = QUICK_CODES
+  .map((code) => allAssets.find((asset) => asset.code === code))
+  .filter((asset): asset is AssetOption => Boolean(asset));
 
 type Query = { id: number; code: string; amount: number; date: string };
 
@@ -54,47 +77,136 @@ function useInvestmentResult(code: string, amount: number, date: string): Result
   }, [data, loading, amount, date]);
 }
 
-function BenchmarkRow({ code, amount, date }: { code: string; amount: number; date: string }) {
-  const result = useInvestmentResult(code, amount, date);
-  return (
-    <li className="app-border flex min-h-12 items-center justify-between gap-3 border-b py-2 last:border-b-0">
-      <span className="min-w-0">
-        <span className="app-text block truncate text-sm font-medium">{labelOf(code)}</span>
-        {result.status === "ok" ? <span className="app-muted block text-[11px]">Başlangıç: {formatDate(result.startDate)}</span> : null}
-      </span>
-      {result.status === "loading" ? <Skeleton className="h-5 w-28" /> : result.status === "ok" ? (
-        <span className="flex shrink-0 flex-col items-end tabular-nums">
-          <span className="app-text text-sm font-semibold">{formatCurrency(result.final)}</span>
-          <span className={`text-xs font-semibold ${result.pct >= 0 ? "text-bull" : "text-bear"}`}>{signedPct(result.pct)}</span>
-        </span>
-      ) : <span className="app-muted max-w-[11rem] text-right text-xs">Bu dönem için veri mevcut değil.</span>}
-    </li>
-  );
-}
-
-function Comparison({ query }: { query: Query }) {
-  const codes = BENCHMARKS.filter((code) => code !== query.code);
-  return (
-    <div className="mt-5">
-      <h3 className="app-text mb-1 text-sm font-semibold">Aynı dönemde, aynı tutarla</h3>
-      <p className="app-muted mb-1 text-xs">Yalnızca fiyat değişimine göre hesaplanır.</p>
-      <ul>{codes.map((code) => <BenchmarkRow key={code} code={code} amount={query.amount} date={query.date} />)}</ul>
-    </div>
-  );
-}
-
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "bull" | "bear" }) {
   const color = tone === "bull" ? "text-bull" : tone === "bear" ? "text-bear" : "app-text";
   return <div className="min-w-0"><dt className="app-muted text-xs">{label}</dt><dd className={`mt-0.5 truncate text-base font-semibold tabular-nums ${color}`}>{value}</dd></div>;
 }
 
+function AssetPicker({ code, onChange }: { code: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedLabel = labelOf(code);
+  const visibleOptions = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("tr-TR");
+    if (!query) return quickAssets.slice(0, 15);
+
+    return allAssets
+      .filter((asset) =>
+        asset.label.toLocaleLowerCase("tr-TR").includes(query)
+        || asset.code.toLocaleLowerCase("tr-TR").includes(query),
+      )
+      .slice(0, 40);
+  }, [search]);
+
+  function selectAsset(nextCode: string) {
+    onChange(nextCode);
+    setOpen(false);
+    setSearch("");
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        id="param-asset"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="app-surface app-border app-text min-h-12 w-full rounded-lg border px-3 text-left text-base outline-none focus:border-[var(--color-primary)]"
+      >
+        <span className="block truncate">{selectedLabel}</span>
+      </button>
+
+      {open ? (
+        <div className="app-surface app-border absolute z-40 mt-2 w-full rounded-xl border p-2 shadow-2xl">
+          <input
+            autoFocus
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Sembol veya varlık adı ara..."
+            className="app-surface-2 app-border app-text mb-2 h-10 w-full rounded-lg border px-3 text-sm outline-none focus:border-[var(--color-primary)]"
+          />
+          <ul role="listbox" className="max-h-56 space-y-1 overflow-auto pr-1">
+            {visibleOptions.map((asset) => (
+              <li key={asset.code}>
+                <button
+                  type="button"
+                  onClick={() => selectAsset(asset.code)}
+                  className={`w-full rounded-lg px-2.5 py-2 text-left text-sm transition ${asset.code === code ? "bg-[var(--color-primary)] text-white" : "app-text hover:app-surface-3"}`}
+                >
+                  <span className="font-semibold">{asset.code}</span>
+                  <span className={`ml-2 ${asset.code === code ? "text-white/90" : "app-muted"}`}>{asset.label}</span>
+                  <span className={`ml-2 text-[10px] ${asset.code === code ? "text-white/80" : "app-muted"}`}>{asset.groupLabel}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {!search.trim() ? <p className="app-muted mt-2 text-[11px]">Daha fazla varlık için arama yazın.</p> : null}
+          {search.trim() && visibleOptions.length === 0 ? <p className="app-muted mt-2 text-[11px]">Eşleşen varlık bulunamadı.</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ComparisonBars({ query, mainResult }: { query: Query; mainResult: Extract<Result, { status: "ok" }> }) {
+  const gramResult = useInvestmentResult(BENCHMARK_CODES[0], query.amount, query.date);
+  const usdResult = useInvestmentResult(BENCHMARK_CODES[1], query.amount, query.date);
+
+  const loading = gramResult.status === "loading" || usdResult.status === "loading";
+  if (loading) return <div className="mt-5 space-y-2"><Skeleton className="h-4 w-48" /><Skeleton className="h-20 w-full" /></div>;
+
+  if (gramResult.status !== "ok" || usdResult.status !== "ok") {
+    return <p className="app-muted mt-5 text-xs">Karşılaştırma için aynı dönem gram altın veya dolar verisi alınamadı.</p>;
+  }
+
+  const rows = [
+    { key: "asset", label: `${labelOf(query.code)} (Seçimin)`, result: mainResult, tone: "bg-[var(--color-primary-dark)]" },
+    { key: "gold", label: "Gram Altın", result: gramResult, tone: "bg-[var(--color-gold)]" },
+    { key: "usd", label: "USD/TRY", result: usdResult, tone: "bg-[var(--color-bull)]" },
+  ];
+
+  const maxFinal = Math.max(...rows.map((row) => row.result.final));
+
+  return (
+    <div className="mt-6 space-y-3">
+      <h3 className="app-text text-sm font-semibold">Enflasyona / Dolar / Gram Altın Karşılaştırması</h3>
+      <p className="app-muted text-xs leading-5">
+        Seçtiğin varlıkta paran <strong className="app-text-secondary">{formatCurrency(mainResult.final)}</strong> oldu,
+        aynı gün Gram Altın alsaydın <strong className="app-text-secondary">{formatCurrency(gramResult.final)}</strong>,
+        USD alsaydın <strong className="app-text-secondary">{formatCurrency(usdResult.final)}</strong> olacaktı.
+      </p>
+
+      <div className="space-y-2">
+        {rows.map((row) => {
+          const width = Math.max(8, (row.result.final / maxFinal) * 100);
+          const positive = row.result.pct >= 0;
+          return (
+            <div key={row.key} className="app-surface app-border rounded-lg border p-3">
+              <div className="mb-1.5 flex items-center justify-between gap-2 text-xs">
+                <span className="app-text font-semibold">{row.label}</span>
+                <span className="app-text tabular-nums font-semibold">{formatCurrency(row.result.final)}</span>
+              </div>
+              <div className="app-surface-3 h-2 overflow-hidden rounded-full">
+                <div className={`h-full rounded-full ${row.tone}`} style={{ width: `${width}%` }} aria-hidden="true" />
+              </div>
+              <p className={`mt-1 text-right text-[11px] font-semibold tabular-nums ${positive ? "text-bull" : "text-bear"}`}>{signedPct(row.result.pct)}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ query }: { query: Query }) {
   const result = useInvestmentResult(query.code, query.amount, query.date);
-  const [compare, setCompare] = useState(false);
 
   if (result.status === "loading") {
     return <div className="space-y-3" aria-busy="true" aria-label="Sonuç hesaplanıyor"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-12 w-2/3" /><Skeleton className="h-16 w-full" /></div>;
   }
+
   if (result.status === "unavailable") {
     return <EmptyState title={UNAVAILABLE_TITLE} description={`${labelOf(query.code)} için ${formatDate(query.date)} sonrasında kullanılabilir bir fiyat bulunamadı. Daha yakın bir tarih veya başka bir varlık deneyin.`} />;
   }
@@ -102,6 +214,7 @@ function ResultCard({ query }: { query: Query }) {
   const positive = result.gain >= 0;
   const Icon = positive ? TrendingUp : TrendingDown;
   const adjusted = result.startDate !== query.date;
+
   return (
     <div>
       <p className="app-muted text-xs">Fiyat değişimine göre · {labelOf(query.code)}</p>
@@ -120,10 +233,10 @@ function ResultCard({ query }: { query: Query }) {
         <div className="app-surface app-border rounded-lg border p-3"><dt className="app-muted text-xs">Başlangıç fiyatı · {formatDate(result.startDate)}</dt><dd className="app-text mt-0.5 text-sm font-semibold tabular-nums">{formatNumber(result.startPrice)}</dd></div>
         <div className="app-surface app-border rounded-lg border p-3"><dt className="app-muted text-xs">Güncel fiyat · {formatDate(result.endDate)}</dt><dd className="app-text mt-0.5 text-sm font-semibold tabular-nums">{formatNumber(result.endPrice)}</dd></div>
       </dl>
+
       {adjusted ? <p className="app-muted mt-3 text-xs leading-5">Seçtiğin tarih ({formatDate(query.date)}) işlem günü olmadığı için veri setindeki sonraki ilk işlem günü olan <strong className="app-text-secondary">{formatDate(result.startDate)}</strong> kapanış fiyatı kullanıldı.</p> : null}
 
-      <button type="button" onClick={() => setCompare((value) => !value)} aria-expanded={compare} className="app-border app-text mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold hover:border-[var(--color-primary)]"><BarChart3 className="h-4 w-4" aria-hidden="true" />{compare ? "Karşılaştırmayı gizle" : "BIST 100, gram altın ve dolarla karşılaştır"}</button>
-      {compare ? <Comparison query={query} /> : null}
+      <ComparisonBars query={query} mainResult={result} />
     </div>
   );
 }
@@ -163,9 +276,19 @@ export function ParamNeOlurdu() {
         <div className="grid gap-5 md:grid-cols-3">
           <div>
             <label htmlFor="param-asset" className={stepLabel}><span className={stepBadge}>1</span> Varlık</label>
-            <select id="param-asset" value={code} onChange={(event) => setCode(event.target.value)} className={fieldClass}>
-              {assetGroups.map((group) => <optgroup key={group.category} label={group.label}>{group.items.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}</optgroup>)}
-            </select>
+            <AssetPicker code={code} onChange={setCode} />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {quickAssets.map((asset) => (
+                <button
+                  key={asset.code}
+                  type="button"
+                  onClick={() => setCode(asset.code)}
+                  className={`min-h-8 rounded-full border px-2.5 text-[11px] font-semibold ${asset.code === code ? "border-transparent bg-[var(--color-primary-dark)] text-white" : "app-border app-text-secondary"}`}
+                >
+                  {asset.code}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label htmlFor="param-amount" className={stepLabel}><span className={stepBadge}>2</span> Yatırım tutarı (TL)</label>
