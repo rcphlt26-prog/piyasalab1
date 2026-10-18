@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 const BASE_URL = "https://veriakis.com";
+const POPULAR_STOCKS = ["THYAO", "ASELS", "TUPRS", "FROTO", "GARAN", "EREGL", "AKBNK", "KCHOL", "SISE", "BIMAS", "SASA"];
 
 type SitemapEntry = {
   url: string;
@@ -27,11 +28,13 @@ function escapeXml(value: string) {
 export async function GET() {
   const urls: SitemapEntry[] = [
     { url: "", changeFrequency: "daily", priority: 1.0 },
-    { url: "/rehber", changeFrequency: "weekly", priority: 0.8 },
-    { url: "/hesaplayicilar/bilesik-getiri", changeFrequency: "monthly", priority: 0.7 },
-    { url: "/hesaplayicilar/hisse-vs-altin", changeFrequency: "monthly", priority: 0.7 },
-    { url: "/hesaplayicilar/maliyet-ortalamasi", changeFrequency: "monthly", priority: 0.7 },
-    { url: "/hesaplayicilar/temettu-getirisi", changeFrequency: "monthly", priority: 0.7 },
+    { url: "/rehber", changeFrequency: "weekly", priority: 0.9 },
+    { url: "/hesaplayicilar", changeFrequency: "weekly", priority: 0.85 },
+    { url: "/hesaplayicilar/bilesik-getiri", changeFrequency: "monthly", priority: 0.8 },
+    { url: "/hesaplayicilar/hisse-vs-altin", changeFrequency: "monthly", priority: 0.8 },
+    { url: "/hesaplayicilar/maliyet-ortalamasi", changeFrequency: "monthly", priority: 0.8 },
+    { url: "/hesaplayicilar/temettu-getirisi", changeFrequency: "monthly", priority: 0.8 },
+    { url: "/oyunlar", changeFrequency: "weekly", priority: 0.75 },
     { url: "/gizlilik-politikasi", changeFrequency: "yearly", priority: 0.3 },
     { url: "/kullanim-kosullari", changeFrequency: "yearly", priority: 0.3 },
     { url: "/sorumluluk-reddi", changeFrequency: "yearly", priority: 0.3 },
@@ -61,7 +64,16 @@ export async function GET() {
     });
   }
 
-  // 3. Haber sayfaları (Güvenli limit)
+  // 3. Popüler hisse detay sayfalarını önceliklendir
+  for (const symbol of POPULAR_STOCKS) {
+    urls.push({
+      url: `/hisse/${encodeURIComponent(symbol)}`,
+      changeFrequency: "daily",
+      priority: 0.95,
+    });
+  }
+
+  // 4. Haber sayfaları (Güvenli limit)
   try {
     const supabase = await getSupabaseServerClient();
     if (supabase) {

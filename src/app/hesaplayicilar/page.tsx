@@ -5,6 +5,19 @@ export const metadata: Metadata = {
   title: "Finans Hesaplayıcıları",
   description: "Bileşik getiri, temettü, maliyet ortalaması ve hisse-altın karşılaştırma hesaplayıcıları.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar" },
+  openGraph: {
+    title: "Finans Hesaplayıcıları | VeriAkış",
+    description: "Bileşik getiri, temettü, maliyet ortalaması ve hisse-altın karşılaştırma hesaplayıcıları.",
+    url: "https://veriakis.com/hesaplayicilar",
+    type: "website",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Finans Hesaplayıcıları" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Finans Hesaplayıcıları | VeriAkış",
+    description: "Bileşik getiri, temettü, maliyet ortalaması ve hisse-altın karşılaştırma hesaplayıcıları.",
+    images: ["/api/og"],
+  },
 };
 
 const calculators = [

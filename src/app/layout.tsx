@@ -95,6 +95,7 @@ const websiteJsonLd = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-7925528729215112";
+  const adsEnabled = process.env.NEXT_PUBLIC_ADSENSE_ENABLED === "true";
 
   return (
     <html lang="tr" className={`antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
@@ -103,13 +104,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <MarketSidebar />
         <Analytics />
         <SpeedInsights />
-        <Script
-          id="adsense-loader"
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
-          crossOrigin="anonymous"
-        />
-        <AdSenseConsent client={adsenseClient} />
+        {adsEnabled ? (
+          <>
+            <Script
+              id="adsense-loader"
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+              crossOrigin="anonymous"
+            />
+            <AdSenseConsent client={adsenseClient} />
+          </>
+        ) : null}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />

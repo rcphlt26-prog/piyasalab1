@@ -5,7 +5,21 @@ import { ContactForm } from "@/components/ContactForm";
 
 export const metadata: Metadata = {
   title: "İletişim",
-  description: "VeriAkış iletişim, gizlilik, telif ve içerik kaldırma başvuruları.",
+  description: "VeriAkış iletişim, gizlilik, telif ve içerik kaldırma başvuruları için resmi iletişim sayfası.",
+  alternates: { canonical: "https://veriakis.com/iletisim" },
+  openGraph: {
+    title: "İletişim | VeriAkış",
+    description: "VeriAkış ekibiyle iletişime geçin. Gizlilik, telif ve içerik kaldırma başvurularını bu sayfadan iletebilirsiniz.",
+    url: "https://veriakis.com/iletisim",
+    type: "website",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "VeriAkış İletişim" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "İletişim | VeriAkış",
+    description: "VeriAkış ekibiyle iletişim ve başvuru formu.",
+    images: ["/api/og"],
+  },
 };
 
 export default function ContactPage() {

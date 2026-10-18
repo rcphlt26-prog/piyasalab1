@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { guideArticles } from "@/data/guideArticles";
+import { AdSlot } from "@/components/AdSlot";
 
 export function generateStaticParams() {
   return guideArticles.map(({ slug }) => ({ slug }));
@@ -48,6 +49,9 @@ export default async function GuideArticlePage({ params }: { params: Promise<{ s
             <p className="app-text-secondary mt-4 text-base leading-7">{article.description}</p>
           </header>
           <div className="space-y-4">{article.content}</div>
+          <div className="mt-8">
+            <AdSlot label="Inline Rehber İçi" width={728} height={250} className="mx-auto w-full" />
+          </div>
           <p className="app-muted app-border mt-8 border-t pt-4 text-xs leading-5">Bu rehber genel bilgilendirme ve eğitim amacıyla hazırlanmıştır. Yatırım tavsiyesi değildir. Piyasa verileri ve koşulları değişebilir.</p>
         </article>
       </div>

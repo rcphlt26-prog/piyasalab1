@@ -7,6 +7,7 @@ import { getMarketPriceMeta, marketSymbolByCode, marketSymbols, type MarketCateg
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AdSlot } from "@/components/AdSlot";
 
 const DAY_MS = 86_400_000;
 // Tarihsel veri servisi en fazla 3650 gün geriye gider; sınırın biraz içinde kalınır.
@@ -124,6 +125,10 @@ function ResultCard({ query }: { query: Query }) {
 
       <button type="button" onClick={() => setCompare((value) => !value)} aria-expanded={compare} className="app-border app-text mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold hover:border-[var(--color-primary)]"><BarChart3 className="h-4 w-4" aria-hidden="true" />{compare ? "Karşılaştırmayı gizle" : "BIST 100, gram altın ve dolarla karşılaştır"}</button>
       {compare ? <Comparison query={query} /> : null}
+
+      <div className="mt-6">
+        <AdSlot label="Inline Param Sonucu" width={728} height={120} className="mx-auto w-full" />
+      </div>
     </div>
   );
 }

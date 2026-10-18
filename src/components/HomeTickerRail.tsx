@@ -10,6 +10,7 @@ import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AdSlot } from "@/components/AdSlot";
 
 type NavigateProps = { onNavigate: (tab: string) => void };
 
@@ -85,7 +86,11 @@ export function HomeStockCards() {
       />
       <InView fallback={<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">{KARNE_CODES.map((code) => <Skeleton key={code} className="h-44 w-full rounded-xl" />)}</div>}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {KARNE_CODES.map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
+          {KARNE_CODES.slice(0, 3).map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <AdSlot label="Inline Hisse Karnesi" width={970} height={90} className="mx-auto w-full" />
+          </div>
+          {KARNE_CODES.slice(3).map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
         </div>
       </InView>
       <p className="app-muted mt-3 text-[11px] leading-5">Veriler Yahoo Finance kaynaklıdır; gecikmeli olabilir ve yatırım tavsiyesi değildir.</p>
