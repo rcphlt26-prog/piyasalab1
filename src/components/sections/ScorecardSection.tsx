@@ -6,6 +6,8 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { ShareCard } from "@/components/ShareCard";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { popularStocks, scorecardData } from "@/data/scorecardData";
+import { stockByTicker } from "@/data/marketSymbols";
+import { getFundamentalSnapshot } from "@/data/fundamentalData";
 import { insiderTransactions } from "@/data/insiderData";
 import { ScorecardGuideText } from "@/components/FinancialGuideText";
 
@@ -15,6 +17,7 @@ const InsiderFlowChart = dynamic(() => import("@/components/ClientCharts").then(
 export function ScorecardSection() {
   const [selectedScoreStock, setSelectedScoreStock] = useState("THYAO");
   const [searchStock, setSearchStock] = useState("");
+  const [sectorFilter, setSectorFilter] = useState("Tümü");
   const [insiderTickerFilter, setInsiderTickerFilter] = useState("Tümü");
   const [insiderTypeFilter, setInsiderTypeFilter] = useState<"Tümü" | "Alım" | "Satım" | "Geri Alım">("Tümü");
 
@@ -24,7 +27,26 @@ export function ScorecardSection() {
     return (selectedMetrics.valuation + selectedMetrics.health + selectedMetrics.dividend + selectedMetrics.growth + selectedMetrics.momentum) / 5;
   }, [selectedMetrics]);
   const verdict = scoreAvg >= 7.2 ? "güçlü" : scoreAvg >= 5.5 ? "orta" : "zayıf";
-  const filteredStocks = popularStocks.filter((s) => s.toLowerCase().includes(searchStock.toLowerCase()));
+  const sectorOptions = useMemo(() => {
+    const sectors = Array.from(new Set(popularStocks.map((ticker) => stockByTicker.get(ticker)?.sector ?? "Diğer"))).sort((a, b) => a.localeCompare(b, "tr"));
+    return ["Tümü", ...sectors];
+  }, []);
+
+  const filteredStocks = popularStocks.filter((s) => {
+    const inSearch = s.toLowerCase().includes(searchStock.toLowerCase());
+    const stockSector = stockByTicker.get(s)?.sector ?? "Diğer";
+    const inSector = sectorFilter === "Tümü" || stockSector === sectorFilter;
+    return inSearch && inSector;
+  });
+
+  const peerList = useMemo(() => {
+    const selectedSector = stockByTicker.get(selectedScoreStock)?.sector;
+    if (!selectedSector) return [];
+    return popularStocks
+      .filter((ticker) => ticker !== selectedScoreStock && (stockByTicker.get(ticker)?.sector ?? "Diğer") === selectedSector)
+      .slice(0, 6)
+      .map((ticker) => ({ ticker, fundamentals: getFundamentalSnapshot(ticker) }));
+  }, [selectedScoreStock]);
 
   const filteredInsider = insiderTransactions.filter((tx) => {
     const tickerOk = insiderTickerFilter === "Tümü" || tx.ticker === insiderTickerFilter;
@@ -55,8 +77,11 @@ export function ScorecardSection() {
         <div className="app-surface-2 app-border rounded-xl border p-3">
           <div className="mb-2 flex flex-wrap gap-2">
             <input value={searchStock} onChange={(e) => setSearchStock(e.target.value)} placeholder="Hisse ara..." className="app-surface app-border app-text flex-1 rounded-lg border px-3 py-2 text-sm" />
+            <select value={sectorFilter} onChange={(e) => setSectorFilter(e.target.value)} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm">
+              {sectorOptions.map((sector) => <option key={sector}>{sector}</option>)}
+            </select>
             <select value={selectedScoreStock} onChange={(e) => setSelectedScoreStock(e.target.value)} className="app-surface app-border app-text rounded-lg border px-3 py-2 text-sm">
-              {filteredStocks.map((stock) => <option key={stock}>{stock}</option>)}
+              {(filteredStocks.length ? filteredStocks : [selectedScoreStock]).map((stock) => <option key={stock}>{stock}</option>)}
             </select>
           </div>
           {selectedMetrics ? (
@@ -120,6 +145,17 @@ export function ScorecardSection() {
                 ))}
               </div>
               <p className="app-surface app-border mt-3 rounded-xl border p-2 text-sm">Bileşik skor: <strong>{formatNumber(scoreAvg)}/10</strong> · Görünüm: <strong className={verdict === "güçlü" ? "text-bull" : verdict === "orta" ? "text-gold" : "text-bear"}>{verdict}</strong></p>
+              <div className="mt-3 rounded-xl border border-[var(--border)] p-3">
+                <p className="app-text text-sm font-semibold">Aynı sektörde akran kıyaslaması</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {peerList.map((peer) => (
+                    <div key={peer.ticker} className="app-surface rounded-lg px-2.5 py-2 text-xs">
+                      <p className="app-text font-semibold">{peer.ticker}</p>
+                      <p className="app-muted">F/K {formatNumber(peer.fundamentals.fk, 1)} · PD/DD {formatNumber(peer.fundamentals.pddd, 2)} · ROE %{formatNumber(peer.fundamentals.roePct, 1)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="mt-3">
                 <ShareCard
                   template="karne"

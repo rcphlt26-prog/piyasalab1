@@ -155,6 +155,35 @@ export type StockEntry = {
   category: StockCategory;
 };
 
+const sectorNormalizationMap: Record<string, string> = {
+  "Holding": "Holding/Yatırım",
+  "Aracı Kurum": "Holding/Yatırım",
+  "Global Yatırım": "Holding/Yatırım",
+  "Petrol & Enerji": "Enerji",
+  "Savunma": "Savunma/Havacılık",
+  "Ulaştırma": "Ulaştırma/Lojistik",
+  "Telekomünikasyon": "Telekom",
+  "Metal Ana": "Demir-Çelik",
+  "Cam & Ambalaj": "Kimya",
+  "Dayanıklı Tüketim": "Beyaz Eşya",
+  "Otomotiv Yan": "Otomotiv",
+  "Bilişim": "Teknoloji",
+  "Finansal Teknoloji": "Teknoloji",
+  "İlaç & Sağlık": "Sağlık",
+  "Sağlık Hizmetleri": "Sağlık",
+  "İnşaat Malz.": "İnşaat",
+  "GYO": "İnşaat",
+  "Tekstil": "Diğer",
+  "Tekstil & Giyim": "Diğer",
+  "Mobilya": "Diğer",
+  "Seramik": "İnşaat",
+  "Makine": "Metal",
+  "Spor": "Diğer",
+  "Sanayi": "Metal",
+};
+
+export const normalizeSectorName = (sector: string) => sectorNormalizationMap[sector] ?? sector;
+
 export const rawBist100: Array<[string, string, string]> = [
   ["THYAO", "Türk Hava Yolları", "Ulaştırma"],
   ["ASELS", "Aselsan", "Savunma"],
@@ -367,7 +396,7 @@ const dedupe = (rows: Array<[string, string, string]>, category: StockCategory):
     const key = ticker.toUpperCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    result.push({ ticker: key, name, sector, category });
+    result.push({ ticker: key, name, sector: normalizeSectorName(sector), category });
   }
   return result;
 };

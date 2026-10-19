@@ -25,7 +25,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
     return {
       code,
       title: quote?.label ?? code,
-      value: quote ? `${formatMarketPrice(quote.price)} ${getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel}` : "Veri mevcut değil",
+      value: quote ? `${formatMarketPrice(quote.price)} ${getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel}` : "Son kapanış",
       currencyLabel: getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel,
       change: quote ? `${isPositive ? "+" : ""}${quote.changePct.toFixed(2)}%` : "Veri bekleniyor",
       isPositive,
@@ -43,7 +43,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
           En Çok Merak Edilenler
         </h2>
         <span className="app-muted shrink-0 text-[11px]">
-          {liveAvailable ? `Canlı Veri${updatedLabel ? ` · ${updatedLabel}` : ""}` : "Veri bekleniyor"}
+          {liveAvailable ? `Canlı Veri${updatedLabel ? ` · ${updatedLabel}` : ""}` : "Son kapanış · güncelleniyor"}
         </span>
       </div>
 

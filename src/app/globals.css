@@ -4,45 +4,45 @@
 
 /* Finans renk paleti (statik) */
 @theme {
-  --color-primary: #1d4ed8;
-  --color-primary-dark: #1e3a8a;
-  --color-primary-light: #3b82f6;
-  --color-bull: #10b981;
+  --color-primary: #2563eb;
+  --color-primary-dark: #1e40af;
+  --color-primary-light: #60a5fa;
+  --color-bull: #059669;
   --color-bull-soft: #34d399;
-  --color-bear: #f43f5e;
+  --color-bear: #e11d48;
   --color-bear-soft: #fb7185;
-  --color-gold: #f59e0b;
-  --color-gold-soft: #fbbf24;
+  --color-gold: #d97706;
+  --color-gold-soft: #f59e0b;
   --font-display: var(--font-space-grotesk), "Segoe UI", sans-serif;
 }
 
 /* Açık tema (varsayılan) */
 :root {
-  --bg: #f6f7f9;
-  --bg-grad-1: #f6f7f9;
-  --bg-grad-2: #f6f7f9;
+  --bg: #f3f6fb;
+  --bg-grad-1: #eef3fb;
+  --bg-grad-2: #f8fbff;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --surface-3: #f1f5f9;
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --surface-2: #f7f9fc;
+  --surface-3: #eef2f8;
+  --border: #dbe3ee;
+  --border-strong: #c6d2e1;
   --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
+  --text-secondary: #3f4f64;
+  --text-muted: #65758b;
 }
 
 .dark {
-  --bg: #020617;
-  --bg-grad-1: #0f172a;
-  --bg-grad-2: #020617;
-  --surface: #0f172a;
-  --surface-2: #020617;
-  --surface-3: #1e293b;
-  --border: #1e293b;
-  --border-strong: #334155;
+  --bg: #0a1220;
+  --bg-grad-1: #0d1728;
+  --bg-grad-2: #0a1220;
+  --surface: #101b2d;
+  --surface-2: #0e1828;
+  --surface-3: #1a2940;
+  --border: #22324a;
+  --border-strong: #314664;
   --text-primary: #e2e8f0;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-secondary: #c5d1e0;
+  --text-muted: #8ea2bc;
 }
 
 * {
