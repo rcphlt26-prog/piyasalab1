@@ -5,6 +5,19 @@ export const metadata: Metadata = {
   title: "Bileşik Getiri Hesaplama",
   description: "Başlangıç paranızın BIST 100 ve farklı dönemlerde bileşik getiriyle bugün ne kadar olacağını hesaplayın.",
   alternates: { canonical: "https://veriakis.com/hesaplayicilar/bilesik-getiri" },
+  openGraph: {
+    title: "Bileşik Getiri Hesaplama | VeriAkış",
+    description: "Başlangıç paranızın BIST 100 ve farklı dönemlerde bileşik getiriyle bugün ne kadar olacağını hesaplayın.",
+    url: "https://veriakis.com/hesaplayicilar/bilesik-getiri",
+    type: "website",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "Bileşik Getiri Hesaplama" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bileşik Getiri Hesaplama | VeriAkış",
+    description: "Başlangıç paranızın BIST 100 ve farklı dönemlerde bileşik getiriyle bugün ne kadar olacağını hesaplayın.",
+    images: ["/api/og"],
+  },
 };
 
 export default function CompoundReturnPage() {

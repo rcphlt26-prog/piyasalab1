@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   title: "Finans Rehberleri",
   description: "Temettü birikimi, reel getiri, enflasyon ve hisse değerleme oranları hakkında kapsamlı finansal okuryazarlık rehberleri.",
   alternates: { canonical: "https://veriakis.com/rehber" },
+  openGraph: {
+    title: "Finans Rehberleri | VeriAkış",
+    description: "Finansal okuryazarlık için özgün rehberler: F/K, PD/DD, temettü, enflasyon ve risk yönetimi.",
+    url: "https://veriakis.com/rehber",
+    type: "website",
+    images: [{ url: "/api/og", width: 1200, height: 630, alt: "VeriAkış Finans Rehberleri" }],
+  },
 };
 
 export default function GuidesPage() {

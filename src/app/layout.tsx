@@ -6,7 +6,6 @@ import { AdSenseConsent } from "@/components/AdSenseConsent";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketSidebar } from "@/components/MarketSidebar";
-import { siteFaqItems } from "@/data/faqs";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -65,45 +64,38 @@ export const metadata: Metadata = {
   },
 };
 
-const webSiteJsonLd = {
+const webAppJsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
+  "@type": "WebApplication",
   name: "VeriAkış",
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web",
   url: "https://veriakis.com",
-  description: "Canlı piyasa akışı, finansal okuryazarlık rehberleri ve hesaplama araçları sunan bilgilendirme platformu.",
+  description:
+    "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
   inLanguage: "tr-TR",
 };
 
-const financialServiceJsonLd = {
+const organizationJsonLd = {
   "@context": "https://schema.org",
-  "@type": "FinancialService",
+  "@type": "Organization",
   name: "VeriAkış",
   url: "https://veriakis.com",
-  areaServed: "TR",
-  serviceType: "Finansal okuryazarlık içerikleri, piyasa veri görselleştirme ve yatırım hesaplama araçları",
-  description: "VeriAkış içerikleri bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.",
-  publisher: {
-    "@type": "Organization",
-    name: "VeriAkış",
-    url: "https://veriakis.com",
-  },
+  logo: "https://veriakis.com/gemini-svg.svg",
+  email: "rcphlt26@gmail.com",
 };
 
-const faqPageJsonLd = {
+const websiteJsonLd = {
   "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: siteFaqItems.map((faq) => ({
-    "@type": "Question",
-    name: faq.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: faq.answer,
-    },
-  })),
+  "@type": "WebSite",
+  name: "Veri Akış",
+  alternateName: ["VeriAkis", "veriakis.com", "Veri Akışı"],
+  url: "https://veriakis.com",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const adsenseClient = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? "ca-pub-7925528729215112";
+  const adsEnabled = process.env.NEXT_PUBLIC_ADSENSE_ENABLED === "true";
 
   return (
     <html lang="tr" className={`antialiased ${spaceGrotesk.variable} ${jakarta.variable}`} suppressHydrationWarning>
@@ -112,16 +104,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <MarketSidebar />
         <Analytics />
         <SpeedInsights />
-        <Script
-          id="adsense-loader"
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
-          crossOrigin="anonymous"
-        />
-        <AdSenseConsent client={adsenseClient} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(financialServiceJsonLd) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageJsonLd) }} />
+        {adsEnabled ? (
+          <>
+            <Script
+              id="adsense-loader"
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+              crossOrigin="anonymous"
+            />
+            <AdSenseConsent client={adsenseClient} />
+          </>
+        ) : null}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
       </body>
     </html>
   );
