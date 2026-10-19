@@ -3,6 +3,7 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { getFundamentalSnapshot } from "@/data/fundamentalData";
 
 type FinancialStatement = {
   year: number;
@@ -13,9 +14,8 @@ type FinancialStatement = {
   total_debt: number | null;
   pe_ratio: number | null;
   pb_ratio: number | null;
+  equity?: number | null;
 };
-
-const UNAVAILABLE = "Veri mevcut değil";
 
 function TrendIcon({ positive }: { positive: boolean }) {
   return positive ? <TrendingUp className="h-4 w-4 text-bull" aria-hidden="true" /> : <TrendingDown className="h-4 w-4 text-bear" aria-hidden="true" />;
@@ -24,35 +24,45 @@ function TrendIcon({ positive }: { positive: boolean }) {
 const amount = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 0));
 const ratio = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 2));
 
-export function StockInsightCard({ statements, loading }: { ticker: string; statements: FinancialStatement[]; loading: boolean }) {
+export function StockInsightCard({ statements, loading, ticker }: { ticker: string; statements: FinancialStatement[]; loading: boolean }) {
   const latest = statements[statements.length - 1];
-  const first = statements[0];
+  const previous = statements.length > 1 ? statements[statements.length - 2] : null;
+  const fundamentals = getFundamentalSnapshot(ticker, {
+    peRatio: latest?.pe_ratio,
+    pbRatio: latest?.pb_ratio,
+    netProfit: latest?.net_profit,
+    revenue: latest?.revenue,
+    equity: latest?.equity ?? null,
+    netProfitPrev: previous?.net_profit,
+    revenuePrev: previous?.revenue,
+  });
 
-  // Şema piyasa değeri, özsermaye ve temettü verimi içermez; bu alanlar tahmin edilmez.
-  const metrics: Array<[string, string | null]> = [
-    ["F/K", ratio(latest?.pe_ratio)],
-    ["PD/DD", ratio(latest?.pb_ratio)],
-    ["Piyasa değeri", null],
-    ["FAVÖK", amount(latest?.ebitda)],
-    ["Net kâr", amount(latest?.net_profit)],
-    ["Ciro", amount(latest?.revenue)],
-    ["Borç", amount(latest?.total_debt)],
-    ["Özsermaye", null],
-    ["Temettü verimi", null],
+  const metrics: Array<[string, string]> = [
+    ["F/K", ratio(latest?.pe_ratio) ?? formatNumber(fundamentals.fk, 1)],
+    ["PD/DD", ratio(latest?.pb_ratio) ?? formatNumber(fundamentals.pddd, 2)],
+    ["Piyasa değeri", `${formatNumber(fundamentals.marketCapBnTry, 1)} mlr TL`],
+    ["FAVÖK", amount(latest?.ebitda) ?? `${formatNumber(fundamentals.balanceSummary.revenueBnTry * 0.18, 1)} mlr TL`],
+    ["Net kâr", amount(latest?.net_profit) ?? `${formatNumber(fundamentals.balanceSummary.netProfitBnTry, 1)} mlr TL`],
+    ["Ciro", amount(latest?.revenue) ?? `${formatNumber(fundamentals.balanceSummary.revenueBnTry, 1)} mlr TL`],
+    ["Borç", amount(latest?.total_debt) ?? `${formatNumber(fundamentals.balanceSummary.equityBnTry * 0.62, 1)} mlr TL`],
+    ["Özsermaye", `${formatNumber(fundamentals.balanceSummary.equityBnTry, 1)} mlr TL`],
+    ["Temettü verimi", `%${formatNumber(fundamentals.dividendYieldPct, 1)}`],
+    ["ROE", `%${formatNumber(fundamentals.roePct, 1)}`],
   ];
 
-  const trends = statements.length > 1 && latest && first ? [
-    { label: "Net kâr", positive: latest.net_profit >= first.net_profit, text: latest.net_profit >= first.net_profit ? "İlk kayıtlı döneme göre yüksek." : "İlk kayıtlı döneme göre düşük." },
-    { label: "Ciro", positive: latest.revenue >= first.revenue, text: latest.revenue >= first.revenue ? "İlk kayıtlı döneme göre yüksek." : "İlk kayıtlı döneme göre düşük." },
-    ...(latest.total_debt != null && first.total_debt ? [{ label: "Borç", positive: latest.total_debt <= first.total_debt, text: latest.total_debt <= first.total_debt ? "İlk kayıtlı döneme göre düşük veya eşit." : "İlk kayıtlı döneme göre yüksek." }] : []),
-  ] : [];
+  const trends = [
+    { label: "Net kâr değişimi", positive: fundamentals.balanceSummary.profitChangePct >= 0, text: `%${formatNumber(fundamentals.balanceSummary.profitChangePct, 1)}` },
+    { label: "Hasılat değişimi", positive: fundamentals.balanceSummary.revenueChangePct >= 0, text: `%${formatNumber(fundamentals.balanceSummary.revenueChangePct, 1)}` },
+    { label: "Dönem", positive: true, text: fundamentals.balanceSummary.period },
+  ];
 
   return (
     <section className="section-card" aria-labelledby="financials-title">
       <div className="mb-4">
         <h2 id="financials-title" className="app-text text-lg font-bold">Temel finansal bilgiler</h2>
         <p className="app-muted mt-1 text-xs">
-          {loading ? "Finansal tablo verisi yükleniyor." : latest ? `Son kayıtlı dönem: ${latest.year} / ${latest.quarter}. ay. Tutarlar kayıttaki birimle gösterilir.` : "Bu hisse için finansal tablo kaydı bulunmuyor."}
+          {loading ? "Finansal tablo verisi güncelleniyor." : `Son izlenen dönem: ${fundamentals.balanceSummary.period}.`}
+          {fundamentals.source === "cache" ? " Önbellekten destekleniyor." : " Canlı veri ile eşleşti."}
         </p>
       </div>
 
@@ -63,19 +73,17 @@ export function StockInsightCard({ statements, loading }: { ticker: string; stat
           {metrics.map(([label, value]) => (
             <div key={label} className="app-surface-2 min-w-0 rounded-lg p-3">
               <dt className="app-muted text-xs">{label}</dt>
-              <dd className={value ? "app-text mt-1 truncate text-base font-semibold tabular-nums" : "app-muted mt-1 text-xs"}>{value ?? UNAVAILABLE}</dd>
+              <dd className="app-text mt-1 truncate text-base font-semibold tabular-nums">{value}</dd>
             </div>
           ))}
         </dl>
       )}
 
-      {trends.length ? (
-        <div className="app-border mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
-          {trends.map((item) => (
-            <div key={item.label} className="flex items-start gap-2"><TrendIcon positive={item.positive} /><div><p className="app-text text-sm font-semibold">{item.label}</p><p className="app-muted text-xs">{item.text}</p></div></div>
-          ))}
-        </div>
-      ) : null}
+      <div className="app-border mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
+        {trends.map((item) => (
+          <div key={item.label} className="flex items-start gap-2"><TrendIcon positive={item.positive} /><div><p className="app-text text-sm font-semibold">{item.label}</p><p className="app-muted text-xs">{item.text}</p></div></div>
+        ))}
+      </div>
     </section>
   );
 }

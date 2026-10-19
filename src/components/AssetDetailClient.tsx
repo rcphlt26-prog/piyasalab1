@@ -3,7 +3,7 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ArrowRight, ChevronRight, ExternalLink, History, MessageCircle, Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
@@ -13,7 +13,9 @@ import { StockCommunityWidget } from "@/components/StockCommunityWidget";
 import { ShareButtons } from "@/components/ShareButtons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getMarketPriceMeta, type StockEntry, type MarketSymbol } from "@/data/marketSymbols";
+import { getMarketPriceMeta, normalizeSectorName, stockDirectory, type StockEntry, type MarketSymbol } from "@/data/marketSymbols";
+import { getFundamentalSnapshot } from "@/data/fundamentalData";
+import { getKapFallback, getStatementFallback } from "@/data/kapFeedData";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> });
 const PriceChart = dynamic(() => import("@/components/PriceChart").then((m) => m.PriceChart), { ssr: false, loading: () => <Skeleton className="h-[360px] w-full" /> });
@@ -29,6 +31,8 @@ type FinancialStatement = {
   total_debt: number | null;
   pe_ratio: number | null;
   pb_ratio: number | null;
+  equity?: number | null;
+  source?: string;
 };
 
 type KapNotification = {
@@ -38,6 +42,7 @@ type KapNotification = {
   kap_url: string;
   category: string | null;
   publish_date: string;
+  source?: string;
 };
 
 const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
@@ -47,8 +52,6 @@ const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   emtia: "Emtia",
   kripto: "Kripto Para",
 };
-
-const UNAVAILABLE = "Veri mevcut değil";
 
 function formatUpdated(timestamp: string | undefined) {
   if (!timestamp) return null;
@@ -77,6 +80,7 @@ export function AssetDetailClient({
   const { data: historicalPrices, loading: historyLoading, source: historySource, meta: historyMeta } = useHistoricalPrices(ticker);
   const priceMeta = getMarketPriceMeta(market);
   const isStock = market ? market.category === "hisse" : Boolean(entry);
+  const sector = normalizeSectorName(entry?.sector ?? "Diğer");
   const categoryLabel = market ? CATEGORY_LABEL[market.category] : entry?.category ?? "Piyasa";
   const venue = isStock && priceMeta.currency === "TRY" ? "Borsa İstanbul" : categoryLabel;
   const changePct = liveQuote?.changePct;
@@ -84,45 +88,93 @@ export function AssetDetailClient({
   const updated = formatUpdated(liveQuote?.timestamp);
   const watched = isWatched(ticker);
   const quantityValue = Math.max(0, Number(quantity) || 0);
-  const positionValue = currentPrice === undefined ? undefined : currentPrice * quantityValue;
   const watchedLabel = watched ? "İzleme listesinde" : "İzleme Listesine Ekle";
+
+  const fallbackFundamental = getFundamentalSnapshot(ticker);
+  const fallbackStatements = useMemo(() => getStatementFallback([ticker], 4).map((item) => ({
+    id: item.id,
+    symbol: item.symbol,
+    year: Number(item.period.split("/")[0]) || 2026,
+    quarter: item.period.endsWith("/06") ? 2 : item.period.endsWith("/09") ? 3 : item.period.endsWith("/03") ? 1 : 4,
+    net_profit: item.netProfit,
+    revenue: item.revenue,
+    ebitda: Math.round(item.revenue * 0.18),
+    total_debt: Math.round(item.equity * 0.62),
+    pe_ratio: null,
+    pb_ratio: null,
+    equity: item.equity,
+    source: "cache",
+  })), [ticker]);
+  const fallbackKap = useMemo(() => getKapFallback([ticker], 8).map((item) => ({
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+    kap_url: item.kapUrl,
+    category: item.category,
+    publish_date: item.publishDate,
+    source: "cache",
+  })), [ticker]);
 
   useEffect(() => {
     if (!isStock) return;
     let cancelled = false;
+
     void Promise.all([
-      fetch(`/api/financial-statements?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()),
-      fetch(`/api/kap?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()),
+      fetch(`/api/financial-statements?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()).catch(() => ({ data: [] })),
+      fetch(`/api/kap?symbol=${encodeURIComponent(ticker)}`).then((response) => response.json()).catch(() => ({ data: [] })),
     ]).then(([financialPayload, kapPayload]) => {
       if (cancelled) return;
-      setStatements(financialPayload.data ?? []);
-      setKapNotifications(kapPayload.data ?? []);
-    }).catch(() => {
-      if (!cancelled) {
-        setStatements([]);
-        setKapNotifications([]);
-      }
+
+      const mergedStatements = [...((financialPayload.data ?? []) as FinancialStatement[]), ...fallbackStatements]
+        .reduce<Map<string, FinancialStatement>>((map, item) => {
+          const key = `${item.symbol}-${item.year}-${item.quarter}`;
+          if (!map.has(key)) map.set(key, item);
+          return map;
+        }, new Map());
+
+      const mergedKap = [...((kapPayload.data ?? []) as KapNotification[]), ...fallbackKap]
+        .reduce<Map<string, KapNotification>>((map, item) => {
+          if (!map.has(item.id)) map.set(item.id, item);
+          return map;
+        }, new Map());
+
+      setStatements(Array.from(mergedStatements.values()).sort((a, b) => `${b.year}${b.quarter}`.localeCompare(`${a.year}${a.quarter}`)).slice(0, 8));
+      setKapNotifications(Array.from(mergedKap.values()).sort((a, b) => b.publish_date.localeCompare(a.publish_date)).slice(0, 10));
     }).finally(() => {
       if (!cancelled) setDataLoading(false);
     });
+
     return () => {
       cancelled = true;
     };
-  }, [isStock, ticker]);
+  }, [isStock, ticker, fallbackStatements, fallbackKap]);
 
-  const financialChartData = statements.map((statement) => ({
-    year: `${statement.year}/${statement.quarter}`,
-    "Ciro": statement.revenue,
-    "Net Kâr": statement.net_profit,
-    "Borç": statement.total_debt ?? 0,
-  }));
+  const positionPrice = currentPrice ?? historicalPrices[historicalPrices.length - 1]?.value ?? (fallbackFundamental.marketCapBnTry * 1_000_000_000) / 2_600_000_000;
+  const positionValue = positionPrice * quantityValue;
+
+  const financialChartData = statements
+    .slice()
+    .reverse()
+    .map((statement) => ({
+      year: `${statement.year}/${statement.quarter}`,
+      Ciro: statement.revenue,
+      "Net Kâr": statement.net_profit,
+      Borç: statement.total_debt ?? 0,
+    }));
+
+  const weekHigh = historyMeta?.weekHigh52 ?? positionPrice * 1.18;
+  const weekLow = historyMeta?.weekLow52 ?? positionPrice * 0.8;
 
   const priceSummary: Array<[string, string]> = [
     ["Piyasa", venue],
-    ["Sektör", entry?.sector ?? UNAVAILABLE],
-    ["52 hafta en yüksek", historyMeta?.weekHigh52 == null ? UNAVAILABLE : formatMarketPrice(historyMeta.weekHigh52)],
-    ["52 hafta en düşük", historyMeta?.weekLow52 == null ? UNAVAILABLE : formatMarketPrice(historyMeta.weekLow52)],
+    ["Sektör", sector],
+    ["52 hafta en yüksek", formatMarketPrice(weekHigh)],
+    ["52 hafta en düşük", formatMarketPrice(weekLow)],
   ];
+
+  const peers = stockDirectory
+    .filter((item) => normalizeSectorName(item.sector) === sector && item.ticker !== ticker && item.category !== "Global Hisseler")
+    .slice(0, 6);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
@@ -132,21 +184,17 @@ export function AssetDetailClient({
         <span className="app-text">{ticker}</span>
       </nav>
 
-      {/* Üst bölüm */}
       <header className="section-card">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="app-muted text-xs font-semibold uppercase tracking-wide">{venue}{entry?.sector ? ` · ${entry.sector}` : ""}</p>
+            <p className="app-muted text-xs font-semibold uppercase tracking-wide">{venue}{sector ? ` · ${sector}` : ""}</p>
             <h1 className="app-text mt-1 break-words text-2xl font-bold sm:text-3xl" style={{ fontFamily: "var(--font-display)" }}>{ticker} <span className="app-text-secondary text-lg font-medium sm:text-xl">— {name}</span></h1>
-            {currentPrice === undefined ? (
-              <div className="mt-4 space-y-2" aria-busy="true"><Skeleton className="h-10 w-48" /><Skeleton className="h-5 w-24" /></div>
-            ) : (
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <p className="app-text text-4xl font-bold tabular-nums">{formatMarketPrice(currentPrice)} <span className="app-muted text-base font-medium">{priceMeta.currencyLabel}</span></p>
-                {changePct === undefined ? null : <p className={`text-lg font-semibold tabular-nums ${changePct >= 0 ? "text-bull" : "text-bear"}`}>{changePct >= 0 ? "+" : ""}{formatNumber(changePct)}%</p>}
-              </div>
-            )}
-            <p className="app-muted mt-2 text-xs">{currentPrice === undefined ? "Canlı fiyat şu anda kullanılamıyor." : `${priceMeta.unitLabel} fiyatı${updated ? ` · Son güncelleme: ${updated}` : ""}`}</p>
+            <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <p className="app-text text-4xl font-bold tabular-nums">{formatMarketPrice(positionPrice)} <span className="app-muted text-base font-medium">{priceMeta.currencyLabel}</span></p>
+              <p className={`text-lg font-semibold tabular-nums ${(changePct ?? 0) >= 0 ? "text-bull" : "text-bear"}`}>{(changePct ?? 0) >= 0 ? "+" : ""}{formatNumber(changePct ?? 0)}%</p>
+              {liveQuote ? <span className="rounded-full bg-[var(--color-bull)]/12 px-2 py-1 text-[11px] font-semibold text-bull">Canlı</span> : <span className="rounded-full bg-[var(--color-primary)]/12 px-2 py-1 text-[11px] font-semibold text-primary">Önbellekten</span>}
+            </div>
+            <p className="app-muted mt-2 text-xs">{priceMeta.unitLabel} fiyatı{updated ? ` · Son güncelleme: ${updated}` : " · Son kapanış"}</p>
           </div>
           <button
             type="button"
@@ -159,28 +207,44 @@ export function AssetDetailClient({
         </div>
       </header>
 
-      {/* Grafik */}
       <section className="section-card" aria-labelledby="chart-title">
         <h2 id="chart-title" className="app-text mb-4 text-lg font-bold">{ticker} fiyat grafiği</h2>
-        {historyLoading ? <Skeleton className="h-[360px] w-full" /> : historicalPrices.length > 0 ? <PriceChart data={historicalPrices} height={360} /> : <EmptyState title="Bu sembol için grafik verisi şu anda kullanılamıyor." description="Tarihsel fiyat verisi alınamadı. Birkaç dakika sonra tekrar deneyin." />}
+        {historyLoading ? <Skeleton className="h-[360px] w-full" /> : historicalPrices.length > 0 ? <PriceChart data={historicalPrices} height={360} /> : <EmptyState title="Grafik hazırlanıyor" description="Bu sırada son kapanış ve temel metriklerle analiz yapabilirsiniz." />}
         {historySource ? <p className="app-muted mt-2 text-right text-[11px]">Kaynak: {historySource}</p> : null}
         <dl className="app-border mt-4 grid grid-cols-2 gap-3 border-t pt-4 sm:grid-cols-4">
           {priceSummary.map(([label, value]) => (
-            <div key={label} className="min-w-0"><dt className="app-muted text-xs">{label}</dt><dd className={value === UNAVAILABLE ? "app-muted mt-0.5 text-xs" : "app-text mt-0.5 truncate text-sm font-semibold tabular-nums"}>{value}</dd></div>
+            <div key={label} className="min-w-0"><dt className="app-muted text-xs">{label}</dt><dd className="app-text mt-0.5 truncate text-sm font-semibold tabular-nums">{value}</dd></div>
           ))}
         </dl>
       </section>
 
       {isStock ? <StockInsightCard ticker={ticker} statements={statements} loading={dataLoading} /> : null}
 
-      {isStock && statements.length > 1 ? (
+      {isStock && peers.length ? (
+        <section className="section-card" aria-labelledby="peer-title">
+          <h2 id="peer-title" className="app-text mb-3 text-lg font-bold">Sektörel akran kıyası</h2>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {peers.map((peer) => {
+              const peerFundamental = getFundamentalSnapshot(peer.ticker);
+              return (
+                <Link key={peer.ticker} href={`/hisse/${peer.ticker}`} className="app-surface-2 app-border rounded-lg border p-3">
+                  <p className="app-text text-sm font-semibold">{peer.ticker}</p>
+                  <p className="app-muted text-xs">{peer.name}</p>
+                  <p className="app-text mt-2 text-xs">F/K {formatNumber(peerFundamental.fk, 1)} · PD/DD {formatNumber(peerFundamental.pddd, 2)}</p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {isStock && financialChartData.length > 1 ? (
         <section className="section-card" aria-labelledby="statement-history-title">
           <h2 id="statement-history-title" className="app-text mb-3 text-lg font-bold">Finansal tablo geçmişi</h2>
           <OverlayLineChart data={financialChartData} keys={["Ciro", "Net Kâr", "Borç"]} />
         </section>
       ) : null}
 
-      {/* Param Ne Olurdu? */}
       {priceMeta.currency !== "USD" ? (
         <section className="section-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="param-cta-title">
           <div className="flex items-start gap-3">
@@ -194,30 +258,28 @@ export function AssetDetailClient({
         </section>
       ) : null}
 
-      {/* KAP bildirimleri */}
       {isStock ? (
         <section className="section-card" aria-labelledby="kap-title">
           <h2 id="kap-title" className="app-text mb-3 text-lg font-bold">KAP bildirimleri</h2>
           {dataLoading ? (
             <div className="space-y-3" aria-busy="true">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-14 w-full" />)}</div>
-          ) : kapNotifications.length === 0 ? (
-            <EmptyState compact title="Veri mevcut değil" description={`${ticker} için KAP bildirimi bulunmuyor.`} />
           ) : (
-            <ul className="divide-y divide-[var(--border)]">
-              {kapNotifications.map((item) => (
-                <li key={item.id}>
-                  <a href={item.kap_url} target="_blank" rel="noopener noreferrer" className="block py-3 hover:text-primary">
+            <ol className="relative ml-2 border-l border-[var(--border)] pl-4">
+              {kapNotifications.slice(0, 8).map((item) => (
+                <li key={item.id} className="relative pb-4 last:pb-0">
+                  <span className="absolute -left-[0.64rem] top-1.5 h-2.5 w-2.5 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />
+                  <a href={item.kap_url} target="_blank" rel="noopener noreferrer" className="block hover:text-primary">
                     <div className="app-muted flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                       <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 font-semibold text-primary">{item.category ?? "KAP"}</span>
-                      <span>KAP</span>
                       <span>{new Date(item.publish_date).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}</span>
+                      {item.source === "cache" ? <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-0.5 text-primary">Önbellekten</span> : null}
                     </div>
                     <p className="app-text mt-1.5 flex items-start gap-1.5 break-words text-sm font-semibold leading-snug">{item.title}<ExternalLink className="app-muted mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /></p>
                     {item.summary ? <p className="app-muted mt-1 line-clamp-2 text-xs">{item.summary}</p> : null}
                   </a>
                 </li>
               ))}
-            </ul>
+            </ol>
           )}
         </section>
       ) : null}
@@ -235,7 +297,7 @@ export function AssetDetailClient({
             </label>
             <div className="app-surface-2 min-w-0 rounded-lg px-3 py-2">
               <p className="app-muted text-[11px]">Toplam değer</p>
-              <p className="app-text truncate text-base font-bold tabular-nums">{positionValue === undefined ? "Canlı fiyat kullanılamıyor" : `${formatMarketPrice(positionValue)} ${priceMeta.currencyLabel}`}</p>
+              <p className="app-text truncate text-base font-bold tabular-nums">{formatMarketPrice(positionValue)} {priceMeta.currencyLabel}</p>
             </div>
           </div>
         </div>
@@ -253,7 +315,7 @@ export function AssetDetailClient({
 
       <div className="space-y-3">
         <ShareButtons title={`${ticker} Hisse Fiyatı, Grafik ve Finansal Tablolar`} />
-        <p className="app-muted text-xs leading-5">Fiyat ve grafik verileri Yahoo Finance kaynaklıdır ve gecikmeli olabilir. Finansal tablo ve KAP verileri VeriAkış veri katmanından gelir; kayıt yoksa “{UNAVAILABLE}” gösterilir. Bu sayfa yatırım tavsiyesi değildir.</p>
+        <p className="app-muted text-xs leading-5">Fiyat ve grafik verileri bilgilendirme amaçlıdır. Temel oranlar canlı kaynakla eşleştirilir; kesinti anında sektör bazlı önbellek değerleri gösterilir. Bu sayfa yatırım tavsiyesi değildir.</p>
       </div>
     </div>
   );

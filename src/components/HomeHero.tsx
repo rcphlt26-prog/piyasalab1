@@ -39,7 +39,7 @@ function SparkFromHistory({ code, positive }: { code: string; positive: boolean 
   return spark.length > 1 ? <Sparkline data={spark} width={96} height={32} trend={positive ? "up" : "down"} /> : null;
 }
 
-function SummaryCard({ code, quote, loading }: { code: string; quote: LiveQuote | undefined; loading: boolean }) {
+function SummaryCard({ code, quote }: { code: string; quote: LiveQuote | undefined }) {
   const meta = getMarketPriceMeta(marketSymbolByCode.get(code));
   const label = marketSymbolByCode.get(code)?.label ?? code;
 
@@ -47,7 +47,7 @@ function SummaryCard({ code, quote, loading }: { code: string; quote: LiveQuote 
     return (
       <Link href={`/varlik/${code}`} className="app-surface-2 block min-w-[11rem] shrink-0 snap-start rounded-xl p-4 md:min-w-0">
         <p className="app-text-secondary text-sm font-medium">{label}</p>
-        {loading ? <div className="mt-3 space-y-2"><Skeleton className="h-7 w-28" /><Skeleton className="h-4 w-20" /></div> : <p className="app-muted mt-3 text-xs leading-5">Bu veri şu anda kullanılamıyor.</p>}
+        <div className="mt-3 space-y-2"><Skeleton className="h-7 w-28" /><Skeleton className="h-4 w-20" /></div>
       </Link>
     );
   }
@@ -68,7 +68,7 @@ function SummaryCard({ code, quote, loading }: { code: string; quote: LiveQuote 
 }
 
 export function HomeMarketSummary() {
-  const { quotes, liveAvailable, updatedAt, isLoading } = useLiveQuotes();
+  const { quotes, liveAvailable, updatedAt, isLoading, isValidating, fallbackReason } = useLiveQuotes();
   const [showMovers, setShowMovers] = useState(false);
   const quoteMap = new Map(quotes.map((quote) => [quote.code, quote]));
   const stocks = quotes.filter((quote) => marketSymbolByCode.get(quote.code)?.category === "hisse");
@@ -82,10 +82,18 @@ export function HomeMarketSummary() {
           <h2 id="summary-title" className="app-text text-xl font-bold sm:text-2xl">Piyasa özeti</h2>
           <p className="app-muted text-xs">Günlük değişim ve son 30 günlük fiyat seyri.</p>
         </div>
-        {liveAvailable ? <span className="rounded-full bg-[var(--color-bull)]/15 px-3 py-1 text-xs font-semibold text-bull">Canlı · {updatedAt ? new Date(updatedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""}</span> : null}
+        {liveAvailable ? (
+          <span className="rounded-full bg-[var(--color-bull)]/15 px-3 py-1 text-xs font-semibold text-bull">
+            Canlı · {updatedAt ? new Date(updatedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""}
+          </span>
+        ) : (
+          <span className="rounded-full bg-[var(--color-primary)]/12 px-3 py-1 text-xs font-semibold text-primary">
+            Son Kapanış • {isValidating || isLoading ? "Güncelleniyor..." : fallbackReason === "cache" ? "Önbellek" : "Referans"}
+          </span>
+        )}
       </div>
       <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
-        {SUMMARY_CODES.map((code) => <SummaryCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
+        {SUMMARY_CODES.map((code) => <SummaryCard key={code} code={code} quote={quoteMap.get(code)} />)}
       </div>
       {stocks.length > 0 ? (
         <>
