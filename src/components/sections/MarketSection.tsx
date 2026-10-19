@@ -224,7 +224,7 @@ export function MarketSection() {
       <MarketNewsStrip tab={activeTab} />
 
       <p className="app-muted mt-3 text-xs">
-        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. {liveAvailable && updatedAt ? `Son güncelleme: ${new Date(updatedAt).toLocaleString("tr-TR")} · Canlı kaynak` : "Canlı veri şu anda kullanılamıyor."}
+        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. {liveAvailable && updatedAt ? `Son güncelleme: ${new Date(updatedAt).toLocaleString("tr-TR")} · Canlı kaynak` : "Son kapanış verileri gösteriliyor."}
       </p>
       <MarketGuideText />
     </section>

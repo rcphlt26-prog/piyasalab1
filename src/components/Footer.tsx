@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Mail } from "lucide-react";
 
 export function Footer() {
@@ -11,7 +10,9 @@ export function Footer() {
         <div className="grid gap-6 md:grid-cols-[1.4fr_1fr]">
           <div>
             <div className="mb-3 flex items-center gap-2">
-              <Image src="/gemini-svg.svg" alt="VeriAkış Gemini sembolü" width={32} height={32} className="rounded-lg" />
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l4-8 4 4 4-6 4 5" />
+              </svg>
               <span className="brand-gradient text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
                 VeriAkış
               </span>
