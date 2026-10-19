@@ -45,6 +45,17 @@ type KapNotification = {
   source?: string;
 };
 
+type FundamentalsApiResponse = {
+  symbol: string;
+  fk: number | null;
+  pddd: number | null;
+  roe: number | null;
+  temettuVerimi: number | null;
+  piyasaDegeri: number | null;
+  kaynakTarih?: string;
+  kaynakTip?: "canli" | "onbellek";
+};
+
 const CATEGORY_LABEL: Record<MarketSymbol["category"], string> = {
   endeks: "Endeks",
   hisse: "Hisse Senedi",
@@ -58,6 +69,22 @@ function formatUpdated(timestamp: string | undefined) {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+
+function formatMarketCapTry(value: number) {
+  const abs = Math.abs(value);
+  const tr = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  if (abs >= 1_000_000_000_000) return `${tr.format(value / 1_000_000_000_000)} Trilyon ₺`;
+  if (abs >= 1_000_000_000) return `${tr.format(value / 1_000_000_000)} Milyar ₺`;
+  if (abs >= 1_000_000) return `${tr.format(value / 1_000_000)} Milyon ₺`;
+  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(value)} ₺`;
+}
+
+function formatSourceBadgeDate(timestamp?: string) {
+  if (!timestamp) return "az önce";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "az önce";
+  return date.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 export function AssetDetailClient({
@@ -74,6 +101,8 @@ export function AssetDetailClient({
   const [kapNotifications, setKapNotifications] = useState<KapNotification[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [showCommunity, setShowCommunity] = useState(false);
+  const [fundamentalsData, setFundamentalsData] = useState<FundamentalsApiResponse | null>(null);
+  const [fundamentalsLoading, setFundamentalsLoading] = useState(true);
   const { isWatched, toggle } = useWatchlist();
   const name = entry?.name ?? market?.label ?? ticker;
   const liveQuote = useLiveQuote(ticker);
@@ -116,6 +145,32 @@ export function AssetDetailClient({
   })), [ticker]);
 
   useEffect(() => {
+    if (!isStock) {
+      setFundamentalsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setFundamentalsLoading(true);
+
+    void fetch(`/api/fundamentals/${encodeURIComponent(ticker)}`)
+      .then((response) => response.json())
+      .then((payload: FundamentalsApiResponse) => {
+        if (!cancelled) setFundamentalsData(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setFundamentalsData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setFundamentalsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isStock, ticker]);
+
+  useEffect(() => {
     if (!isStock) return;
     let cancelled = false;
 
@@ -151,6 +206,14 @@ export function AssetDetailClient({
 
   const positionPrice = currentPrice ?? historicalPrices[historicalPrices.length - 1]?.value ?? (fallbackFundamental.marketCapBnTry * 1_000_000_000) / 2_600_000_000;
   const positionValue = positionPrice * quantityValue;
+
+  const headerFundamentals = {
+    fk: fundamentalsData?.fk ?? fallbackFundamental.fk,
+    pddd: fundamentalsData?.pddd ?? fallbackFundamental.pddd,
+    piyasaDegeri: fundamentalsData?.piyasaDegeri ?? Math.round(fallbackFundamental.marketCapBnTry * 1_000_000_000),
+    kaynakTip: fundamentalsData?.kaynakTip ?? "onbellek",
+    kaynakTarih: fundamentalsData?.kaynakTarih,
+  };
 
   const financialChartData = statements
     .slice()
@@ -206,6 +269,44 @@ export function AssetDetailClient({
           </button>
         </div>
       </header>
+
+      {isStock ? (
+        <section className="section-card" aria-labelledby="live-fundamentals-title">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <h2 id="live-fundamentals-title" className="app-text text-base font-bold">Canlı temel oran özeti</h2>
+            {headerFundamentals.kaynakTip === "onbellek" ? (
+              <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                📦 Önbellekten • {formatSourceBadgeDate(headerFundamentals.kaynakTarih)}
+              </span>
+            ) : (
+              <span className="rounded-full bg-[var(--up-bg)] px-2 py-1 text-[11px] font-semibold text-[var(--up)]">Canlı veri</span>
+            )}
+          </div>
+
+          {fundamentalsLoading ? (
+            <div className="grid gap-3 sm:grid-cols-3" aria-busy="true">
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
+          ) : (
+            <dl className="grid gap-3 sm:grid-cols-3">
+              <div className="app-surface-2 rounded-lg p-3">
+                <dt className="app-muted text-xs">F/K</dt>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatNumber(headerFundamentals.fk, 1)}</dd>
+              </div>
+              <div className="app-surface-2 rounded-lg p-3">
+                <dt className="app-muted text-xs">PD/DD</dt>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatNumber(headerFundamentals.pddd, 2)}</dd>
+              </div>
+              <div className="app-surface-2 rounded-lg p-3">
+                <dt className="app-muted text-xs">Piyasa değeri</dt>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatMarketCapTry(headerFundamentals.piyasaDegeri)}</dd>
+              </div>
+            </dl>
+          )}
+        </section>
+      ) : null}
 
       <section className="section-card" aria-labelledby="chart-title">
         <h2 id="chart-title" className="app-text mb-4 text-lg font-bold">{ticker} fiyat grafiği</h2>

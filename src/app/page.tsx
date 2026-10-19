@@ -116,10 +116,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="app-bg min-h-screen tabular-nums block overflow-x-hidden">
+    <div className="app-bg min-h-screen tabular-nums block">
       <SpkBanner />
 
-      <header className={`sticky top-0 z-50 border-b app-border backdrop-blur-xl transition-all duration-300 ${headerCompact ? "bg-[color-mix(in_srgb,var(--surface)_84%,transparent)]" : "bg-[color-mix(in_srgb,var(--surface)_92%,transparent)]"}`}>
+      <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/90 dark:bg-zinc-900/90 border-b border-zinc-200 dark:border-zinc-800 transition-all duration-200">
         <div className={`mx-auto flex max-w-7xl items-center gap-4 px-4 transition-all duration-300 ${headerCompact ? "h-14" : "h-16"}`}>
           
           {/* Logo */}

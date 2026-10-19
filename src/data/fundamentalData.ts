@@ -268,3 +268,20 @@ export function getSectorLabel(symbol: string): NormalizedSector {
   if (data) return data.sector;
   return inferSector(symbol.toUpperCase());
 }
+
+export function getFundamentals(symbol: string) {
+  const snapshot = getFundamentalSnapshot(symbol);
+  return {
+    symbol: snapshot.symbol,
+    fk: snapshot.fk,
+    pddd: snapshot.pddd,
+    roe: snapshot.roePct,
+    temettuVerimi: snapshot.dividendYieldPct,
+    piyasaDegeri: Math.round(snapshot.marketCapBnTry * 1_000_000_000),
+    hisseBasinaKazanc: null as number | null,
+    defterdegerPerShare: null as number | null,
+    guncelFiyat: null as number | null,
+    degisimYuzde: null as number | null,
+    kaynakTip: "onbellek" as const,
+  };
+}

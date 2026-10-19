@@ -18,31 +18,53 @@
 
 /* Açık tema (varsayılan) */
 :root {
-  --bg: #f3f6fb;
-  --bg-grad-1: #eef3fb;
-  --bg-grad-2: #f8fbff;
-  --surface: #ffffff;
-  --surface-2: #f7f9fc;
-  --surface-3: #eef2f8;
-  --border: #dbe3ee;
-  --border-strong: #c6d2e1;
-  --text-primary: #0f172a;
-  --text-secondary: #3f4f64;
-  --text-muted: #65758b;
+  /* Light Mode */
+  --bg-primary: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --bg-surface: #F1F5F9;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --border: #E2E8F0;
+  --accent-blue: #2563EB;
+  --up: #16A34A;
+  --down: #DC2626;
+  --up-bg: #F0FDF4;
+  --down-bg: #FEF2F2;
+
+  /* Geriye dönük yardımcı eşlemeler */
+  --bg: var(--bg-primary);
+  --bg-grad-1: #EEF3FB;
+  --bg-grad-2: #F8FBFF;
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-surface);
+  --surface-3: #E2E8F0;
+  --border-strong: #CBD5E1;
 }
 
 .dark {
-  --bg: #0a1220;
-  --bg-grad-1: #0d1728;
-  --bg-grad-2: #0a1220;
-  --surface: #101b2d;
-  --surface-2: #0e1828;
-  --surface-3: #1a2940;
-  --border: #22324a;
-  --border-strong: #314664;
-  --text-primary: #e2e8f0;
-  --text-secondary: #c5d1e0;
-  --text-muted: #8ea2bc;
+  /* Dark Mode */
+  --bg-primary: #090F1D;
+  --bg-card: #1E293B;
+  --bg-surface: #0F172A;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: #1E293B;
+  --accent-blue: #3B82F6;
+  --up: #22C55E;
+  --down: #EF4444;
+  --up-bg: #052E16;
+  --down-bg: #450A0A;
+
+  /* Geriye dönük yardımcı eşlemeler */
+  --bg: var(--bg-primary);
+  --bg-grad-1: #0D1728;
+  --bg-grad-2: #0A1220;
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-surface);
+  --surface-3: #1E293B;
+  --border-strong: #334155;
 }
 
 * {
@@ -54,9 +76,8 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  overflow-x: hidden;
   overflow-y: auto;
-  background: var(--bg);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-jakarta), Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   scroll-behavior: smooth;
@@ -94,7 +115,7 @@ a {
 }
 
 .brand-gradient {
-  background: linear-gradient(90deg, var(--color-primary-light), var(--color-bull));
+  background: linear-gradient(90deg, var(--accent-blue), var(--up));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -120,12 +141,12 @@ a {
 .flash-down { animation: flashDown 0.6s ease; }
 
 @keyframes flashUp {
-  from { box-shadow: 0 0 0 rgba(16, 185, 129, 0.8); }
-  to { box-shadow: 0 0 28px rgba(16, 185, 129, 0); }
+  from { box-shadow: 0 0 0 color-mix(in srgb, var(--up) 70%, transparent); }
+  to { box-shadow: 0 0 28px transparent; }
 }
 @keyframes flashDown {
-  from { box-shadow: 0 0 0 rgba(244, 63, 94, 0.8); }
-  to { box-shadow: 0 0 28px rgba(244, 63, 94, 0); }
+  from { box-shadow: 0 0 0 color-mix(in srgb, var(--down) 70%, transparent); }
+  to { box-shadow: 0 0 28px transparent; }
 }
 
 @keyframes pop {
