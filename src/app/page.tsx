@@ -34,11 +34,24 @@ import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
 import { HomeStockCards, HomeNewsList } from "@/components/HomeTickerRail";
+import { InView } from "@/components/ui/InView";
 
 // Dynamic Import (Lazy Loading)
 const LoadingBox = () => (
   <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
     <Skeleton className="h-6 w-1/3" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-40 w-full" />
+  </div>
+);
+
+const LazySectionSkeleton = ({ lines = 3, cardHeight = "h-36" }: { lines?: number; cardHeight?: string }) => (
+  <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
+    <Skeleton className="h-6 w-1/3" />
+    <Skeleton className="h-4 w-1/2" />
+    <div className="grid gap-3 md:grid-cols-2">
+      {Array.from({ length: lines }).map((_, idx) => (
+        <Skeleton key={idx} className={`${cardHeight} w-full`} />
+      ))}
+    </div>
   </div>
 );
 
@@ -344,12 +357,24 @@ export default function HomePage() {
             <HomeHero />
             <HomeMarketSummary />
             <ParamNeOlurdu />
-            <HomeStockCards />
-            <HomeNewsList onNavigate={handleNavigate} />
-            <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
-            <HomePersonalPanel />
-            <HomeDailyFlow />
-            <HomeTools onNavigate={handleNavigate} />
+            <InView rootMargin="320px" fallback={<LazySectionSkeleton lines={4} cardHeight="h-40" />}>
+              <HomeStockCards />
+            </InView>
+            <InView rootMargin="320px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-28" />}>
+              <HomeNewsList onNavigate={handleNavigate} />
+            </InView>
+            <InView rootMargin="260px" fallback={<LazySectionSkeleton lines={2} cardHeight="h-44" />}>
+              <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
+            </InView>
+            <InView rootMargin="220px" fallback={<LazySectionSkeleton lines={2} cardHeight="h-32" />}>
+              <HomePersonalPanel />
+            </InView>
+            <InView rootMargin="260px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-32" />}>
+              <HomeDailyFlow />
+            </InView>
+            <InView rootMargin="220px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-28" />}>
+              <HomeTools onNavigate={handleNavigate} />
+            </InView>
             <section className="rounded-3xl bg-[var(--color-primary-dark)] px-6 py-10 text-center text-white sm:py-12 shadow-lg">
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Yatırım yapmadan önce veriyi incele.</h2>
               <p className="mx-auto mt-2.5 max-w-xl text-sm sm:text-base text-white/80">Geçmiş dönem performanslarını hesapla, hisseleri akranlarıyla kıyasla ve portföyünü tek ekrandan yönet.</p>
