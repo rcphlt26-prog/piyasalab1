@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import yahooFinance from "yahoo-finance2";
 
 export const runtime = "nodejs";
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: Promise<{ symbol: string }>;
@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     };
 
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "s-maxage=3600, stale-while-revalidate=7200" },
+      headers: { "Cache-Control": "no-store, no-cache, max-age=0" },
     });
   } catch (error) {
     console.error(`Yahoo Finance hatası [${yahooSymbol}]:`, error);
