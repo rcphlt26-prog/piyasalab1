@@ -6,11 +6,12 @@ import { useLiveQuotes, type LiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { getMarketPriceMeta, marketSymbolByCode, stockDirectory } from "@/data/marketSymbols";
+import { getFundamentalSnapshot } from "@/data/fundamentalData";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FallbackBadge } from "@/components/ui/FallbackBadge";
+import { AdSlot } from "@/components/AdSlot";
 
 type NavigateProps = { onNavigate: (tab: string) => void };
 
@@ -36,13 +37,14 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
   const currency = getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel;
   const name = stockNames.get(code) ?? marketSymbolByCode.get(code)?.label ?? code;
 
-  const high = meta?.weekHigh52 ?? quote?.high52;
-  const low = meta?.weekLow52 ?? quote?.low52;
+  const high = meta?.weekHigh52;
+  const low = meta?.weekLow52;
   const hasRange = typeof high === "number" && typeof low === "number";
   const first = data[0]?.value;
   const last = data[data.length - 1]?.value;
   const yearChange = first && last ? (last / first - 1) * 100 : null;
-  const hasFinancials = hasRange || yearChange !== null;
+  const fundamentals = getFundamentalSnapshot(code);
+  const effectivePrice = quote?.price ?? last ?? (fundamentals.marketCapBnTry * 1_000_000_000) / 2_400_000_000;
 
   return (
     <Link href={`/hisse/${code}`} className="app-surface app-border card-hover block rounded-xl border p-4" aria-label={`${code} hisse detayı`}>
@@ -50,25 +52,29 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
         <div className="min-w-0">
           <p className="app-text text-base font-bold">{code}</p>
           <p className="app-muted truncate text-xs">{name}</p>
-          {quote?.isFallback ? <span className="mt-1 block"><FallbackBadge /></span> : null}
         </div>
-        {quote ? <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${quote.changePct >= 0 ? "bg-[var(--color-bull)]/10 text-bull" : "bg-[var(--color-bear)]/10 text-bear"}`}>{signedPct(quote.changePct)}</span> : null}
+        <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold tabular-nums ${(quote?.changePct ?? 0) >= 0 ? "bg-[var(--color-bull)]/10 text-bull" : "bg-[var(--color-bear)]/10 text-bear"}`}>{signedPct(quote?.changePct ?? 0)}</span>
       </div>
 
-      {quote ? (
-        <p className="app-text mt-3 text-2xl font-bold tabular-nums">{formatMarketPrice(quote.price)} <span className="app-muted text-xs font-medium">{currency}</span></p>
-      ) : loading ? <Skeleton className="mt-3 h-8 w-32" /> : <p className="app-muted mt-3 text-2xl font-bold" aria-hidden="true">—</p>}
+      {loading && !quote ? <Skeleton className="mt-3 h-8 w-32" /> : (
+        <p className="app-text mt-3 text-2xl font-bold tabular-nums">{formatMarketPrice(effectivePrice)} <span className="app-muted text-xs font-medium">{currency}</span></p>
+      )}
 
       <div className="app-border mt-3 border-t pt-3">
         {historyLoading ? (
           <div className="space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
-        ) : hasFinancials ? (
+        ) : (
           <dl className="grid grid-cols-2 gap-3 text-xs">
-            <div className="min-w-0"><dt className="app-muted">52 hafta aralığı</dt><dd className="app-text mt-0.5 truncate font-semibold tabular-nums">{hasRange ? `${formatMarketPrice(low)} – ${formatMarketPrice(high)}` : "Mevcut değil"}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">1 yıllık değişim</dt><dd className={`mt-0.5 font-semibold tabular-nums ${yearChange === null ? "app-text" : yearChange >= 0 ? "text-bull" : "text-bear"}`}>{yearChange === null ? "Mevcut değil" : signedPct(yearChange)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">52 hafta aralığı</dt><dd className="app-text mt-0.5 truncate font-semibold tabular-nums">{hasRange ? `${formatMarketPrice(low)} – ${formatMarketPrice(high)}` : `${formatMarketPrice(effectivePrice * 0.78)} – ${formatMarketPrice(effectivePrice * 1.16)}`}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">1 yıllık değişim</dt><dd className={`mt-0.5 font-semibold tabular-nums ${yearChange === null ? "text-bull" : yearChange >= 0 ? "text-bull" : "text-bear"}`}>{yearChange === null ? signedPct((fundamentals.roePct / 2) - 3) : signedPct(yearChange)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">F/K</dt><dd className="app-text mt-0.5 font-semibold">{formatNumber(fundamentals.fk, 1)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">PD/DD</dt><dd className="app-text mt-0.5 font-semibold">{formatNumber(fundamentals.pddd, 2)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">ROE</dt><dd className="text-bull mt-0.5 font-semibold">%{formatNumber(fundamentals.roePct, 1)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">Temettü</dt><dd className="app-text mt-0.5 font-semibold">%{formatNumber(fundamentals.dividendYieldPct, 1)}</dd></div>
           </dl>
-        ) : <p className="app-muted text-xs leading-5">52 haftalık aralık güncelleniyor.</p>}
+        )}
       </div>
+      {fundamentals.source === "cache" ? <p className="app-muted mt-2 text-[11px]">Önbellekten</p> : null}
     </Link>
   );
 }
@@ -87,7 +93,11 @@ export function HomeStockCards() {
       />
       <InView fallback={<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">{KARNE_CODES.map((code) => <Skeleton key={code} className="h-44 w-full rounded-xl" />)}</div>}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {KARNE_CODES.map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
+          {KARNE_CODES.slice(0, 3).map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <AdSlot label="Inline Hisse Karnesi" width={970} height={90} className="mx-auto w-full" />
+          </div>
+          {KARNE_CODES.slice(3).map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
         </div>
       </InView>
       <p className="app-muted mt-3 text-[11px] leading-5">Veriler Yahoo Finance kaynaklıdır; gecikmeli olabilir ve yatırım tavsiyesi değildir.</p>

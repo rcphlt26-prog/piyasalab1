@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { 
   LineChart, 
@@ -230,6 +231,11 @@ export default function HomePage() {
               ) : null}
             </div>
 
+            <Link href="/hakkimizda-veri-metodolojisi" className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium app-text-secondary hover:app-surface-3 hover:app-text">
+              <Info className="h-4 w-4 opacity-75" aria-hidden="true" />
+              Hakkımızda & Metodoloji
+            </Link>
+
           </nav>
 
           {/* Search Bar */}
@@ -320,6 +326,12 @@ export default function HomePage() {
                   </button>
                 );
               })}
+
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 pt-3 pb-0.5">Kurumsal</div>
+              <Link href="/hakkimizda-veri-metodolojisi" onClick={() => setMobileOpen(false)} className="inline-flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition app-surface-2 app-text-secondary hover:app-surface-3 hover:app-text">
+                <Info className="h-4 w-4 opacity-80" aria-hidden="true" />
+                <span>Hakkımızda & Veri Metodolojisi</span>
+              </Link>
             </div>
           </nav>
         ) : null}

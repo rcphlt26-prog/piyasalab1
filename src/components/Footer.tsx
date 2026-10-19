@@ -59,6 +59,7 @@ export function Footer() {
             <Link href="/gizlilik-politikasi" className="app-muted hover:text-primary">Gizlilik politikası</Link>
             <Link href="/kullanim-kosullari" className="app-muted hover:text-primary">Kullanım koşulları</Link>
             <Link href="/sorumluluk-reddi" className="app-muted hover:text-primary">Sorumluluk reddi</Link>
+            <Link href="/hakkimizda-veri-metodolojisi" className="app-muted hover:text-primary">Hakkımızda & veri metodolojisi</Link>
             <Link href="/rehber" className="app-muted hover:text-primary">Finans rehberleri</Link>
             <Link href="/iletisim" className="app-muted hover:text-primary">İletişim</Link>
           </nav>

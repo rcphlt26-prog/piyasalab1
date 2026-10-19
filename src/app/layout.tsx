@@ -6,6 +6,7 @@ import { AdSenseConsent } from "@/components/AdSenseConsent";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { MarketSidebar } from "@/components/MarketSidebar";
+import { siteFaqItems } from "@/data/faqs";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -64,33 +65,41 @@ export const metadata: Metadata = {
   },
 };
 
-const webAppJsonLd = {
+const webSiteJsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
+  "@type": "WebSite",
   name: "VeriAkış",
-  applicationCategory: "FinanceApplication",
-  operatingSystem: "Web",
   url: "https://veriakis.com",
-  description:
-    "Borsa İstanbul getiri hesaplama, enflasyon düzeltme, dolar bazlı reel kazanç ve topluluk sentiment araçları.",
+  description: "Canlı piyasa akışı, finansal okuryazarlık rehberleri ve hesaplama araçları sunan bilgilendirme platformu.",
   inLanguage: "tr-TR",
 };
 
-const organizationJsonLd = {
+const financialServiceJsonLd = {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": "FinancialService",
   name: "VeriAkış",
   url: "https://veriakis.com",
-  logo: "https://veriakis.com/gemini-svg.svg",
-  email: "rcphlt26@gmail.com",
+  areaServed: "TR",
+  serviceType: "Finansal okuryazarlık içerikleri, piyasa veri görselleştirme ve yatırım hesaplama araçları",
+  description: "VeriAkış içerikleri bilgilendirme amaçlıdır, yatırım tavsiyesi değildir.",
+  publisher: {
+    "@type": "Organization",
+    name: "VeriAkış",
+    url: "https://veriakis.com",
+  },
 };
 
-const websiteJsonLd = {
+const faqPageJsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Veri Akış",
-  alternateName: ["VeriAkis", "veriakis.com", "Veri Akışı"],
-  url: "https://veriakis.com",
+  "@type": "FAQPage",
+  mainEntity: siteFaqItems.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -110,9 +119,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           crossOrigin="anonymous"
         />
         <AdSenseConsent client={adsenseClient} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(financialServiceJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageJsonLd) }} />
       </body>
     </html>
   );
