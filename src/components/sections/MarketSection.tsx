@@ -116,7 +116,7 @@ export function MarketSection() {
       <SectionTitle
         eyebrow="Canlı Veri"
         title="Canlı Borsa, Döviz, Emtia ve Kripto Akışı"
-        description="Veriler Yahoo Finance üzerinden yaklaşık 30 saniyede bir güncellenir. Kaynak erişilemezse fiyat yerine veri durumu gösterilir."
+        description="Veriler yaklaşık 30 saniyede bir güncellenir. Canlı kaynak gecikirse son kapanış ve önbellek değerleri korunur."
       />
 
       <div className="app-surface-2 app-border mb-3 rounded-xl border p-2">
@@ -224,7 +224,7 @@ export function MarketSection() {
       <MarketNewsStrip tab={activeTab} />
 
       <p className="app-muted mt-3 text-xs">
-        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. {liveAvailable && updatedAt ? `Son güncelleme: ${new Date(updatedAt).toLocaleString("tr-TR")} · Canlı kaynak` : "Son kapanış verileri gösteriliyor."}
+        Veriler bilgilendirme amaçlıdır, yatırım tavsiyesi değildir. {liveAvailable && updatedAt ? `Son güncelleme: ${new Date(updatedAt).toLocaleString("tr-TR")} · Canlı kaynak` : "Son kapanış verileri gösteriliyor, canlı kaynak güncelleniyor."}
       </p>
       <MarketGuideText />
     </section>

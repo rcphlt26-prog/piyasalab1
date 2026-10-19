@@ -5,15 +5,6 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import { useLiveQuotes } from "@/hooks/useLiveQuotes";
 import { getMarketPriceMeta, marketSymbolByCode } from "@/data/marketSymbols";
 import { formatMarketPrice } from "@/lib/utils";
-import { FallbackBadge } from "@/components/ui/FallbackBadge";
-
-// Bantta okunaklı görünen ad (kod + birim bitişik yazılmasın: "XU100Puan" vb.)
-const DISPLAY_NAMES: Record<string, string> = {
-  XU100: "XU100 (Puan)",
-  GRAMALTIN: "Gram Altın (TL)",
-  USDTRY: "USD/TRY",
-  BTCUSD: "BTC/USD",
-};
 
 interface ItemData {
   code: string;
@@ -22,28 +13,23 @@ interface ItemData {
   currencyLabel: string;
   change: string;
   isPositive: boolean;
-  isFallback: boolean;
 }
 
 export function MostCurious({ compact = false }: { compact?: boolean }) {
   const { quotes, liveAvailable, updatedAt } = useLiveQuotes();
   const codes = ["XU100", "GRAMALTIN", "GRAMGUMUS", "USDTRY", "EURTRY", "BTCUSD", "ETHUSD"];
-  // Canlı ya da son kapanış verisi olmayan semboller bantta gösterilmez
-  const data: ItemData[] = codes.flatMap((code) => {
+  const data: ItemData[] = codes.map((code) => {
     const quote = quotes.find((item) => item.code === code);
-    if (!quote) return [];
-    const isPositive = quote.changePct >= 0;
-    const currencyLabel = getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel;
+    const isPositive = (quote?.changePct ?? 0) >= 0;
 
-    return [{
+    return {
       code,
-      title: DISPLAY_NAMES[code] ?? `${quote.label} (${currencyLabel})`,
-      value: `${formatMarketPrice(quote.price)} ${currencyLabel}`,
-      currencyLabel,
-      change: `${isPositive ? "+" : ""}${quote.changePct.toFixed(2)}%`,
+      title: quote?.label ?? code,
+      value: quote ? `${formatMarketPrice(quote.price)} ${getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel}` : "Son kapanış",
+      currencyLabel: getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel,
+      change: quote ? `${isPositive ? "+" : ""}${quote.changePct.toFixed(2)}%` : "Veri bekleniyor",
       isPositive,
-      isFallback: Boolean(quote.isFallback),
-    }];
+    };
   });
 
   const updatedLabel = updatedAt
@@ -57,7 +43,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
           En Çok Merak Edilenler
         </h2>
         <span className="app-muted shrink-0 text-[11px]">
-          {liveAvailable ? `Canlı Veri${updatedLabel ? ` · ${updatedLabel}` : ""}` : data.length ? <FallbackBadge /> : null}
+          {liveAvailable ? `Canlı Veri${updatedLabel ? ` · ${updatedLabel}` : ""}` : "Son kapanış · güncelleniyor"}
         </span>
       </div>
 
@@ -70,7 +56,7 @@ export function MostCurious({ compact = false }: { compact?: boolean }) {
           >
             <div className="min-w-0">
               <span className="app-text block truncate text-sm font-medium">{item.title}</span>
-              {item.isFallback && liveAvailable ? <span className="mt-0.5 block"><FallbackBadge /></span> : null}
+              <span className="app-muted text-[11px]">{item.currencyLabel}</span>
             </div>
             <div className={compact ? "min-w-0 text-right" : "mt-2"}>
               <span className="app-text block truncate text-base font-bold">{item.value}</span>

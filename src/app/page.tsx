@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { 
   LineChart, 
@@ -24,8 +23,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SpkBanner } from "@/components/SpkBanner";
 import { Footer } from "@/components/Footer";
-import { OnlineUsers } from "@/components/OnlineUsers";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
 import { AuthPanel } from "@/components/AuthPanel";
 import { HomeHero, HomeMarketSummary } from "@/components/HomeHero";
 import { ParamNeOlurdu } from "@/components/ParamNeOlurdu";
@@ -34,24 +32,11 @@ import { HomePersonalPanel } from "@/components/HomePersonalPanel";
 import { HomeDailyFlow } from "@/components/HomeDailyFlow";
 import { HomeTools } from "@/components/HomeTools";
 import { HomeStockCards, HomeNewsList } from "@/components/HomeTickerRail";
-import { InView } from "@/components/ui/InView";
 
 // Dynamic Import (Lazy Loading)
 const LoadingBox = () => (
   <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
     <Skeleton className="h-6 w-1/3" /><Skeleton className="h-4 w-2/3" /><Skeleton className="h-40 w-full" />
-  </div>
-);
-
-const LazySectionSkeleton = ({ lines = 3, cardHeight = "h-36" }: { lines?: number; cardHeight?: string }) => (
-  <div className="section-card space-y-3" aria-busy="true" aria-label="Bölüm yükleniyor">
-    <Skeleton className="h-6 w-1/3" />
-    <Skeleton className="h-4 w-1/2" />
-    <div className="grid gap-3 md:grid-cols-2">
-      {Array.from({ length: lines }).map((_, idx) => (
-        <Skeleton key={idx} className={`${cardHeight} w-full`} />
-      ))}
-    </div>
   </div>
 );
 
@@ -97,7 +82,14 @@ export default function HomePage() {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
   const [exploreOpen, setExploreOpen] = useState<boolean>(false);
   const [portfolioOpen, setPortfolioOpen] = useState<boolean>(false);
-  const supabase = getSupabaseBrowserClient();
+  const [headerCompact, setHeaderCompact] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setHeaderCompact(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function handleNavigate(tab: string) {
     if (typeof window === "undefined") return;
@@ -127,9 +119,8 @@ export default function HomePage() {
     <div className="app-bg min-h-screen tabular-nums block overflow-x-hidden">
       <SpkBanner />
 
-      {/* Header - Akışkan ve normal akışta (Asla sabit/sticky değil) */}
-      <header className="app-surface app-border border-b block">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
+      <header className={`sticky top-0 z-50 border-b app-border backdrop-blur-xl transition-all duration-300 ${headerCompact ? "bg-[color-mix(in_srgb,var(--surface)_84%,transparent)]" : "bg-[color-mix(in_srgb,var(--surface)_92%,transparent)]"}`}>
+        <div className={`mx-auto flex max-w-7xl items-center gap-4 px-4 transition-all duration-300 ${headerCompact ? "h-14" : "h-16"}`}>
           
           {/* Logo */}
           <button
@@ -244,11 +235,6 @@ export default function HomePage() {
               ) : null}
             </div>
 
-            <Link href="/hakkimizda-veri-metodolojisi" className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium app-text-secondary hover:app-surface-3 hover:app-text">
-              <Info className="h-4 w-4 opacity-75" aria-hidden="true" />
-              Hakkımızda & Metodoloji
-            </Link>
-
           </nav>
 
           {/* Search Bar */}
@@ -258,7 +244,6 @@ export default function HomePage() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2.5">
-            <div className="hidden xl:block"><OnlineUsers supabase={supabase} /></div>
             <AuthPanel />
             <div className="max-[400px]:hidden"><ThemeToggle /></div>
             <button
@@ -339,12 +324,6 @@ export default function HomePage() {
                   </button>
                 );
               })}
-
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 pt-3 pb-0.5">Kurumsal</div>
-              <Link href="/hakkimizda-veri-metodolojisi" onClick={() => setMobileOpen(false)} className="inline-flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition app-surface-2 app-text-secondary hover:app-surface-3 hover:app-text">
-                <Info className="h-4 w-4 opacity-80" aria-hidden="true" />
-                <span>Hakkımızda & Veri Metodolojisi</span>
-              </Link>
             </div>
           </nav>
         ) : null}
@@ -353,34 +332,22 @@ export default function HomePage() {
       {/* Main Content Sections */}
       <main className="mx-auto max-w-7xl px-4 py-6">
         {activeTab === "piyasa" ? (
-          <div className="space-y-10">
+          <div className="space-y-8">
             <HomeHero />
             <HomeMarketSummary />
             <ParamNeOlurdu />
-            <InView rootMargin="320px" fallback={<LazySectionSkeleton lines={4} cardHeight="h-40" />}>
-              <HomeStockCards />
-            </InView>
-            <InView rootMargin="320px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-28" />}>
-              <HomeNewsList onNavigate={handleNavigate} />
-            </InView>
-            <InView rootMargin="260px" fallback={<LazySectionSkeleton lines={2} cardHeight="h-44" />}>
-              <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
-            </InView>
-            <InView rootMargin="220px" fallback={<LazySectionSkeleton lines={2} cardHeight="h-32" />}>
-              <HomePersonalPanel />
-            </InView>
-            <InView rootMargin="260px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-32" />}>
-              <HomeDailyFlow />
-            </InView>
-            <InView rootMargin="220px" fallback={<LazySectionSkeleton lines={3} cardHeight="h-28" />}>
-              <HomeTools onNavigate={handleNavigate} />
-            </InView>
-            <section className="rounded-3xl bg-[var(--color-primary-dark)] px-6 py-10 text-center text-white sm:py-12 shadow-lg">
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Yatırım yapmadan önce veriyi incele.</h2>
-              <p className="mx-auto mt-2.5 max-w-xl text-sm sm:text-base text-white/80">Geçmiş dönem performanslarını hesapla, hisseleri akranlarıyla kıyasla ve portföyünü tek ekrandan yönet.</p>
-              <div className="mt-6 flex flex-col justify-center gap-3.5 sm:flex-row">
-                <a href="#param-ne-olurdu" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 text-sm font-semibold text-[var(--color-primary-dark)] shadow transition hover:bg-gray-100">Geçmiş yatırımını hesapla</a>
-                <button type="button" onClick={() => handleNavigate("portfoy")} className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/40 px-6 text-sm font-semibold text-white transition hover:bg-white/10 cursor-pointer">Portföyünü oluştur</button>
+            <HomeStockCards />
+            <HomeNewsList onNavigate={handleNavigate} />
+            <div id="piyasalar" className="scroll-mt-24"><MarketSection /></div>
+            <HomePersonalPanel />
+            <HomeDailyFlow />
+            <HomeTools onNavigate={handleNavigate} />
+            <section className="app-surface-2 app-border rounded-2xl border px-5 py-6 text-center">
+              <h2 className="app-text text-xl font-bold tracking-tight">Planlı yatırım için tek ekran</h2>
+              <p className="app-muted mx-auto mt-2 max-w-xl text-sm">Hisseleri akranlarıyla kıyasla, KAP akışını takip et ve yatırım senaryolarını aynı panelde yönet.</p>
+              <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
+                <a href="#param-ne-olurdu" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--color-primary-dark)] px-5 text-sm font-semibold text-white transition hover:opacity-90">Geçmiş yatırımını hesapla</a>
+                <button type="button" onClick={() => handleNavigate("portfoy")} className="app-border app-text inline-flex min-h-11 items-center justify-center rounded-xl border px-5 text-sm font-semibold transition hover:app-surface-3 cursor-pointer">Portföyünü aç</button>
               </div>
             </section>
           </div>

@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import useSWR from "swr";
-import { marketSymbols, marketSymbolByCode } from "@/data/marketSymbols";
-import { FALLBACK_CODE_MAP, MARKET_FALLBACK } from "@/data/fallbackData";
+import { marketSymbols } from "@/data/marketSymbols";
+import { getStaticMarketFallback } from "@/data/marketFallback";
 
 export type LiveQuote = {
   code: string;
@@ -13,10 +13,6 @@ export type LiveQuote = {
   source: string;
   timestamp: string;
   direction?: "up" | "down";
-  /** true → canlı veri yerine son kapanış (fallback) değeri */
-  isFallback?: boolean;
-  low52?: number;
-  high52?: number;
 };
 
 const chunk = <T,>(arr: T[], size: number) =>
@@ -25,32 +21,28 @@ const chunk = <T,>(arr: T[], size: number) =>
 const quoteGroups = chunk(marketSymbols.map((symbol) => symbol.code), 40);
 const quoteCacheKey = `live-quotes:${quoteGroups.map((group) => group.join(",")).join("|")}`;
 const previousQuotePrices = new Map<string, number>();
-// Stale-while-revalidate: son başarılı canlı yanıt, API geçici olarak başarısız olursa yeniden kullanılır
-let lastGoodQuotes: LiveQuote[] = [];
+const LOCAL_CACHE_KEY = "veriakis:last-successful-quotes:v3";
+const staticFallback = getStaticMarketFallback();
 
-function buildFallbackQuotes(): LiveQuote[] {
-  const timestamp = new Date().toISOString();
-  return Object.entries(FALLBACK_CODE_MAP).map(([code, key]) => {
-    const item = MARKET_FALLBACK[key];
-    return {
-      code,
-      label: marketSymbolByCode.get(code)?.label ?? item.label,
-      price: item.price,
-      changePct: item.changePercent,
-      source: "fallback",
-      timestamp,
-      isFallback: true,
-      low52: item.low52,
-      high52: item.high52,
-    };
-  });
+function readLocalQuotes(): LiveQuote[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { quotes?: LiveQuote[] };
+    return Array.isArray(parsed.quotes) && parsed.quotes.length > 0 ? parsed.quotes : null;
+  } catch {
+    return null;
+  }
 }
 
-/** Canlı listede eksik kalan sembolleri son kapanış verisiyle tamamlar. */
-function withFallback(quotes: LiveQuote[]): LiveQuote[] {
-  const present = new Set(quotes.map((quote) => quote.code));
-  const missing = buildFallbackQuotes().filter((quote) => !present.has(quote.code));
-  return missing.length ? [...quotes, ...missing] : quotes;
+function persistLocalQuotes(quotes: LiveQuote[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ quotes, updatedAt: new Date().toISOString() }));
+  } catch {
+    // no-op
+  }
 }
 
 async function fetchMarketQuotes(): Promise<LiveQuote[]> {
@@ -64,45 +56,47 @@ async function fetchMarketQuotes(): Promise<LiveQuote[]> {
       return [];
     }
   }));
-  const live = batches.flat().filter((quote) => Number.isFinite(quote?.price) && quote.price > 0);
 
-  // Başarısız / boş yanıt (rate-limit, hafta sonu, ağ hatası): önce son canlı veri, yoksa son kapanış
-  if (live.length === 0) return lastGoodQuotes.length ? lastGoodQuotes : buildFallbackQuotes();
-
-  const quotes = live.map((quote) => {
+  const merged = batches.flat().map((quote) => {
     const previousPrice = previousQuotePrices.get(quote.code);
     const direction: LiveQuote["direction"] = previousPrice === undefined || previousPrice === quote.price
       ? undefined
       : quote.price > previousPrice ? "up" : "down";
     previousQuotePrices.set(quote.code, quote.price);
-    return { ...quote, direction, isFallback: false };
+    return { ...quote, direction };
   });
-  lastGoodQuotes = quotes;
-  return quotes;
+
+  if (merged.length > 0) persistLocalQuotes(merged);
+  return merged;
 }
 
 export function useLiveQuotes() {
-  const { data, isLoading } = useSWR(quoteCacheKey, fetchMarketQuotes, {
+  const { data, isLoading, isValidating } = useSWR(quoteCacheKey, fetchMarketQuotes, {
     refreshInterval: 30_000,
     dedupingInterval: 25_000,
     focusThrottleInterval: 30_000,
     revalidateOnReconnect: true,
-    keepPreviousData: true,
   });
-  const quotes = useMemo(
-    () => (data ? withFallback(data) : isLoading ? [] : buildFallbackQuotes()),
-    [data, isLoading],
-  );
+
+  const localQuotes = readLocalQuotes();
+  const quotes = useMemo(() => {
+    if (data && data.length > 0) return data;
+    if (localQuotes && localQuotes.length > 0) return localQuotes;
+    return staticFallback;
+  }, [data, localQuotes]);
+
   const tickerTape = useMemo(() => quotes.slice(0, 15), [quotes]);
-  const liveQuote = quotes.find((quote) => !quote.isFallback);
+  const usingFallback = !data || data.length === 0;
 
   return {
     quotes,
     tickerTape,
-    liveAvailable: Boolean(liveQuote),
-    isFallback: quotes.length > 0 && !liveQuote,
-    updatedAt: liveQuote?.timestamp,
+    liveAvailable: !usingFallback,
+    updatedAt: quotes[0]?.timestamp,
     isLoading,
+    isValidating,
+    isFallback: usingFallback,
+    fallbackReason: usingFallback ? (localQuotes?.length ? "cache" : "static") : null as null | "cache" | "static",
   };
 }
 
