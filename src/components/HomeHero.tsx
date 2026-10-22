@@ -68,7 +68,7 @@ function SummaryCard({ code, quote }: { code: string; quote: LiveQuote | undefin
 }
 
 export function HomeMarketSummary() {
-  const { quotes, liveAvailable, updatedAt, isLoading, isValidating, fallbackReason } = useLiveQuotes();
+  const { quotes, liveAvailable, updatedAt, isLoading, isValidating } = useLiveQuotes();
   const [showMovers, setShowMovers] = useState(false);
   const quoteMap = new Map(quotes.map((quote) => [quote.code, quote]));
   const stocks = quotes.filter((quote) => marketSymbolByCode.get(quote.code)?.category === "hisse");
@@ -87,8 +87,8 @@ export function HomeMarketSummary() {
             Canlı · {updatedAt ? new Date(updatedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""}
           </span>
         ) : (
-          <span className="rounded-full bg-[var(--color-primary)]/12 px-3 py-1 text-xs font-semibold text-primary">
-            Son Kapanış • {isValidating || isLoading ? "Güncelleniyor..." : fallbackReason === "cache" ? "Önbellek" : "Referans"}
+          <span className="rounded-full bg-[var(--color-gold)]/15 px-3 py-1 text-xs font-semibold text-gold">
+            Canlı akış bekleniyor • {isValidating || isLoading ? "Yenileniyor..." : "Tekrar deneniyor"}
           </span>
         )}
       </div>

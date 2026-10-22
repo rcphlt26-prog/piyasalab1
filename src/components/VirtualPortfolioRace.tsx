@@ -596,7 +596,7 @@ export function VirtualPortfolioRace() {
   async function removeParticipant(participant: Participant) {
     if (
       !window.confirm(
-        `${participant.display_name} yarıştan çıkarılsın mı? Bu kişi tekrar katılamaz.`,
+        `${participant.display_name} yarıştan çıkarılsın mı? Kullanıcı bugün yeniden katılamaz, ertesi gün tekrar katılabilir.`,
       )
     ) {
       return;
@@ -719,7 +719,7 @@ export function VirtualPortfolioRace() {
       {removed ? (
         <div className="mb-4 flex items-start gap-3 rounded-xl border border-[var(--color-bear)]/40 bg-[var(--color-bear)]/10 p-4 text-sm text-bear">
           <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
-          <p>Yarıştan çıkarıldınız; yeniden katılamazsınız.</p>
+          <p>Bu katılım oturumunuz kapatıldı. Yeni bir portföyle tekrar yarışa katılabilirsiniz (günde 1 kez).</p>
         </div>
       ) : null}
 
@@ -919,7 +919,6 @@ export function VirtualPortfolioRace() {
                   busy ||
                   draftInvalid ||
                   !consent ||
-                  removed ||
                   Boolean(data && !data.signedIn)
                 }
                 onClick={() => void joinRace()}
@@ -1463,8 +1462,7 @@ export function VirtualPortfolioRace() {
           )}
 
           <p className="app-muted mt-2 text-[11px]">
-            Çıkarılan yarışmacı sıralamadan kalkar ve yeniden
-            katılamaz.
+            Çıkarılan yarışmacı sıralamadan kalkar. Aynı kullanıcı aynı gün yalnızca 1 kez yeniden katılabilir.
           </p>
         </div>
       ) : null}

@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { getFundamentalSnapshot } from "@/data/fundamentalData";
 
 type FinancialStatement = {
   year: number;
@@ -30,17 +29,18 @@ type FundamentalsApiResponse = {
   guncelFiyat: number | null;
   degisimYuzde: number | null;
   kaynakTarih?: string;
-  kaynakTip?: "canli" | "onbellek";
+  kaynakTip?: "canli";
+  error?: string;
 };
 
 function TrendIcon({ positive }: { positive: boolean }) {
   return positive ? <TrendingUp className="h-4 w-4 text-bull" aria-hidden="true" /> : <TrendingDown className="h-4 w-4 text-bear" aria-hidden="true" />;
 }
 
-const amount = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 0));
-const ratio = (value: number | null | undefined) => (value == null ? null : formatNumber(value, 2));
+const amount = (value: number | null | undefined) => (value == null ? "—" : formatNumber(value, 0));
 
-function formatMarketCapTry(value: number) {
+function formatMarketCapTry(value: number | null) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return "—";
   const abs = Math.abs(value);
   const tr = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
   if (abs >= 1_000_000_000_000) return `${tr.format(value / 1_000_000_000_000)} Trilyon ₺`;
@@ -66,30 +66,30 @@ export function StockInsightCard({ statements, loading, ticker }: { ticker: stri
   const latest = statements[statements.length - 1];
   const previous = statements.length > 1 ? statements[statements.length - 2] : null;
 
-  const fundamentals = getFundamentalSnapshot(ticker, {
-    peRatio: latest?.pe_ratio,
-    pbRatio: latest?.pb_ratio,
-    netProfit: latest?.net_profit,
-    revenue: latest?.revenue,
-    equity: latest?.equity ?? null,
-    netProfitPrev: previous?.net_profit,
-    revenuePrev: previous?.revenue,
-  });
-
   const [apiFundamentals, setApiFundamentals] = useState<FundamentalsApiResponse | null>(null);
   const [fundamentalsLoading, setFundamentalsLoading] = useState(true);
+  const [fundamentalsError, setFundamentalsError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setFundamentalsLoading(true);
+    setFundamentalsError(null);
 
-    void fetch(`/api/fundamentals/${encodeURIComponent(ticker)}`)
-      .then((response) => response.json())
+    void fetch(`/api/fundamentals/${encodeURIComponent(ticker)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as FundamentalsApiResponse;
+        if (!response.ok) throw new Error(payload.error ?? "Canlı veri alınamadı, lütfen tekrar deneyin.");
+        return payload;
+      })
       .then((payload: FundamentalsApiResponse) => {
         if (!cancelled) setApiFundamentals(payload);
       })
-      .catch(() => {
-        if (!cancelled) setApiFundamentals(null);
+      .catch((error) => {
+        if (!cancelled) {
+          setApiFundamentals(null);
+          setFundamentalsError(error instanceof Error ? error.message : "Canlı veri alınamadı, lütfen tekrar deneyin.");
+        }
       })
       .finally(() => {
         if (!cancelled) setFundamentalsLoading(false);
@@ -98,58 +98,57 @@ export function StockInsightCard({ statements, loading, ticker }: { ticker: stri
     return () => {
       cancelled = true;
     };
-  }, [ticker]);
+  }, [ticker, retryTick]);
 
-  const effective = useMemo(() => {
-    const fallbackMarketCap = Math.round(fundamentals.marketCapBnTry * 1_000_000_000);
-    return {
-      fk: apiFundamentals?.fk ?? latest?.pe_ratio ?? fundamentals.fk,
-      pddd: apiFundamentals?.pddd ?? latest?.pb_ratio ?? fundamentals.pddd,
-      roe: apiFundamentals?.roe ?? fundamentals.roePct,
-      temettuVerimi: apiFundamentals?.temettuVerimi ?? fundamentals.dividendYieldPct,
-      piyasaDegeri: apiFundamentals?.piyasaDegeri ?? fallbackMarketCap,
-      kaynakTip: apiFundamentals?.kaynakTip ?? (fundamentals.source === "api" ? "canli" : "onbellek"),
-      kaynakTarih: apiFundamentals?.kaynakTarih,
-    };
-  }, [apiFundamentals, fundamentals, latest?.pb_ratio, latest?.pe_ratio]);
+  const metrics = useMemo<Array<[string, string]>>(() => [
+    ["F/K", typeof apiFundamentals?.fk === "number" ? formatNumber(apiFundamentals.fk, 1) : "—"],
+    ["PD/DD", typeof apiFundamentals?.pddd === "number" ? formatNumber(apiFundamentals.pddd, 2) : "—"],
+    ["Piyasa değeri", formatMarketCapTry(apiFundamentals?.piyasaDegeri ?? null)],
+    ["FAVÖK", latest?.ebitda != null ? amount(latest.ebitda) : "—"],
+    ["Net kâr", latest?.net_profit != null ? amount(latest.net_profit) : "—"],
+    ["Ciro", latest?.revenue != null ? amount(latest.revenue) : "—"],
+    ["Borç", latest?.total_debt != null ? amount(latest.total_debt) : "—"],
+    ["Özsermaye", latest?.equity != null ? amount(latest.equity) : "—"],
+    ["Temettü verimi", typeof apiFundamentals?.temettuVerimi === "number" ? `%${formatNumber(apiFundamentals.temettuVerimi, 1)}` : "—"],
+    ["ROE", typeof apiFundamentals?.roe === "number" ? `%${formatNumber(apiFundamentals.roe, 1)}` : "—"],
+  ], [apiFundamentals, latest]);
 
-  const metrics: Array<[string, string]> = [
-    ["F/K", formatNumber(effective.fk, 1)],
-    ["PD/DD", formatNumber(effective.pddd, 2)],
-    ["Piyasa değeri", formatMarketCapTry(effective.piyasaDegeri)],
-    ["FAVÖK", amount(latest?.ebitda) ?? `${formatNumber(fundamentals.balanceSummary.revenueBnTry * 0.18, 1)} mlr TL`],
-    ["Net kâr", amount(latest?.net_profit) ?? `${formatNumber(fundamentals.balanceSummary.netProfitBnTry, 1)} mlr TL`],
-    ["Ciro", amount(latest?.revenue) ?? `${formatNumber(fundamentals.balanceSummary.revenueBnTry, 1)} mlr TL`],
-    ["Borç", amount(latest?.total_debt) ?? `${formatNumber(fundamentals.balanceSummary.equityBnTry * 0.62, 1)} mlr TL`],
-    ["Özsermaye", `${formatNumber(fundamentals.balanceSummary.equityBnTry, 1)} mlr TL`],
-    ["Temettü verimi", `%${formatNumber(effective.temettuVerimi, 1)}`],
-    ["ROE", `%${formatNumber(effective.roe, 1)}`],
-  ];
+  const profitChange = latest?.net_profit != null && previous?.net_profit != null && previous.net_profit !== 0
+    ? ((latest.net_profit - previous.net_profit) / Math.abs(previous.net_profit)) * 100
+    : null;
+  const revenueChange = latest?.revenue != null && previous?.revenue != null && previous.revenue !== 0
+    ? ((latest.revenue - previous.revenue) / Math.abs(previous.revenue)) * 100
+    : null;
 
   const trends = [
-    { label: "Net kâr değişimi", positive: fundamentals.balanceSummary.profitChangePct >= 0, text: `%${formatNumber(fundamentals.balanceSummary.profitChangePct, 1)}` },
-    { label: "Hasılat değişimi", positive: fundamentals.balanceSummary.revenueChangePct >= 0, text: `%${formatNumber(fundamentals.balanceSummary.revenueChangePct, 1)}` },
-    { label: "Dönem", positive: true, text: fundamentals.balanceSummary.period },
+    { label: "Net kâr değişimi", positive: (profitChange ?? 0) >= 0, text: profitChange == null ? "—" : `%${formatNumber(profitChange, 1)}` },
+    { label: "Hasılat değişimi", positive: (revenueChange ?? 0) >= 0, text: revenueChange == null ? "—" : `%${formatNumber(revenueChange, 1)}` },
+    { label: "Dönem", positive: true, text: latest ? `${latest.year}/Q${latest.quarter}` : "—" },
   ];
 
   return (
     <section className="section-card" aria-labelledby="financials-title">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h2 id="financials-title" className="app-text text-lg font-bold">Temel finansal bilgiler</h2>
-        {effective.kaynakTip === "onbellek" ? (
-          <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-1 text-[11px] font-semibold text-primary">
-            📦 Önbellekten • {formatSourceDate(effective.kaynakTarih)}
-          </span>
-        ) : (
+        {apiFundamentals ? (
           <span className="rounded-full bg-[var(--up-bg)] px-2 py-1 text-[11px] font-semibold text-[var(--up)]">
-            Canlı veri
+            Canlı veri · {formatSourceDate(apiFundamentals.kaynakTarih)}
           </span>
-        )}
+        ) : null}
       </div>
 
       <p className="app-muted mb-4 mt-1 text-xs">
-        {loading || fundamentalsLoading ? "Finansal metrikler güncelleniyor." : `Son izlenen dönem: ${fundamentals.balanceSummary.period}.`}
+        {loading || fundamentalsLoading ? "Finansal metrikler güncelleniyor." : "Canlı temel oranlar API üzerinden gösterilir."}
       </p>
+
+      {fundamentalsError ? (
+        <div className="mb-4 rounded-lg border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-3 text-xs text-gold">
+          <p>{fundamentalsError}</p>
+          <button type="button" onClick={() => setRetryTick((v) => v + 1)} className="mt-2 inline-flex items-center gap-1 font-semibold text-primary">
+            <RefreshCw className="h-3.5 w-3.5" /> Yeniden dene
+          </button>
+        </div>
+      ) : null}
 
       {loading || fundamentalsLoading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy="true">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-16 w-full" />)}</div>

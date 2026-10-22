@@ -9,23 +9,26 @@ type LiveNewsResult = { items: NewsItem[]; source: NewsSource };
 
 async function fetchLiveNews(): Promise<LiveNewsResult> {
   try {
-    const response = await fetch("/api/cron/fetch-news");
+    const response = await fetch("/api/cron/fetch-news", { cache: "no-store" });
     const payload = (await response.json()) as { items?: NewsItem[] };
-    if (response.ok && payload.items?.length) return { items: payload.items, source: "google" };
+    if (response.ok && payload.items?.length) {
+      return { items: payload.items, source: "google" };
+    }
   } catch {
-    // Fall back to the stored news feed when the RSS provider is unavailable.
+    // Canlı RSS akışı geçici olarak erişilemezse bir sonraki kaynağa düş.
   }
 
   const storedNews = await fetchNews();
   if (storedNews?.length) return { items: storedNews, source: "supabase" };
+
   return { items: newsData, source: "demo" };
 }
 
 export function useLiveNews() {
   const { data, error, isLoading } = useSWR<LiveNewsResult>("live-news", fetchLiveNews, {
-    refreshInterval: 300_000,
-    dedupingInterval: 60_000,
-    focusThrottleInterval: 60_000,
+    refreshInterval: 120_000,
+    dedupingInterval: 30_000,
+    focusThrottleInterval: 30_000,
     revalidateOnReconnect: true,
   });
 

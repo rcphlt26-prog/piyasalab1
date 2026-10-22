@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Parser from "rss-parser";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getKapFallback } from "@/data/kapFeedData";
 
@@ -10,7 +11,7 @@ type KapItem = {
   related_symbols: string[];
   category: string | null;
   publish_date: string;
-  source: "kap.org.tr" | "supabase" | "cache";
+  source: "kap.org.tr" | "google-news-rss" | "supabase" | "cache";
 };
 
 const KAP_HEADERS = {
@@ -49,9 +50,7 @@ function normalizeKapPayload(payload: unknown, symbols: string[], limit: number)
 
   const normalized = list.reduce<KapItem[]>((acc, raw) => {
     const item = raw as Record<string, unknown>;
-    const code = String(
-      item.companyCode ?? item.stockCode ?? item.symbol ?? item.ticker ?? "",
-    ).trim().toUpperCase();
+    const code = String(item.companyCode ?? item.stockCode ?? item.symbol ?? item.ticker ?? "").trim().toUpperCase();
 
     if (symbols.length && code && !symbols.includes(code)) return acc;
 
@@ -76,7 +75,7 @@ function normalizeKapPayload(payload: unknown, symbols: string[], limit: number)
         ? item.category
         : typeof item.disclosureClass === "string"
           ? item.disclosureClass
-          : null,
+          : "KAP",
       publish_date: publishDate,
       source: "kap.org.tr",
     });
@@ -102,6 +101,7 @@ async function fetchKapOrgDisclosures(symbols: string[], limit: number) {
         method: "GET",
         headers: KAP_HEADERS,
         cache: "no-store",
+        signal: AbortSignal.timeout(6000),
       });
 
       if (!response.ok) continue;
@@ -115,6 +115,50 @@ async function fetchKapOrgDisclosures(symbols: string[], limit: number) {
   }
 
   return null;
+}
+
+async function fetchKapGoogleNews(symbols: string[], limit: number) {
+  try {
+    const parser = new Parser();
+    const query = encodeURIComponent(`KAP ${symbols.join(" ")} BIST duyuru`);
+    const url = `https://news.google.com/rss/search?q=${query}&hl=tr&gl=TR&ceid=TR:tr`;
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/rss+xml, application/xml, text/xml",
+        "User-Agent": "Mozilla/5.0 (compatible; VeriAkisKapBot/1.0)",
+      },
+      signal: AbortSignal.timeout(7000),
+    });
+    if (!response.ok) return null;
+
+    const feed = await parser.parseString(await response.text());
+
+    const items: KapItem[] = (feed.items ?? [])
+      .slice(0, limit)
+      .map((item, index) => {
+        const title = (item.title ?? "KAP duyurusu").trim();
+        const link = item.link?.trim() || "https://www.kap.org.tr/tr/bildirim-sorgu";
+        const date = toIsoDate(item.isoDate ?? item.pubDate);
+        const upperTitle = title.toUpperCase();
+        const related = symbols.filter((symbol) => upperTitle.includes(symbol));
+
+        return {
+          id: `google-kap-${index}-${Buffer.from(`${title}-${link}`).toString("base64url").slice(0, 16)}`,
+          title,
+          summary: "Canlı haber akışından derlendi. Ayrıntı için kaynağı açın.",
+          kap_url: link,
+          related_symbols: related.length ? related : symbols,
+          category: "KAP",
+          publish_date: date,
+          source: "google-news-rss",
+        };
+      });
+
+    return dedupeAndSort(items, limit);
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -131,9 +175,17 @@ export async function GET(request: Request) {
   const limit = symbols.length === 1 ? 20 : 120;
 
   const kapOrgData = await fetchKapOrgDisclosures(symbols, limit);
-  if (kapOrgData && kapOrgData.length) {
+  if (kapOrgData?.length) {
     return NextResponse.json(
       { data: kapOrgData },
+      { headers: { "Cache-Control": "no-store, no-cache, max-age=0" } },
+    );
+  }
+
+  const googleKapData = await fetchKapGoogleNews(symbols, limit);
+  if (googleKapData?.length) {
+    return NextResponse.json(
+      { data: googleKapData },
       { headers: { "Cache-Control": "no-store, no-cache, max-age=0" } },
     );
   }

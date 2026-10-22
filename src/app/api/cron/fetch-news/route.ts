@@ -37,7 +37,7 @@ function categoryFor(title: string) {
 export async function GET() {
   try {
     const response = await fetch(RSS_URL, {
-      next: { revalidate: 300 },
+      cache: 'no-store',
       headers: {
         Accept: 'application/rss+xml, application/xml, text/xml',
         'User-Agent': 'VeriAkisNewsBot/1.0 (+https://veriakis.com)',

@@ -101,8 +101,8 @@ export async function GET(request: Request) {
     const own = await supabase.from("game_portfolios").select(`id, display_name, cash_balance, current_value, total_return_pct, started_at, status, entry_day, game_orders(${ORDER_COLUMNS}, created_at)`).eq("user_id", userId).order("started_at", { ascending: false }).limit(50);
     if (own.error) return fail(isMissingColumn(own.error) ? MIGRATION_HINT : "Portföy alınamadı.", 500);
     const mine = (own.data ?? []) as unknown as Array<Row & { entry_day: string }>;
-    const row = mine.find((entry) => entry.status === "ACTIVE") ?? mine[0] ?? null;
-    canJoin = isAdmin || (!mine.some((entry) => entry.status === "REMOVED") && !mine.some((entry) => entry.entry_day === todayIstanbul()));
+    const row = mine.find((entry) => entry.status === "ACTIVE") ?? null;
+    canJoin = isAdmin || !mine.some((entry) => entry.entry_day === todayIstanbul());
     if (row) {
       const orders = row.game_orders ?? [];
       const ownPrices = await pricesForSymbols(orders);
@@ -133,7 +133,7 @@ export async function DELETE(request: Request) {
   const id = new URL(request.url).searchParams.get("id") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Geçerli yarışmacı kimliği gerekli.", 400);
 
-  // Satır silinmez, REMOVED işaretlenir: böylece çıkarılan kişi yeniden katılamaz.
+  // Satır silinmez, REMOVED işaretlenir: geçmiş kayıt korunur; kullanıcı yeni günlerde yeniden katılabilir.
   const database = getSupabaseAdminClient() ?? supabase;
   const { data, error } = await database.from("game_portfolios").update({ status: "REMOVED", removed_at: new Date().toISOString() }).eq("id", id).select("id").maybeSingle();
   if (error) return fail(isMissingColumn(error) ? MIGRATION_HINT : "Yarışmacı çıkarılamadı.", 500);
@@ -162,8 +162,7 @@ async function joinRace(supabase: SupabaseClient, userId: string, username: stri
   const existing = await ownPortfolios(supabase, userId);
   if (existing.error) return fail(isMissingColumn(existing.error) ? MIGRATION_HINT : "Katılım durumu kontrol edilemedi.", 500);
   if (!isAdmin) {
-    if (existing.removed) return fail("Yarışmadan çıkarıldınız; yeniden katılamazsınız.", 403);
-    if (existing.rows.some((row) => row.entry_day === todayIstanbul())) return fail("Bugünkü katılım hakkınızı kullandınız; yarın yeni bir katılım yapabilirsiniz.", 409);
+    if (existing.rows.some((row) => row.entry_day === todayIstanbul())) return fail("Yarışmaya günde 1 kez katılabilirsin.", 409);
   }
 
   const displayName = (typeof body.displayName === "string" ? body.displayName.trim() : "") || username || "";
@@ -199,7 +198,7 @@ async function joinRace(supabase: SupabaseClient, userId: string, username: stri
     .insert({ user_id: userId, display_name: displayName, cash_balance: cash, current_value: GAME_START_CASH, total_return_pct: 0, initial_cash: GAME_START_CASH, entry_day: todayIstanbul(), is_admin_entry: isAdmin })
     .select("id")
     .single();
-  if (createError || !created) return fail(createError?.code === "23505" ? "Bugünkü katılım hakkınızı kullandınız; yarın yeni bir katılım yapabilirsiniz." : "Yarışa katılım kaydedilemedi.", createError?.code === "23505" ? 409 : 500);
+  if (createError || !created) return fail(createError?.code === "23505" ? "Yarışmaya günde 1 kez katılabilirsin." : "Yarışa katılım kaydedilemedi.", createError?.code === "23505" ? 409 : 500);
 
   const { error: orderError } = await supabase.from("game_orders").insert(orders.map((order) => ({ ...order, portfolio_id: created.id })));
   if (orderError) {
@@ -210,9 +209,9 @@ async function joinRace(supabase: SupabaseClient, userId: string, username: stri
 }
 
 async function adjustPosition(supabase: SupabaseClient, userId: string, body: PostBody) {
-  const { portfolio, removed, error: portfolioError } = await ownPortfolios(supabase, userId);
+  const { portfolio, error: portfolioError } = await ownPortfolios(supabase, userId);
   if (portfolioError) return fail(isMissingColumn(portfolioError) ? MIGRATION_HINT : "Portföy alınamadı.", 500);
-  if (!portfolio) return fail(removed ? "Yarışmadan çıkarıldığınız için işlem yapamazsınız." : "Önce yarışa katılın.", removed ? 403 : 400);
+  if (!portfolio) return fail("Önce yarışa katılın.", 400);
 
   const symbol = cleanSymbol(body.symbol);
   const mode = body.mode === "REMOVE" ? "REMOVE" : body.mode === "ADD" ? "ADD" : null;

@@ -14,7 +14,6 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getMarketPriceMeta, normalizeSectorName, stockDirectory, type StockEntry, type MarketSymbol } from "@/data/marketSymbols";
-import { getFundamentalSnapshot } from "@/data/fundamentalData";
 import { getKapFallback, getStatementFallback } from "@/data/kapFeedData";
 
 const OverlayLineChart = dynamic(() => import("@/components/ClientCharts").then((m) => m.OverlayLineChart), { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> });
@@ -72,6 +71,7 @@ function formatUpdated(timestamp: string | undefined) {
 }
 
 function formatMarketCapTry(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "—";
   const abs = Math.abs(value);
   const tr = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
   if (abs >= 1_000_000_000_000) return `${tr.format(value / 1_000_000_000_000)} Trilyon ₺`;
@@ -103,6 +103,8 @@ export function AssetDetailClient({
   const [showCommunity, setShowCommunity] = useState(false);
   const [fundamentalsData, setFundamentalsData] = useState<FundamentalsApiResponse | null>(null);
   const [fundamentalsLoading, setFundamentalsLoading] = useState(true);
+  const [fundamentalsError, setFundamentalsError] = useState<string | null>(null);
+  const [fundamentalsRetryTick, setFundamentalsRetryTick] = useState(0);
   const { isWatched, toggle } = useWatchlist();
   const name = entry?.name ?? market?.label ?? ticker;
   const liveQuote = useLiveQuote(ticker);
@@ -119,7 +121,6 @@ export function AssetDetailClient({
   const quantityValue = Math.max(0, Number(quantity) || 0);
   const watchedLabel = watched ? "İzleme listesinde" : "İzleme Listesine Ekle";
 
-  const fallbackFundamental = getFundamentalSnapshot(ticker);
   const fallbackStatements = useMemo(() => getStatementFallback([ticker], 4).map((item) => ({
     id: item.id,
     symbol: item.symbol,
@@ -152,14 +153,22 @@ export function AssetDetailClient({
 
     let cancelled = false;
     setFundamentalsLoading(true);
+    setFundamentalsError(null);
 
-    void fetch(`/api/fundamentals/${encodeURIComponent(ticker)}`)
-      .then((response) => response.json())
+    void fetch(`/api/fundamentals/${encodeURIComponent(ticker)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => ({}))) as FundamentalsApiResponse & { error?: string };
+        if (!response.ok) throw new Error(payload.error ?? "Canlı veri alınamadı, lütfen tekrar deneyin.");
+        return payload;
+      })
       .then((payload: FundamentalsApiResponse) => {
         if (!cancelled) setFundamentalsData(payload);
       })
-      .catch(() => {
-        if (!cancelled) setFundamentalsData(null);
+      .catch((error) => {
+        if (!cancelled) {
+          setFundamentalsData(null);
+          setFundamentalsError(error instanceof Error ? error.message : "Canlı veri alınamadı, lütfen tekrar deneyin.");
+        }
       })
       .finally(() => {
         if (!cancelled) setFundamentalsLoading(false);
@@ -168,7 +177,7 @@ export function AssetDetailClient({
     return () => {
       cancelled = true;
     };
-  }, [isStock, ticker]);
+  }, [isStock, ticker, fundamentalsRetryTick]);
 
   useEffect(() => {
     if (!isStock) return;
@@ -204,14 +213,14 @@ export function AssetDetailClient({
     };
   }, [isStock, ticker, fallbackStatements, fallbackKap]);
 
-  const positionPrice = currentPrice ?? historicalPrices[historicalPrices.length - 1]?.value ?? (fallbackFundamental.marketCapBnTry * 1_000_000_000) / 2_600_000_000;
+  const positionPrice = currentPrice ?? historicalPrices[historicalPrices.length - 1]?.value ?? 0;
   const positionValue = positionPrice * quantityValue;
 
   const headerFundamentals = {
-    fk: fundamentalsData?.fk ?? fallbackFundamental.fk,
-    pddd: fundamentalsData?.pddd ?? fallbackFundamental.pddd,
-    piyasaDegeri: fundamentalsData?.piyasaDegeri ?? Math.round(fallbackFundamental.marketCapBnTry * 1_000_000_000),
-    kaynakTip: fundamentalsData?.kaynakTip ?? "onbellek",
+    fk: fundamentalsData?.fk ?? null,
+    pddd: fundamentalsData?.pddd ?? null,
+    piyasaDegeri: fundamentalsData?.piyasaDegeri ?? null,
+    kaynakTip: fundamentalsData?.kaynakTip ?? null,
     kaynakTarih: fundamentalsData?.kaynakTarih,
   };
 
@@ -255,7 +264,7 @@ export function AssetDetailClient({
             <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <p className="app-text text-4xl font-bold tabular-nums">{formatMarketPrice(positionPrice)} <span className="app-muted text-base font-medium">{priceMeta.currencyLabel}</span></p>
               <p className={`text-lg font-semibold tabular-nums ${(changePct ?? 0) >= 0 ? "text-bull" : "text-bear"}`}>{(changePct ?? 0) >= 0 ? "+" : ""}{formatNumber(changePct ?? 0)}%</p>
-              {liveQuote ? <span className="rounded-full bg-[var(--color-bull)]/12 px-2 py-1 text-[11px] font-semibold text-bull">Canlı</span> : <span className="rounded-full bg-[var(--color-primary)]/12 px-2 py-1 text-[11px] font-semibold text-primary">Önbellekten</span>}
+              {liveQuote ? <span className="rounded-full bg-[var(--color-bull)]/12 px-2 py-1 text-[11px] font-semibold text-bull">Canlı</span> : <span className="rounded-full bg-[var(--color-gold)]/12 px-2 py-1 text-[11px] font-semibold text-gold">Canlı akış bekleniyor</span>}
             </div>
             <p className="app-muted mt-2 text-xs">{priceMeta.unitLabel} fiyatı{updated ? ` · Son güncelleme: ${updated}` : " · Son kapanış"}</p>
           </div>
@@ -274,14 +283,21 @@ export function AssetDetailClient({
         <section className="section-card" aria-labelledby="live-fundamentals-title">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <h2 id="live-fundamentals-title" className="app-text text-base font-bold">Canlı temel oran özeti</h2>
-            {headerFundamentals.kaynakTip === "onbellek" ? (
-              <span className="rounded-full bg-[var(--color-primary)]/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                📦 Önbellekten • {formatSourceBadgeDate(headerFundamentals.kaynakTarih)}
-              </span>
+            {headerFundamentals.kaynakTip === "canli" ? (
+              <span className="rounded-full bg-[var(--up-bg)] px-2 py-1 text-[11px] font-semibold text-[var(--up)]">Canlı veri • {formatSourceBadgeDate(headerFundamentals.kaynakTarih)}</span>
             ) : (
-              <span className="rounded-full bg-[var(--up-bg)] px-2 py-1 text-[11px] font-semibold text-[var(--up)]">Canlı veri</span>
+              <span className="rounded-full bg-[var(--color-gold)]/12 px-2 py-1 text-[11px] font-semibold text-gold">Canlı temel oran bekleniyor</span>
             )}
           </div>
+
+          {fundamentalsError ? (
+            <div className="mb-3 rounded-lg border border-[var(--color-gold)] bg-[var(--color-gold)]/10 p-3 text-xs text-gold">
+              <p>{fundamentalsError}</p>
+              <button type="button" onClick={() => setFundamentalsRetryTick((v) => v + 1)} className="mt-2 inline-flex items-center gap-1 font-semibold text-primary">
+                Canlı veriyi yeniden dene
+              </button>
+            </div>
+          ) : null}
 
           {fundamentalsLoading ? (
             <div className="grid gap-3 sm:grid-cols-3" aria-busy="true">
@@ -293,15 +309,15 @@ export function AssetDetailClient({
             <dl className="grid gap-3 sm:grid-cols-3">
               <div className="app-surface-2 rounded-lg p-3">
                 <dt className="app-muted text-xs">F/K</dt>
-                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatNumber(headerFundamentals.fk, 1)}</dd>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{typeof headerFundamentals.fk === "number" ? formatNumber(headerFundamentals.fk, 1) : "—"}</dd>
               </div>
               <div className="app-surface-2 rounded-lg p-3">
                 <dt className="app-muted text-xs">PD/DD</dt>
-                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatNumber(headerFundamentals.pddd, 2)}</dd>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{typeof headerFundamentals.pddd === "number" ? formatNumber(headerFundamentals.pddd, 2) : "—"}</dd>
               </div>
               <div className="app-surface-2 rounded-lg p-3">
                 <dt className="app-muted text-xs">Piyasa değeri</dt>
-                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatMarketCapTry(headerFundamentals.piyasaDegeri)}</dd>
+                <dd className="app-text mt-1 text-base font-semibold tabular-nums">{formatMarketCapTry(headerFundamentals.piyasaDegeri ?? 0)}</dd>
               </div>
             </dl>
           )}
@@ -325,16 +341,13 @@ export function AssetDetailClient({
         <section className="section-card" aria-labelledby="peer-title">
           <h2 id="peer-title" className="app-text mb-3 text-lg font-bold">Sektörel akran kıyası</h2>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {peers.map((peer) => {
-              const peerFundamental = getFundamentalSnapshot(peer.ticker);
-              return (
-                <Link key={peer.ticker} href={`/hisse/${peer.ticker}`} className="app-surface-2 app-border rounded-lg border p-3">
-                  <p className="app-text text-sm font-semibold">{peer.ticker}</p>
-                  <p className="app-muted text-xs">{peer.name}</p>
-                  <p className="app-text mt-2 text-xs">F/K {formatNumber(peerFundamental.fk, 1)} · PD/DD {formatNumber(peerFundamental.pddd, 2)}</p>
-                </Link>
-              );
-            })}
+            {peers.map((peer) => (
+              <Link key={peer.ticker} href={`/hisse/${peer.ticker}`} className="app-surface-2 app-border rounded-lg border p-3">
+                <p className="app-text text-sm font-semibold">{peer.ticker}</p>
+                <p className="app-muted text-xs">{peer.name}</p>
+                <p className="app-text mt-2 text-xs">Aynı sektörde karşılaştırma için detay sayfasını açın.</p>
+              </Link>
+            ))}
           </div>
         </section>
       ) : null}

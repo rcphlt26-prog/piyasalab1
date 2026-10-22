@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock } from "lucide-react";
+import useSWR from "swr";
+import { ArrowRight, Clock, RefreshCw } from "lucide-react";
 import { useLiveQuotes, type LiveQuote } from "@/hooks/useLiveQuotes";
 import { useHistoricalPrices } from "@/hooks/useHistoricalPrices";
 import { useLiveNews } from "@/hooks/useLiveNews";
 import { getMarketPriceMeta, marketSymbolByCode, stockDirectory } from "@/data/marketSymbols";
-import { getFundamentalSnapshot } from "@/data/fundamentalData";
 import { formatMarketPrice, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { InView } from "@/components/ui/InView";
@@ -15,10 +15,30 @@ import { AdSlot } from "@/components/AdSlot";
 
 type NavigateProps = { onNavigate: (tab: string) => void };
 
+type FundamentalLiveResponse = {
+  symbol: string;
+  fk: number | null;
+  pddd: number | null;
+  roe: number | null;
+  temettuVerimi: number | null;
+  piyasaDegeri: number | null;
+  kaynakTip?: "canli";
+  error?: string;
+};
+
 const KARNE_CODES = ["THYAO", "ASELS", "GARAN", "AKBNK", "EREGL", "TUPRS"];
 const NEWS_LIMIT = 6;
 const stockNames = new Map(stockDirectory.map((stock) => [stock.ticker, stock.name]));
 const signedPct = (value: number) => `${value >= 0 ? "+" : ""}${formatNumber(value, 2)}%`;
+
+const fetchFundamentals = async (code: string): Promise<FundamentalLiveResponse> => {
+  const response = await fetch(`/api/fundamentals/${encodeURIComponent(code)}`, { cache: "no-store" });
+  const payload = (await response.json()) as FundamentalLiveResponse;
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Canlı temel veri alınamadı.");
+  }
+  return payload;
+};
 
 function SectionHeader({ id, title, description, action }: { id: string; title: string; description: string; action: React.ReactNode }) {
   return (
@@ -34,6 +54,11 @@ function SectionHeader({ id, title, description, action }: { id: string; title: 
 
 function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | undefined; loading: boolean }) {
   const { data, meta, loading: historyLoading } = useHistoricalPrices(code, "1Y");
+  const { data: fundamentals, error: fundamentalsError, isLoading: fundamentalsLoading, mutate } = useSWR(`fundamentals:${code}`, () => fetchFundamentals(code), {
+    refreshInterval: 180_000,
+    revalidateOnReconnect: true,
+  });
+
   const currency = getMarketPriceMeta(marketSymbolByCode.get(code)).currencyLabel;
   const name = stockNames.get(code) ?? marketSymbolByCode.get(code)?.label ?? code;
 
@@ -43,8 +68,7 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
   const first = data[0]?.value;
   const last = data[data.length - 1]?.value;
   const yearChange = first && last ? (last / first - 1) * 100 : null;
-  const fundamentals = getFundamentalSnapshot(code);
-  const effectivePrice = quote?.price ?? last ?? (fundamentals.marketCapBnTry * 1_000_000_000) / 2_400_000_000;
+  const effectivePrice = quote?.price ?? last ?? 0;
 
   return (
     <Link href={`/hisse/${code}`} className="app-surface app-border card-hover block rounded-xl border p-4" aria-label={`${code} hisse detayı`}>
@@ -57,7 +81,7 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
       </div>
 
       {loading && !quote ? <Skeleton className="mt-3 h-8 w-32" /> : (
-        <p className="app-text mt-3 text-2xl font-bold tabular-nums">{formatMarketPrice(effectivePrice)} <span className="app-muted text-xs font-medium">{currency}</span></p>
+        <p className="app-text mt-3 text-2xl font-bold tabular-nums">{effectivePrice > 0 ? formatMarketPrice(effectivePrice) : "—"} <span className="app-muted text-xs font-medium">{currency}</span></p>
       )}
 
       <div className="app-border mt-3 border-t pt-3">
@@ -65,16 +89,21 @@ function StockCard({ code, quote, loading }: { code: string; quote: LiveQuote | 
           <div className="space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
         ) : (
           <dl className="grid grid-cols-2 gap-3 text-xs">
-            <div className="min-w-0"><dt className="app-muted">52 hafta aralığı</dt><dd className="app-text mt-0.5 truncate font-semibold tabular-nums">{hasRange ? `${formatMarketPrice(low)} – ${formatMarketPrice(high)}` : `${formatMarketPrice(effectivePrice * 0.78)} – ${formatMarketPrice(effectivePrice * 1.16)}`}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">1 yıllık değişim</dt><dd className={`mt-0.5 font-semibold tabular-nums ${yearChange === null ? "text-bull" : yearChange >= 0 ? "text-bull" : "text-bear"}`}>{yearChange === null ? signedPct((fundamentals.roePct / 2) - 3) : signedPct(yearChange)}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">F/K</dt><dd className="app-text mt-0.5 font-semibold">{formatNumber(fundamentals.fk, 1)}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">PD/DD</dt><dd className="app-text mt-0.5 font-semibold">{formatNumber(fundamentals.pddd, 2)}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">ROE</dt><dd className="text-bull mt-0.5 font-semibold">%{formatNumber(fundamentals.roePct, 1)}</dd></div>
-            <div className="min-w-0"><dt className="app-muted">Temettü</dt><dd className="app-text mt-0.5 font-semibold">%{formatNumber(fundamentals.dividendYieldPct, 1)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">52 hafta aralığı</dt><dd className="app-text mt-0.5 truncate font-semibold tabular-nums">{hasRange ? `${formatMarketPrice(low)} – ${formatMarketPrice(high)}` : effectivePrice > 0 ? `${formatMarketPrice(effectivePrice * 0.78)} – ${formatMarketPrice(effectivePrice * 1.16)}` : "—"}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">1 yıllık değişim</dt><dd className={`mt-0.5 font-semibold tabular-nums ${yearChange === null ? "app-text" : yearChange >= 0 ? "text-bull" : "text-bear"}`}>{yearChange === null ? "—" : signedPct(yearChange)}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">F/K</dt><dd className="app-text mt-0.5 font-semibold">{typeof fundamentals?.fk === "number" ? formatNumber(fundamentals.fk, 1) : "—"}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">PD/DD</dt><dd className="app-text mt-0.5 font-semibold">{typeof fundamentals?.pddd === "number" ? formatNumber(fundamentals.pddd, 2) : "—"}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">ROE</dt><dd className="text-bull mt-0.5 font-semibold">{typeof fundamentals?.roe === "number" ? `%${formatNumber(fundamentals.roe, 1)}` : "—"}</dd></div>
+            <div className="min-w-0"><dt className="app-muted">Temettü</dt><dd className="app-text mt-0.5 font-semibold">{typeof fundamentals?.temettuVerimi === "number" ? `%${formatNumber(fundamentals.temettuVerimi, 1)}` : "—"}</dd></div>
           </dl>
         )}
       </div>
-      {fundamentals.source === "cache" ? <p className="app-muted mt-2 text-[11px]">Önbellekten</p> : null}
+      {fundamentalsLoading ? <p className="app-muted mt-2 text-[11px]">Temel oranlar canlı kaynaktan alınıyor...</p> : null}
+      {fundamentalsError ? (
+        <button type="button" onClick={(event) => { event.preventDefault(); void mutate(); }} className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+          <RefreshCw className="h-3.5 w-3.5" /> Canlı temel veriyi yeniden dene
+        </button>
+      ) : null}
     </Link>
   );
 }
@@ -100,14 +129,13 @@ export function HomeStockCards() {
           {KARNE_CODES.slice(3).map((code) => <StockCard key={code} code={code} quote={quoteMap.get(code)} loading={isLoading} />)}
         </div>
       </InView>
-      <p className="app-muted mt-3 text-[11px] leading-5">Veriler Yahoo Finance kaynaklıdır; gecikmeli olabilir ve yatırım tavsiyesi değildir.</p>
+      <p className="app-muted mt-3 text-[11px] leading-5">Temel oranlar canlı API üzerinden alınır; veri yoksa uydurma değer gösterilmez.</p>
     </section>
   );
 }
 
 export function HomeNewsList({ onNavigate }: NavigateProps) {
   const { items, source, isLoading } = useLiveNews();
-  // "demo" kaynağı yalnızca eğitim amaçlı yerel içeriktir; gerçek haber gibi gösterilmez.
   const live = source !== "demo";
   const latest = live ? [...items].sort((a, b) => b.date.localeCompare(a.date)).slice(0, NEWS_LIMIT) : [];
 
